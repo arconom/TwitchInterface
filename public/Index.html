@@ -1,0 +1,360 @@
+<html>
+	<head>
+
+<style>
+.margin-sm{
+	margin-bottom: 4px;
+}
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.1.1/dist/vuetify.min.css"/>
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+	</head>
+<body>
+	<div id="app">
+		<v-app>
+			<v-app-bar title="Popular Rhinoceros Twitch Bot"></v-app-bar>
+			<v-main>
+				<v-tabs v-model="currentTab">
+					<v-tab value="chat">Chat</v-tab>
+					<v-tab value="api">Twitch API</v-tab>
+					<v-tab value="users">Users</v-tab>
+					<v-tab value="events">Events</v-tab>
+					<v-tab value="osc">OSC</v-tab>
+					<v-tab value="config">Config</v-tab>
+					<v-tab value="secrets">Secrets</v-tab>
+				</v-tabs>
+				<v-window v-model="currentTab">
+					<v-window-item value="chat">
+						<v-container>
+							<v-card title="Channels" v-if="!chatConnected">
+								<v-card-actions>
+									<v-btn @click="startChat" color="primary">Start Chat</v-btn>
+								</v-card-actions>
+							</v-card>
+							<v-card title="Channels" v-if="chatConnected">
+								<v-card-subtitle>
+									<input style="width: min(max-content, max(min-content, 50%))" id="txtChannel" v-model="channel" type="text" placeholder="channel"/>
+									<v-btn style="float: right;" :disabled="channel.length === 0" color="primary" id="btnJoinChannel" @click="joinChannel()">Join Channel</v-btn>
+								</v-card-subtitle>
+								<v-card-text>
+									<v-tabs v-model="currentChannel" bg-color="primary" show-arrows>
+										<v-tab v-for="(c, i) in activeChannels" :key="i" :value="i" @click="currentChannel = i">{{c}}</v-tab>
+									</v-tabs>
+									<v-list style="height: 10em; overflow: auto;" :items="currentChannelMessages"/>
+								</v-card-text>
+								<v-card-actions></v-card-actions>
+							</v-card>
+							<v-card title="Chat" class="margin-sm" v-if="chatConnected">
+								<v-card-text>
+									<v-textarea id="txtChat" type="text" v-model="message" placeholder="say something"/>
+								</v-card-text>
+								<v-card-actions>
+									<v-btn style="width: calc(80% - 2em);" :disabled="message.trim().length === 0" color="primary" id="btnSay" @click="say()">Send</v-btn>
+									<v-btn style="width: calc(20% - 2em);" color="error" id="btnLeaveChannel" @click="leaveChannel()">Leave Channel</v-btn>
+								</v-card-actions>
+							</v-card>
+
+
+							<v-expansion-panels>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatScopes">Save</v-btn>
+										Chat Scopes
+										"./chatscopes.txt"
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+										<v-checkbox v-for="(item, i) in chatScopesDisplay" :key="i" @click="setChatScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatScopes">Save</v-btn>
+										Chat Command State
+										"./chatcommandstate.txt"
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+										<v-checkbox v-for="(item, i) in chatCommandStateDisplay" :key="i" @click="setChatScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+							</v-expansion-panels>
+						</v-container>
+					</v-window-item>
+					<v-window-item value="api">
+						<v-container>
+							<v-card title="Twitch API">
+							<v-card-subtitle>Select an event to trigger and pass the args manually</v-card-subtitle>
+								<v-card-text>
+									<v-select
+										v-model="selectedEndpointKey"
+										:items="twitchEndpointsDisplay"
+									>
+									</v-select>
+									<v-row 
+										v-show="selectedEndpoint && selectedEndpoint.args" 
+										v-for="(item, i) in Object.keys(selectedEndpoint.args)" 
+										:key="i">
+										<v-text-field :label="item" v-model="selectedEndpoint.args[item]"></v-text-field>
+									</v-row>
+								</v-card-text>
+								<v-card-actions>
+									<v-btn color="primary" @click="submitApiRequest">Submit Request</v-btn>
+								</v-card-actions>
+							</v-card>
+
+							<v-expansion-panels>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveApiScopes">Save</v-btn>
+										API Scopes
+										"./apiscopes.txt"
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+										<v-checkbox v-for="(item, i) in apiScopesDisplay" :key="i" @click="setApiScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+							</v-expansion-panels>
+						</v-container>
+					</v-window-item>
+					<v-window-item value="users">
+						<v-container>
+						
+						<v-card>
+						
+						<v-card-title>Saved Users</v-card-title>
+						<v-card-subtitle>You can copy their id to use for Twitch API requests</v-card-subtitle>
+						<v-card-text>
+						
+							<div v-if="users.length === 0">
+								No users saved.  Use the Get User Info API end point to save a user.
+							</div>
+							<v-row>
+								<v-col cols="3" sm="3">Name</v-col>
+								<v-col cols="2" sm="2">Id</v-col>
+								<v-col cols="2" sm="2">Type</v-col>
+								<v-col cols="3" sm="3">Created</v-col>
+								<v-col cols="2" sm="2">Actions</v-col>
+							</v-row>
+							
+							<v-row v-for="(item, i) in usersDisplay">
+								<v-col cols="3" sm="3">
+									<img src="item.profile_image_url"></img>
+									{{item.display_name}}
+								</v-col>
+								<v-col cols="2" sm="2">
+									{{item.id}}
+								</v-col>
+								<v-col cols="2" sm="2">
+									{{item.type}}
+								</v-col>
+								<v-col cols="3" sm="3">
+									{{item.created_at}}
+								</v-col>
+
+								<v-col cols="1" sm="1">
+										<v-btn @click="deleteUser(item.id)" color="error"><v-icon icon="mdi-delete" /></v-btn>
+								</v-col>
+								<v-col cols="1" sm="1">
+										<v-btn @click="copyUser(item.id)" color="primary"><v-icon icon="mdi-content-copy" /></v-btn>
+								</v-col>
+
+							</v-row>
+						</v-card-text>
+						</v-card>
+							
+						</v-container>
+					</v-window-item>					
+
+					<v-window-item value="events">
+						<v-container>
+							<v-card title="Event Subscriptions">
+							<v-card-subtitle>Cost: {{cost}}  Max cost: {{maxCost}}</v-card-subtitle>
+								<v-card-text>
+								
+								<v-select
+									v-model="selectedEventSubscriptionKey"
+									:items="eventSubscriptionTypesDisplay"
+									item-title="name"
+									item-value="name"
+								>
+								</v-select>
+									
+								<v-row 
+								v-for="(item, i) in Object.keys(selectedEventSubscriptionType.condition)" 
+								:key="i">
+									<v-text-field 
+									:label="item" 
+									v-model="selectedEventSubscriptionType.condition[item]"></v-text-field>
+								</v-row>
+								
+								</v-card-text>
+								<v-card-actions>
+									<v-btn color="primary" @click="addEventSubscription">Add Subscription</v-btn>
+									<v-btn color="primary" :disabled="eventSubStarted" @click="startEventSub">Start Event Sub</v-btn>
+									<v-btn color="error" :disabled="!eventSubStarted" @click="endEventSub">End Event Sub</v-btn>
+								</v-card-actions>
+							</v-card>
+								<v-expansion-panels>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveEventSubscriptions">Save</v-btn>
+							Event Subscriptions
+							</v-expansion-panel-title>
+									<v-expansion-panel-text>
+									<v-row v-for="(item, i) in eventSubscriptionsDisplay">
+										<v-col cols="10">
+											<v-checkbox :key="i" 
+											@click="setEventSubscription(item.name, i, !item.value)" 
+											v-model="item.value"
+											:label="item.name"/>
+										</v-col>
+										<v-col cols="1">
+											<v-btn @click="removeEventSubscription(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
+										</v-col>
+									</v-row>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+								</v-expansion-panels>
+						</v-container>
+					</v-window-item>
+					<v-window-item value="osc">
+						<v-container>
+								<v-expansion-panels>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveOscMappings">Save</v-btn>
+							OSC Mappings
+							</v-expansion-panel-title>
+									<v-expansion-panel-text>
+										<v-checkbox v-for="(item, i) in oscMappingsDisplay" :key="i" @click="setOscEvent(item.name,!item.value)" v-model="item.value" :label="item.name"/>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+								</v-expansion-panels>
+							<div>OSC mappings are saved to "./OscMappings.txt"</div>
+							<div>Event subscriptions are saved to "./EventSubscriptions.txt"</div>
+						</v-container>
+					</v-window-item>
+					<v-window-item value="config">
+						<v-container>
+							<v-row>
+								<v-col cols="2" sm="2">
+									<v-btn color="primary" @click="saveConfig">Save</v-btn>
+								</v-col>
+								<v-col cols="2" sm="2">
+									<v-btn color="primary" @click="addConfig">Add</v-btn>
+								</v-col>
+							</v-row>
+							<v-row v-for="(item, i) in config" :key="i" @change="updateConfig(i,item)">
+								<v-col cols="3" sm="3">
+									<v-text-field v-model="item.title"></v-text-field>
+								</v-col>
+								<v-col cols="7" sm="7">
+									<v-text-field v-model="item.value"></v-text-field>
+								</v-col>
+								<v-col cols="2" sm="2">
+									<v-btn @click="deleteConfig(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
+								</v-col>
+							</v-row>
+							<v-list>
+								<v-list-item>
+									<div>Entries here are saved to "./config.txt"</div>
+								</v-list-item>
+							</v-list>
+						</v-container>
+					</v-window-item>
+					<v-window-item value="secrets">
+						<v-container>
+							<v-row>
+								<v-col cols="2" sm="2">
+									<v-btn color="primary" @click="saveSecrets">Save</v-btn>
+								</v-col>
+								<v-col cols="2" sm="2">
+									<v-btn color="primary" @click="addSecret">Add</v-btn>
+								</v-col>
+							</v-row>
+							<v-row v-for="(item, i) in secrets" :key="i" @change="updateSecret(i,item)">
+								<v-col cols="3" sm="3">
+									<v-text-field v-model="item.title"></v-text-field>
+								</v-col>
+								<v-col cols="7" sm="7">
+									<v-text-field v-model="item.value"></v-text-field>
+								</v-col>
+								<v-col cols="2" sm="2">
+									<v-btn @click="deleteSecret(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
+								</v-col>
+							</v-row>
+							
+							<v-list>
+							<v-list-item>
+								<a href="https://dev.twitch.tv/console/apps">Get your secret here</a>
+							</v-list-item>
+							<v-list-item>
+								<a href="https://twitchapps.com/tmi">Get your tmi password here</a>
+							</v-list-item>
+							<v-list-item>
+							<div>Entries here are saved to "./secrets.txt"</div>
+							</v-list-item>
+							
+							</v-list>
+							
+						</v-container>
+					</v-window-item>
+				</v-window>					
+
+
+			</v-main>
+			
+			<v-row v-for="(key, i) in Object.keys(botUserInfo)" :key="i">
+			</v-row>
+			
+			<v-footer>
+				<v-col>
+					id:  
+					{{botUserInfo["id"]}}
+				</v-col>
+				<v-col>
+					login:  
+					{{botUserInfo["login"]}}
+				</v-col>
+
+			 <v-snackbar v-model="snackbar"
+				  :timeout="snackbarTimeout"
+			 >
+				{{ snackbarText }}
+
+			  <template v-slot:actions>
+				<v-btn
+				  color="primary"
+				  variant="text"
+				  @click="snackbar = false"
+				>
+				  Close
+				</v-btn>
+			  </template>
+			</v-snackbar>
+			<v-footer>
+		</v-app>
+	</div>
+</body>
+	<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vuetify@3.1.1/dist/vuetify.min.js"></script>
+	<script type="module">
+		const {createApp} = Vue;
+		import {vueInstance} from "./src/vueInstance.mjs"
+		const {createVuetify} = Vuetify;
+
+		const vuetify = createVuetify({
+		    theme: {
+		        defaultTheme: "dark"
+		    },
+		});
+
+		const app = createApp(vueInstance);
+		app.use(vuetify);
+		app.mount('#app');
+  </script>
+  
+	
+	
+	
+</html>
