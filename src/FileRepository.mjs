@@ -28,6 +28,14 @@ export const FileRepository = {
         return this.readFileAsync("./data/chatBotState.txt");
     },
 
+    saveBookmarkedChannels: function (state) {
+        return this.writeFileAsync("./data/savedChannels.txt", state);
+    },
+
+    readBookmarkedChannels: function () {
+        return this.readFileAsync("./data/savedChannels.txt");
+    },
+
     saveAuth: function (token) {
         return this.writeFileAsync("./data/OAuth.txt", token);
     },

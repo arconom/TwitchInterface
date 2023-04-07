@@ -124,10 +124,7 @@ export default class EventSubListener extends WebSocketListener {
             return fetch(Constants.eventSubUrl, requestOptions)
             .then(self.checkResponse)
             .then(self.readJson)
-            .then(function(data){
-				self.getCostInfo(data);
-				return Promise.resolve(data);
-			})
+            .then(self.getCostInfo)
             .catch(function (e) {
                 FileRepository.log("\r\n EventSubListener.subscribe Error: " + e + "\r\n" +
                     "eventName: " + eventName + "\r\n" +
@@ -259,10 +256,8 @@ export default class EventSubListener extends WebSocketListener {
     }
 
     checkResponse(res, req) {
-
         if (res.status >= 400) {
-			console.log("checkResponse ", req?.url, JSON.stringify(res), res.statusText, res.status);
-			FileRepository.log("checkResponse " + req.url + " " + JSON.stringify(res) + " " + res.statusText);
+			FileRepository.log("checkResponse " + JSON.stringify(res) + " " + res.statusText);
             throw res.statusText;
         }
         return res;

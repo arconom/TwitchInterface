@@ -26,8 +26,6 @@ export default class ChatBot extends HandlerMap {
         var instance = this;
         this.commands = commands ?? new Map();
 
-console.log("ChatBot commands", Array.from(this.commands.entries()).join("\r\n"));
-
         // Define configuration options
         const opts = {
             identity: {
@@ -270,6 +268,17 @@ console.log("ChatBot commands", Array.from(this.commands.entries()).join("\r\n")
             return null;
 
         }
+    }
+
+    getCommandDescriptions() {
+        return Array.from(this.commands.entries().map(function (x) {
+                return x[0] + "\r\n" +
+                x[1].description + "\r\n" +
+                x[1].cooldown + "\r\n" +
+                x[1].lastExecution + "\r\n" +
+                x[1].role + "\r\n" +
+                x[1].enabled + "\r\n";
+            })).join("\r\n");
     }
 
     // Called every time the bot connects to Twitch chat

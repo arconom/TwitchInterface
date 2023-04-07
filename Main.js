@@ -211,7 +211,6 @@ function startWebServer() {
 
     Controller.set("/chat/channels", {
         "GET": function (args) {
-
             return Promise.resolve(Array.from(chatBot?.channels ?? []));
         },
         "POST": function (args) {
@@ -219,6 +218,21 @@ function startWebServer() {
         },
         "PUT": function (args) {
             throw "method not allowed";
+        },
+        "DELETE": function (args) {
+            throw "method not allowed";
+        },
+    });
+
+    Controller.set("/chat/channels/saved", {
+        "GET": function (args) {
+            return FileRepository.readBookmarkedChannels();
+        },
+        "POST": function (args) {
+            throw "method not allowed";
+        },
+        "PUT": function (args) {
+            return FileRepository.saveBookmarkedChannels(args);
         },
         "DELETE": function (args) {
             throw "method not allowed";
@@ -305,8 +319,8 @@ function startWebServer() {
     Controller.set("/eventsub/cost", {
         "GET": function (args) {
             return Promise.resolve({
-                cost: eventSubListener.cost,
-                maxCost: eventSubListener.maxCost
+                cost: eventSubListener?.cost ?? 0,
+                maxCost: eventSubListener?.maxCost ?? 0
             });
         },
         "POST": function (args) {
@@ -808,7 +822,7 @@ function startEventSub() {
     if (isEventSubRunning) {
         FileRepository.log("EventSub already running");
 
-        return;
+        return Promise.resolve(true);
     }
 
     // FileRepository.log("startEventSub " + eventSubscriptionConfig);
@@ -862,7 +876,7 @@ function startEventSub() {
             subs.get(obj.metadata.subscription_type).handler(obj);
         }
     }, true);
-    return eventSubListener.connect();
+    return Promise.resolve(eventSubListener.connect());
 }
 
 function endPubSub() {
@@ -994,17 +1008,17 @@ loadChatScopes()
                                 console.log(`Worker stopped with exit code ${code}`);
                         });
 
-                        // var startTime = Date.now();
-                        // var keys = chatLog.keys();
-                        // for (const key of keys) {
-                        // var messages = chatLog.get(key);
-                        // messages.forEach(function (x) {
-                        // gorkblorf.read(x.msg, x.context["user-id"]);
-                        // });
-                        // }
-                        // var endTime = Date.now();
-                        // console.log("gorkblorf took " + (endTime - startTime) + " ms");
-                        // console.log("checked words", gorkblorf.checkedWordCounter);
+                        var startTime = Date.now();
+                        var keys = chatLog.keys();
+                        for (const key of keys) {
+                        var messages = chatLog.get(key);
+                        messages.forEach(function (x) {
+                        gorkblorf.read(x.msg, x.context["user-id"]);
+                        });
+                        }
+                        var endTime = Date.now();
+                        console.log("gorkblorf took " + (endTime - startTime) + " ms");
+                        console.log("checked words", gorkblorf.checkedWordCounter);
                     });
 
 /*                     FileRepository.loadPlugins().then(function (list) {

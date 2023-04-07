@@ -570,7 +570,8 @@ export function ChatCommands({
 
     function getDiceResult(options) {
         console.log("getDiceResult", options);
-
+        var returnMe = "";
+		
         function rollDice(count, faces, explode, dice = []) {
             for (let i = 0; i < count; i++) {
                 var pips = Math.ceil(Math.random() * faces);

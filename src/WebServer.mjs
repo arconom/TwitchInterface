@@ -93,7 +93,7 @@ export default class WebServer {
                             }
 
                             handlerResult
-                            .then(function (data) {
+                            ?.then(function (data) {
 
                                 // FileRepository.log("WebServer.start GET request returning", data);
                                 res.statusCode = 200;

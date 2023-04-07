@@ -243,7 +243,7 @@ export default class Gorkblorf {
             // parsedWords["valid"].length >= max_violations &&
             validString.length > 0) {
             // FileRepository.log("Adding new message to markov database:", validString);
-            // markov_bot.seed(validString);
+            markov_bot.seed(validString);
         }
     }
 

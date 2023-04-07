@@ -1,14 +1,19 @@
 import fs from 'fs';
 import zl from "zip-lib";
 
-import("./EnglishDefinitions.mjs").then(function (x) {})
+var EnglishDefinitions;
+import("./EnglishDefinitions.mjs").then(function (data) {
+    // console.log("done", data);
+    EnglishDefinitions = data.EnglishDefinitions;
+})
 .catch(function (err) {
-    zl.extract('./src/EnglishDefinitions.zip', "./src").then(function () {
-        console.log("done");
+    zl.extract('./src/EnglishDefinitions.zip', "./src").then(function (data) {
+        // console.log("done", data);
+        EnglishDefinitions = data.EnglishDefinitions;
     }, function (err) {
         console.log(err);
     });
- });
+});
 
 import {
     CommonEnglishWords

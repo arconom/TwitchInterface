@@ -135,7 +135,9 @@ export const vueInstance = {
             var self = this;
             dataAccess.getStartEventSub()
             .then(function (data) {
-                self.getEventSubCost();
+                setTimeout(function(){
+					self.getEventSubCost();
+				}, 1000);
                 self.eventSubStarted = true;
                 self.snackbar = true;
                 self.snackbarText = "Event Sub started";
@@ -490,35 +492,49 @@ export const vueInstance = {
     mounted: function () {
         var self = this;
 
-        dataAccess.getBotUserInfo()
-        .then(function (data) {
-            console.log("after getBotUserInfo", data, data.length);
-            if (data) {
-                self.botUserInfo = data;
-                console.log("bot id", self.botUserInfo["id"]);
+        var initialDelay = 1000;
 
-                dataAccess.getSubscriptionTypes()
-                .then(function (data) {
-                    console.log("getAvailableSubscriptions().then", data);
-                    var temp = self.eventSubscriptionTypes;
-                    if (data?.length > 0) {
-                        data.forEach(function (x) {
+        setTimeout(function () {
+            getBotInfo(null, initialDelay);
+        }, initialDelay);
 
-                            if (x[1].condition.hasOwnProperty("moderator_user_id")) {
-                                x[1].condition["moderator_user_id"] = self.botUserInfo["id"];
-                            }
+        function getBotInfo(data, delay) {
+            //retry getting bot info with an increasing delay so we don't clog up the network
+            dataAccess.getBotUserInfo()
+            .then(function (data) {
+                if (data) {
+                    console.log("after getBotUserInfo", data);
+                    self.botUserInfo = data;
+                    console.log("bot id", self.botUserInfo["id"]);
 
-                            temp.set(x[0], x[1]);
-                        });
-                    }
-                    self.eventSubscriptionTypes = temp;
-                    console.log("available eventSubscriptions after load", self.eventSubscriptionTypes);
-                })
-                .catch(function (err) {
-                    console.log(err);
-                });
-            }
-        });
+                    dataAccess.getSubscriptionTypes()
+                    .then(function (data) {
+                        console.log("getAvailableSubscriptions().then", data);
+                        var temp = self.eventSubscriptionTypes;
+                        if (data?.length > 0) {
+                            data.forEach(function (x) {
+
+                                if (x[1].condition.hasOwnProperty("moderator_user_id")) {
+                                    x[1].condition["moderator_user_id"] = self.botUserInfo["id"];
+                                }
+
+                                temp.set(x[0], x[1]);
+                            });
+                        }
+                        self.eventSubscriptionTypes = temp;
+                        console.log("available eventSubscriptions after load", self.eventSubscriptionTypes);
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                    });
+                } else {
+                    delay *= 2;
+                    setTimeout(function () {
+                        getBotInfo(null, delay);
+                    }, delay);
+                }
+            });
+        }
 
         dataAccess.getSubscriptions()
         .then(function (data) {
