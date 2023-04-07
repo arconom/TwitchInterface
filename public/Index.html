@@ -35,11 +35,14 @@
 							<v-card title="Channels" v-if="chatConnected">
 								<v-card-subtitle>
 									<input style="width: min(max-content, max(min-content, 50%))" id="txtChannel" v-model="channel" type="text" placeholder="channel"/>
-									<v-btn style="float: right;" :disabled="channel.length === 0" color="primary" id="btnJoinChannel" @click="joinChannel()">Join Channel</v-btn>
+									<v-btn style="float: right;" :disabled="channel.length === 0" color="primary" id="btnJoinChannel" @click="joinCurrentChannel()">Join Channel</v-btn>
 								</v-card-subtitle>
 								<v-card-text>
 									<v-tabs v-model="currentChannel" bg-color="primary" show-arrows>
-										<v-tab v-for="(c, i) in activeChannels" :key="i" :value="i" @click="currentChannel = i">{{c}}</v-tab>
+										<v-tab v-for="(c, i) in activeChannels" :key="i" :value="i" @click="currentChannel = i">{{c}}
+										<v-icon @click="addChannel(c)" v-show="!savedChannels.has(c)">mdi-bookmark-plus</v-icon>
+										<v-icon @click="removeChannel(c)" v-show="savedChannels.has(c)">mdi-bookmark-remove</v-icon>
+										</v-tab>
 									</v-tabs>
 									<v-list style="height: 10em; overflow: auto;" :items="currentChannelMessages"/>
 								</v-card-text>

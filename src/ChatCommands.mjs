@@ -473,7 +473,11 @@ export function ChatCommands({
         role: Constants.chatRoles.viewer,
         enabled: true,
         handler: function (obj) {
-            var wordle = new Wordle(wordGenerator.getCommonWord());
+            var length = 0;
+            if (obj.args) {
+                length = parseInt(obj.args);
+            }
+            var wordle = new Wordle(wordGenerator.getCommonWord(length));
             obj.chatBot.createChannelCommandState(obj.target.substr(1) + "wordle", wordle);
             obj.chatBot.sendMessage(obj.target.substr(1), wordle.status());
         }
@@ -485,7 +489,13 @@ export function ChatCommands({
         role: Constants.chatRoles.viewer,
         enabled: true,
         handler: function (obj) {
-            var wordle = new Wordle(wordGenerator.getRandomWord());
+
+            var length = 0;
+            if (obj.args) {
+                length = parseInt(obj.args);
+            }
+
+            var wordle = new Wordle(wordGenerator.getRandomWord(length));
             obj.chatBot.createChannelCommandState(obj.target.substr(1) + "wordle", wordle);
             obj.chatBot.sendMessage(obj.target.substr(1), wordle.status());
         }
@@ -506,6 +516,22 @@ export function ChatCommands({
                 } else {
                     obj.chatBot.sendMessage(obj.target.substr(1), "wordle has not been started");
                 }
+            }
+        }
+    });
+    returnMe.set("prwordlestatus", {
+        description: "",
+        cooldown: 0,
+        lastExecution: 0,
+        role: Constants.chatRoles.viewer,
+        enabled: true,
+        handler: function (obj) {
+            var wordle = obj.chatBot.getCommandState(obj.target.substr(1) + "wordle");
+
+            if (wordle) {
+                obj.chatBot.sendMessage(obj.target.substr(1), wordle.status(true));
+            } else {
+                obj.chatBot.sendMessage(obj.target.substr(1), "wordle has not been started");
             }
         }
     });
@@ -571,7 +597,7 @@ export function ChatCommands({
     function getDiceResult(options) {
         console.log("getDiceResult", options);
         var returnMe = "";
-		
+
         function rollDice(count, faces, explode, dice = []) {
             for (let i = 0; i < count; i++) {
                 var pips = Math.ceil(Math.random() * faces);

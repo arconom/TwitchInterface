@@ -23,6 +23,7 @@ export const vueInstance = {
             message: "",
             oscMappings: new Map(),
             pubsubSubscriptions: [],
+            savedChannels: new Set(),
             secrets: [],
             selectedEndpointKey: "",
             selectedEventSubscriptionKey: "channel.follow",
@@ -113,6 +114,14 @@ export const vueInstance = {
         saveConfig: function () {
             dataAccess.putConfig(this.config);
         },
+        addChannel: function (channel) {
+            this.savedChannels.add(channel);
+            dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
+        },
+        removeChannel: function (channel) {
+            this.savedChannels.delete();
+            dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
+        },
         addConfig: function (item) {
             this.config.push(item);
         },
@@ -135,9 +144,9 @@ export const vueInstance = {
             var self = this;
             dataAccess.getStartEventSub()
             .then(function (data) {
-                setTimeout(function(){
-					self.getEventSubCost();
-				}, 1000);
+                setTimeout(function () {
+                    self.getEventSubCost();
+                }, 1000);
                 self.eventSubStarted = true;
                 self.snackbar = true;
                 self.snackbarText = "Event Sub started";
@@ -178,6 +187,13 @@ export const vueInstance = {
                 .catch(function (err) {
                     console.log(err);
                 });
+            })
+            .then(function () {
+                setTimeout(function () {
+                    self.savedChannels.forEach(function (x) {
+                        self.joinChannel(x);
+                    });
+                }, 1000);
             });
         },
         leaveChannel: function () {
@@ -192,16 +208,20 @@ export const vueInstance = {
                 // }
             });
         },
-        joinChannel: function () {
+        joinCurrentChannel: function () {
+            this.joinChannel(this.channel);
+        },
+        joinChannel: function (channel) {
             var self = this;
-            dataAccess.joinChannel(self.channel).then(function (result) {
-                // console.log('joinChannel', result, self.channel);
-                self.activeChannels.push(self.channel);
-                self.snackbarText = "Joined channel " + self.channel;
-                self.snackbar = true;
-            }).catch(function (err) {
-                console.log('joinChannel err', err);
-            });
+            if (self.activeChannels.indexOf(channel) === -1) {
+                dataAccess.joinChannel(channel).then(function (result) {
+                    self.activeChannels.push(channel);
+                    self.snackbarText = "Joined channel " + channel;
+                    self.snackbar = true;
+                }).catch(function (err) {
+                    console.log('joinChannel err', err);
+                });
+            }
         },
         createWebSocket: function () {
             var self = this;
@@ -705,6 +725,12 @@ export const vueInstance = {
             if (data?.length > 0) {
                 self.users = new Map(data);
                 console.log("saved users", self.users);
+            }
+        });
+
+        dataAccess.getBookmarkedChannels().then(function (data) {
+            if (data?.length > 0) {
+                self.savedChannels = new Set(JSON.parse(data));
             }
         });
 

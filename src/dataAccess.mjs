@@ -63,6 +63,7 @@ export default class dataAccess {
         });
     }
 
+
     putOscEvents(events) {
 
         if (!events) {
@@ -113,6 +114,29 @@ export default class dataAccess {
         });
 
     }
+    getBookmarkedChannels() {
+        var self = this;
+        return fetch(this.hostname + "/chat/channels/saved").then(function (res) {
+            return res.json();
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+    }
+    putBookmarkedChannels(channels) {
+        if (!channels) {
+            return;
+        }
+
+        return fetch(this.hostname + "/chat/channels/saved", {
+            method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(channels) // body data type must match "Content-Type" header
+        });
+    }
+
     leaveChannel(channel) {
         var self = this;
         return fetch(this.hostname + "/chat/leave?channel=" + channel).then(function (res) {

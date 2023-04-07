@@ -45,7 +45,14 @@ export const FileRepository = {
     },
 
     loadPlugins: function () {
-        return this.readFileAsync("./data/plugins.txt");
+        var path = "./data/plugins.txt";
+
+        fs.readdir(path, (err, files) => {
+            files.forEach(file => {
+                console.log(file);
+            });
+        });
+
     },
 
     log: function (message) {

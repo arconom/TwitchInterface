@@ -143,18 +143,22 @@ export default class WordGenerator {
         return returnMe;
     }
 
-    getWordFromList(list) {
+    getWordFromList(list, length) {
+		if(length && length > 0){
+			list = list.filter(x => x.length === length);
+		}
+		
         var index = Math.floor(Math.random() * list.length);
         this.lastWord = list[index];
         return list[index];
     }
 
-    getCommonWord() {
-        return this.getWordFromList(this.getCommonWordList());
+    getCommonWord(length) {
+        return this.getWordFromList(this.getCommonWordList(), length);
     }
 
-    getRandomWord() {
-        return this.getWordFromList(this.getWordList());
+    getRandomWord(length) {
+        return this.getWordFromList(this.getWordList(), length);
     }
 
     getDefinition(key) {

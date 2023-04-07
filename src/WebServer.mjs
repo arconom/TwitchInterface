@@ -84,7 +84,6 @@ export default class WebServer {
                         var handler = route[req.method];
                         // FileRepository.log("WebServer.start handler", handler);
                         if (handler) {
-
                             var handlerResult;
                             if (queryString?.length > 0) {
                                 handlerResult = handler(querystringToObject(urlParts[1]));
@@ -103,6 +102,10 @@ export default class WebServer {
                                 }
                                 // FileRepository.log("WebServer.start end request " + req.url);
                                 res.end();
+                            })
+                            .catch(function (err) {
+                                FileRepository.log("WebServer error during request " + req.url);
+                                FileRepository.log(err);
                             });
                         } else {
                             // FileRepository.log("WebServer.start end request " + req.url);
@@ -130,7 +133,7 @@ export default class WebServer {
 
                     //routes passed from main look like this
                     /*
-					Controller.set("say", {
+                    Controller.set("say", {
                     "GET": function (data) {
                     throw "method not allowed";
                     },

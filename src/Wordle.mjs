@@ -7,7 +7,7 @@ from "./FileRepository.mjs";
 export default class Wordle {
 
     constructor(word, maxAttempts) {
-        this.selectedWord = word;
+        this.selectedWord = word?.toLowerCase();
 
         if (!maxAttempts) {
             maxAttempts = word.length + 2;
@@ -28,11 +28,12 @@ export default class Wordle {
     submit(word) {
         FileRepository.log("submit", word);
         //check the word against the instance word
-        this.attempts++;
+        word = word.toLowerCase();
         this.lastGuess = word;
-        if (this.attempts <= this.maxAttempts) {
-            if (word.length === this.selectedWord.length) {
-                if (this.wordGenerator.getDefinition(word)) {
+        if (word.length === this.selectedWord.length) {
+            if (this.wordGenerator.getDefinition(word)) {
+                this.attempts++;
+                if (this.attempts <= this.maxAttempts) {
 
                     var selectedLetters = this.selectedWord.split("");
                     var letters = word.split("");
@@ -66,17 +67,21 @@ export default class Wordle {
                         }
                     }
                 } else {
-                    this.statusMessage = word + " was not found in the dictionary.  Plurals are removed.";
+                    this.statusMessage = "You have run out of guesses.  The answer is " + this.selectedWord;
                 }
             } else {
-                this.statusMessage = "Length doesn't match.  You must guess an actual word with matching length.";
+                this.statusMessage = word + " was not found in the dictionary.  Plurals are removed.";
             }
         } else {
-            this.statusMessage = "You have run out of guesses.  The answer is " + this.selectedWord;
+            this.statusMessage = "Length doesn't match.  You must guess an actual word with matching length.";
         }
     }
 
-    status() {
+    status(clearPreviousMessage) {
+        if (clearPreviousMessage) {
+            this.statusMessage = "";
+        }
+
         if (this.statusMessage && this.statusMessage.length > 0) {
             return this.statusMessage;
         }
