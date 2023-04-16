@@ -28,6 +28,7 @@ export default class Dafsa {
     }
 
     insert(word) {
+        //word = String
         var currentState = this.states[0];
         for (var i = 0; i < word.length; i++) {
             var symbol = word.charAt(i);
@@ -43,6 +44,7 @@ export default class Dafsa {
     }
 
     has(word) {
+        //word = String
         var currentState = this.states[0];
         for (var i = 0; i < word.length; i++) {
             var symbol = word.charAt(i);
@@ -54,17 +56,20 @@ export default class Dafsa {
         }
         return currentState.isFinal();
     }
-	
-	getClosest(word){
-		var maxCost = 2;
-		return getLevenshteinDistance(word, maxCost);
-	}
-	
-	getLevenshteinDistance(query, maxCost) {
+
+    getClosest(word) {
+        //word = String
+        var maxCost = 2;
+        return getLevenshteinDistance(word, maxCost);
+    }
+
+    getLevenshteinDistance(query, maxCost) {
+        //query = String
+        //maxCost = Number
         // FileRepository.log("Helper.getLevenshteinDistanceTrie " + query);
         var self = this;
-		
-		var currentRow = [];
+
+        var currentRow = [];
 
         for (let i = 0; i < query.length; i++) {
             currentRow.push(i);
@@ -76,12 +81,12 @@ export default class Dafsa {
         };
 
         Object.keys(self.states[0].transitions).forEach(function (node) {
-            self.getLevenshteinDistanceRecursively(node, 
-				node, 
-				query, 
-				currentRow, 
-				results, 
-				maxCost);
+            self.getLevenshteinDistanceRecursively(node,
+                node,
+                query,
+                currentRow,
+                results,
+                maxCost);
         });
 
         // FileRepository.log("Helper.getLevenshteinDistanceTrie " + query + " returning " + JSON.stringify(results));
@@ -89,6 +94,13 @@ export default class Dafsa {
     }
 
     getLevenshteinDistanceRecursively(node, letter, potentialMatch, word, previousRow, results, maxCost) {
+        //node = {transitions = Object, final = Boolean}
+        //letter = String
+        //potentialMatch = String
+        //word = String
+        //previousRow = Array
+        //results = {word: string,cost: Number}
+
         if (!node) {
             throw "getLevenshteinDistanceRecursively node is undefined";
         }
@@ -142,19 +154,17 @@ export default class Dafsa {
         }
 
         if (min <= maxCost) {
-			Object.keys(node.transitions)
-			.forEach(function (child) {
-                this.getLevenshteinDistanceRecursively(node.transitions[child], 
-				child, 
-				potentialMatch + child, 
-				word, 
-				currentRow, 
-				results, 
-				maxCost);
+            Object.keys(node.transitions)
+            .forEach(function (child) {
+                this.getLevenshteinDistanceRecursively(node.transitions[child],
+                    child,
+                    potentialMatch + child,
+                    word,
+                    currentRow,
+                    results,
+                    maxCost);
             });
         }
     }
 
-	
-	
 }

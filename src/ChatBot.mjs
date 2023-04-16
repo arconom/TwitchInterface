@@ -18,13 +18,13 @@ import {
 from "./FileRepository.mjs";
 
 export default class ChatBot extends HandlerMap {
-    constructor(username, secrets, chatDelay, commands) {
+    constructor(username, secrets, chatDelay, commandManager) {
         // console.log("ChatBot.ctor " + commands);
         super();
         var self = this;
         secrets = new Secrets(secrets);
         var instance = this;
-        this.commands = commands ?? new Map();
+        this.commandManager = commandManager;
 
         // Define configuration options
         const opts = {
@@ -37,17 +37,6 @@ export default class ChatBot extends HandlerMap {
         this.commandState = new Map();
         this.chatDelay = chatDelay;
         this.channels = new Set();
-
-        FileRepository.readChatBotState().then(function (data) {
-            try {
-                var arr = JSON.parse(data);
-                for (let i = 0; i < arr.length; i++) {
-                    self.commandState.set(arr[i][0], arr[i][1]);
-                }
-            } catch (e) {
-                //no state data saved
-            }
-        });
 
         // Create a client with our options
         this.client = new tmi.client(opts);
@@ -65,32 +54,6 @@ export default class ChatBot extends HandlerMap {
 
         // Connect to Twitch:
         this.client.connect();
-    }
-
-    createCommandState(state) {
-        var stateId = crypto.randomUUID();
-        this.commandState.set(stateId, state);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
-        return stateId;
-    }
-
-    createChannelCommandState(channel, state) {
-        this.commandState.set(channel, state);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
-    }
-
-    getCommandState(id) {
-        return this.commandState.get(id);
-    }
-
-    setCommandState(id, state) {
-        var state = this.commandState.set(id, state);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
-    }
-
-    deleteCommandState(id) {
-        this.commandState.delete(id);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
     }
 
     joinChannel(name) {
@@ -185,53 +148,6 @@ export default class ChatBot extends HandlerMap {
         });
     }
 
-    hasRole(context, role) {
-        if (role === "" || role === Constants.chatRoles.viewer) {
-            return true;
-        } else if (role === Constants.chatRoles.subscriber) {
-            return context.subscriber;
-        } else if (role === Constants.chatRoles.moderator) {
-            return context.mod;
-        } else if (role === Constants.chatRoles.broadcaster) {
-            return context.badges.broadcaster === "1";
-        } else {
-            return false;
-        }
-    }
-
-    processCommand(obj) {
-        var self = this;
-        // Remove whitespace from chat message
-        const commandName = obj.msg.trim();
-        var match = commandName.match(Constants.commandRegex);
-
-        if (match?.index === 0 && match[1]?.length > 0) {
-            var commandObject = this.commands.get(match[1]);
-            FileRepository.log("processCommand commands " + Array.from(this.commands.entries()).join("\r\n"));
-            FileRepository.log("processCommand match " + match);
-            FileRepository.log("processCommand command " + JSON.stringify(commandObject));
-            FileRepository.log("processCommand enabled " + commandObject?.enabled);
-            FileRepository.log("processCommand role " + this.hasRole(obj.context, commandObject?.role));
-
-            if (commandObject?.enabled && this.hasRole(obj.context, commandObject?.role)) {
-
-                FileRepository.log("processCommand checking cooldown");
-                if (commandObject.lastExecution + commandObject.cooldown < Date.now()) {
-                    FileRepository.log("processCommand running command");
-                    commandObject.lastExecution = Date.now();
-                    obj.args = match[2];
-                    // console.log("processCommand sending Message");
-                    return self.sendMessage(obj.target.substr(1), commandObject.handler(obj));
-                } else {
-                    // console.log("processCommand debounced", commandObject.lastExecution, commandObject.cooldown);
-                    return self.sendMessage(obj.target.substr(1), "Wait for command to cool down in " +
-                        (commandObject.lastExecution + commandObject.cooldown - Date.now()) +
-                        " ms");
-                }
-            }
-        }
-    }
-
     sendMessage(channel, text) {
         FileRepository.log("sendMessage " + channel + ": " + text);
         if (text && text.length > 0) {
@@ -270,20 +186,8 @@ export default class ChatBot extends HandlerMap {
         }
     }
 
-    getCommandDescriptions() {
-        return Array.from(this.commands.entries().map(function (x) {
-                return x[0] + "\r\n" +
-                x[1].description + "\r\n" +
-                x[1].cooldown + "\r\n" +
-                x[1].lastExecution + "\r\n" +
-                x[1].role + "\r\n" +
-                x[1].enabled + "\r\n";
-            })).join("\r\n");
-    }
-
     // Called every time the bot connects to Twitch chat
     onConnectedHandler(addr, port) {
-        var self = this;
         FileRepository.log(`* Connected to ${addr}:${port}`);
     }
 }

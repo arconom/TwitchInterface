@@ -124,20 +124,5 @@ export default class Common {
         }
     }
  */
-    static removeRepeatedLetters(word) {
-        var deleteIndexes = [];
-
-        var returnMe = [];
-        for (let i = 1; i < word.length; i++) {
-            if (word[i - 1] === word[i]) {
-                deleteIndexes.push(i);
-            } else {
-                returnMe.push(word[i - 1]);
-            }
-        }
-        returnMe.push(word[word.length - 1]);
-
-        return returnMe.join("");
-    }
 
 }

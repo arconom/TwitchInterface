@@ -12,7 +12,10 @@ import {
     SubscriptionTypes
 }
 from "./SubscriptionTypes.mjs";
-import {FileRepository} from "./FileRepository.mjs";
+import {
+    FileRepository
+}
+from "./FileRepository.mjs";
 
 export default class OscManager {
     constructor(clientAddress, clientPort, serverAddress, serverPort) {
@@ -30,7 +33,7 @@ export default class OscManager {
         });
 
         this.oscServer.on('message', function (msg) {
-            FileRepository.log(`Message: ${msg}`);
+            FileRepository.log(`OSC Message: ${msg}`);
             // oscServer.close();
         });
 
@@ -55,14 +58,14 @@ export default class OscManager {
     }
 
     send(message, args) {
-			FileRepository.log("OSCManager.send " + message + " " + args);
-		var self = this;
-		if(!args.length){
-			args = [args];
-		}
+        FileRepository.log("OSCManager.send " + message + " " + args);
+        var self = this;
+        if (!args.length) {
+            args = [args];
+        }
 
         if (self.events.get(message)) {
-			FileRepository.log("OSCManager.sending");
+            FileRepository.log("OSCManager.sending");
             self.oscClient.send(message, [...args], () => {});
         }
     }

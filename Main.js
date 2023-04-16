@@ -1,6 +1,4 @@
 import zl from "zip-lib";
-
-
 import LanguageLookup from './src/languageLookup.mjs';
 import {
     Worker,
@@ -41,7 +39,6 @@ import {
 from "./src/TwitchEndpoints.mjs";
 import TwitchAPIProvider from "./src/TwitchAPIProvider.mjs";
 import EventSubListener from "./src/EventSubListener.mjs";
-import WordGenerator from "./src/WordGenerator.mjs";
 import {
     FileRepository
 }
@@ -446,7 +443,6 @@ function startWebServer() {
 
     Controller.set("/subscription/types", {
         "GET": function (args) {
-            // FileRepository.log("/subscriptions", Array.from(SubscriptionTypes.keys()));
             return Promise.resolve(Array.from(SubscriptionTypes.entries()));
         },
         "POST": function (args) {
@@ -462,16 +458,13 @@ function startWebServer() {
 
     Controller.set("/oscmappings", {
         "GET": function (args) {
-            // FileRepository.log("/oscmappings", Array.from(oscManager.events));
             return Promise.resolve(Array.from(oscManager.events));
         },
         "POST": function (args) {
             throw "method not allowed";
         },
         "PUT": function (args) {
-            // FileRepository.log("args", args);
             args.forEach(function (t) {
-                // FileRepository.log("t", t);
                 oscManager.setEvent(t[0], t[1]);
             });
 
@@ -485,14 +478,12 @@ function startWebServer() {
 
     Controller.set("/secrets", {
         "GET": function (args) {
-            // FileRepository.log("/oscmappings", Array.from(oscManager.events));
             return Promise.resolve(secrets);
         },
         "POST": function (args) {
             throw "method not allowed";
         },
         "PUT": function (args) {
-            // FileRepository.log("args", args);
             var obj = {};
 
             args.forEach(function (x) {
@@ -509,14 +500,12 @@ function startWebServer() {
 
     Controller.set("/config", {
         "GET": function (args) {
-            // FileRepository.log("/oscmappings", Array.from(oscManager.events));
             return Promise.resolve(config);
         },
         "POST": function (args) {
             throw "method not allowed";
         },
         "PUT": function (args) {
-            // FileRepository.log("args", args);
             var obj = {};
 
             args.forEach(function (x) {
@@ -533,7 +522,6 @@ function startWebServer() {
 
     Controller.set("/chat/start", {
         "GET": function (args) {
-            // FileRepository.log("/oscmappings", Array.from(oscManager.events));
             return Promise.resolve(initChatBot());
         },
         "POST": function (args) {
@@ -550,7 +538,6 @@ function startWebServer() {
 
     Controller.set("/chat/scopes", {
         "GET": function (args) {
-            // FileRepository.log("/chat/scopes", ChatScopes.entries());
             return Promise.resolve(Array.from(ChatScopes.entries()));
         },
         "POST": function (args) {
@@ -591,7 +578,6 @@ function startWebServer() {
             throw "method not allowed";
         },
         "PUT": function (args) {
-            // FileRepository.log("args", args);
             if (args.length !== undefined && args.length !== null) {
                 activeChatScopes = args;
                 return FileRepository.saveChatScopes(args, function (x) {});
@@ -605,7 +591,6 @@ function startWebServer() {
 
     Controller.set("/twitchendpoints", {
         "GET": function (args) {
-            // FileRepository.log("/oscmappings", Array.from(oscManager.events));
             return Promise.resolve(Array.from(TwitchEndpoints.entries()));
         },
         "POST": function (args) {
@@ -697,7 +682,10 @@ function initChatBot() {
         return;
     }
 
-    var chatCommands = ChatCommands({
+    var chatCommands = ChatCommands;
+	load all the commands and add them to the CommandManager
+
+	({
         wordGenerator: new WordGenerator(),
         gorkblorf,
         config,
@@ -1011,22 +999,26 @@ loadChatScopes()
                         var startTime = Date.now();
                         var keys = chatLog.keys();
                         for (const key of keys) {
-                        var messages = chatLog.get(key);
-                        messages.forEach(function (x) {
-                        gorkblorf.read(x.msg, x.context["user-id"]);
-                        });
+                            var messages = chatLog.get(key);
+                            messages.forEach(function (x) {
+                                gorkblorf.read(x.msg, x.context["user-id"]);
+                            });
                         }
                         var endTime = Date.now();
                         console.log("gorkblorf took " + (endTime - startTime) + " ms");
                         console.log("checked words", gorkblorf.checkedWordCounter);
                     });
 
-                     FileRepository.loadPlugins().then(function (list) {
-                        // list.forEach(function (plugin) {
-                            // import(plugin).then((pl) => {
-                                // console.log(pl);
-                            // });
-                        // });
+                    FileRepository.loadPlugins().then(function (list) {
+                        //add commands to the list
+                        list.forEach(function (plugin) {
+                            for (var command of plugin.commands) {
+                                var commandConstructed = new Command(command);
+	load all the commands and add them to the CommandManager
+								
+								
+                            }
+                        });
                     });
 
                 });

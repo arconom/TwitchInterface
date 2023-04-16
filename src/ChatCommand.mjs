@@ -5,6 +5,8 @@ from './Constants.mjs';
 
 export class ChatCommand {
     constructor(data) {
+        this.description: data.description ?? "";
+        this.lastExecution: data.lastExecution ?? null;
         this.cooldown = data.cooldown ?? 0;
         this.role = data.role ?? Constants.chatRoles.broadcaster;
         this.enabled = data.enabled ?? false;
@@ -19,6 +21,5 @@ export class ChatCommand {
         if (this.cooldown > 1e8) {
             this.cooldown = 1e8;
         }
-
     }
 }

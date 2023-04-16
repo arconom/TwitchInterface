@@ -20,12 +20,12 @@ export const FileRepository = {
         return this.readFileAsync("./data/Users.txt");
     },
 
-    saveChatBotState: function (state) {
-        return this.writeFileAsync("./data/chatBotState.txt", state);
+    saveCommandState: function (state) {
+        return this.writeFileAsync("./data/commandState.txt", state);
     },
 
-    readChatBotState: function () {
-        return this.readFileAsync("./data/chatBotState.txt");
+    readCommandState: function () {
+        return this.readFileAsync("./data/commandState.txt");
     },
 
     saveBookmarkedChannels: function (state) {

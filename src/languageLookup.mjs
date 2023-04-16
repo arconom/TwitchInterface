@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from "path";
 import Trie from './trie.mjs';
 import Dafsa from './dafsa.mjs';
-import Helper from './Helper.mjs';
 import {
     FileRepository
 }
@@ -75,36 +74,36 @@ export default class LanguageLookup {
         return violations;
     }
 
-    getClosestMatch(query) {
-        let matchDistance = Infinity;
-        let match = "";
-        let language = "";
+    // getClosestMatch(query) {
+        // let matchDistance = Infinity;
+        // let match = "";
+        // let language = "";
 
-        Object.keys(this.languageArrays).forEach(lang => {
-            this.languageArrays[lang].forEach(word => {
-                if (Math.abs(word.length - query.length) < 2) {
-                    var d = Helper.getLevenshteinDistance(query, word);
-                    if (d < matchDistance) {
-                        matchDistance = d;
-                        match = word;
-                        language = lang;
-                    }
-                    if (matchDistance == 0) {
-                        return {
-                            word: match,
-                            language: language,
-                            distance: matchDistance
-                        };
-                    }
-                }
-            });
-        });
-        return {
-            word: match,
-            language: language,
-            distance: matchDistance
-        };
-    }
+        // Object.keys(this.languageArrays).forEach(lang => {
+            // this.languageArrays[lang].forEach(word => {
+                // if (Math.abs(word.length - query.length) < 2) {
+                    // var d = Helper.getLevenshteinDistance(query, word);
+                    // if (d < matchDistance) {
+                        // matchDistance = d;
+                        // match = word;
+                        // language = lang;
+                    // }
+                    // if (matchDistance == 0) {
+                        // return {
+                            // word: match,
+                            // language: language,
+                            // distance: matchDistance
+                        // };
+                    // }
+                // }
+            // });
+        // });
+        // return {
+            // word: match,
+            // language: language,
+            // distance: matchDistance
+        // };
+    // }
 
     getClosestMatchTrie(query) {
         let matchDistance = Infinity;

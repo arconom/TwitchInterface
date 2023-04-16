@@ -5,7 +5,6 @@ import Trie from './trie.mjs';
 import LanguageLookup from './languageLookup.mjs';
 import LanguageDetect from "languagedetect";
 import WordEvolver from './wordEvolver.mjs';
-import Helper from './Helper.mjs';
 import Statistics from './statistics.mjs';
 import {
     performance,
@@ -300,7 +299,7 @@ export default class Gorkblorf {
                     match = self.distanceCache.get(word);
                 } else {
                     // console.log("checking distance for word", lowerCaseWord);
-                    var trimmedWord = Helper.removeRepeatedLetters(lowerCaseWord);
+                    var trimmedWord = this.removeRepeatedLetters(lowerCaseWord);
                     match = languageLookup.getClosestMatchTrie(lowerCaseWord).distance;
                     var otherMatch = languageLookup.getClosestMatchTrie(trimmedWord).distance;
 
@@ -353,6 +352,24 @@ export default class Gorkblorf {
             return "";
         }
     }
+
+    removeRepeatedLetters(word) {
+        var deleteIndexes = [];
+
+        var returnMe = [];
+        for (let i = 1; i < word.length; i++) {
+            if (word[i - 1] === word[i]) {
+                deleteIndexes.push(i);
+            } else {
+                returnMe.push(word[i - 1]);
+            }
+        }
+        returnMe.push(word[word.length - 1]);
+
+        return returnMe.join("");
+    }
+
+
 
     /*     // todo delete if unused
     numberToEmojii(num) {
