@@ -127,3 +127,4 @@ dist
 .pnp.*
 data/*
 src/EnglishDefinitions.mjs
+plugins/wordgenerator/src/EnglishDefinitions.mjs

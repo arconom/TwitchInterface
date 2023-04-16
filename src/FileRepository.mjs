@@ -45,14 +45,19 @@ export const FileRepository = {
     },
 
     loadPlugins: function () {
-        var path = "./data/plugins.txt";
+        var path = "./plugins/";
 
-        fs.readdir(path, (err, files) => {
-            files.forEach(file => {
-                console.log(file);
+        return new Promise(function (resolve, reject) {
+            fs.readdir(path, (err, folders) => {
+				console.log("folders", folders);
+                folders.forEach(folder => {
+                    import("../" + path + folder + "/main.mjs").then((pl) => {
+                        console.log("imported plugin", pl);
+                    });
+                });
+                resolve(folders);
             });
         });
-
     },
 
     log: function (message) {

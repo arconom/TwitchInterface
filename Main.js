@@ -1021,14 +1021,14 @@ loadChatScopes()
                         console.log("checked words", gorkblorf.checkedWordCounter);
                     });
 
-/*                     FileRepository.loadPlugins().then(function (list) {
-                        list.forEach(function (plugin) {
-                            import(plugin).then((pl) => {
-                                console.log(pl);
-                            });
-                        });
+                     FileRepository.loadPlugins().then(function (list) {
+                        // list.forEach(function (plugin) {
+                            // import(plugin).then((pl) => {
+                                // console.log(pl);
+                            // });
+                        // });
                     });
- */
+
                 });
             })
         })

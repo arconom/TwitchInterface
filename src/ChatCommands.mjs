@@ -21,6 +21,16 @@ export function ChatCommands({
     oscManager
 }) {
 
+// this is passed into the handler
+/*         {
+            target: target,
+            msg: msg,
+            context: context,
+            "self": isSelf,
+            chatBot: this
+        }
+ */
+
     var returnMe = new Map();
 
     returnMe.set("prenablecommand", {
