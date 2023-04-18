@@ -5,8 +5,9 @@ from './Constants.mjs';
 
 export class ChatCommand {
     constructor(data) {
-        this.description: data.description ?? "";
-        this.lastExecution: data.lastExecution ?? null;
+		this.name = data.name ?? "";
+        this.description = data.description ?? "";
+        this.lastExecution = data.lastExecution ?? null;
         this.cooldown = data.cooldown ?? 0;
         this.role = data.role ?? Constants.chatRoles.broadcaster;
         this.enabled = data.enabled ?? false;

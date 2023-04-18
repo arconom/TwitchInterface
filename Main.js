@@ -58,6 +58,7 @@ import {
 }
 from "./src/Constants.mjs";
 import Gorkblorf from "./src/Gorkblorf.mjs";
+import ChatCommandManager from "./src/ChatCommandManager.mjs";
 
 import {
     open
@@ -100,6 +101,7 @@ var isChatBotRunning = false;
 var isEventSubRunning = false;
 var isPubSubRunning = false;
 var isWebServerRunning = false;
+var globalState = new Map();
 
 var subscriptionConditionState = {
     "broadcaster_user_id": null,
@@ -119,6 +121,10 @@ var subscriptionConditionState = {
 };
 
 //todo figure out a way to fix the maxlisteners error
+
+function setGlobalState(key, value) {
+    globalState.set(key, value);
+}
 
 function loadEventSubscriptions() {
     return FileRepository.loadEventSubscriptions().then(function (data) {
@@ -682,16 +688,15 @@ function initChatBot() {
         return;
     }
 
-    var chatCommands = ChatCommands;
-	load all the commands and add them to the CommandManager
-
-	({
-        wordGenerator: new WordGenerator(),
-        gorkblorf,
+    ChatCommandManager = new ChatCommandManager({
         config,
-        // wordle,
         oscManager
     });
+
+    for (var command of ChatCommands.entries()) {
+        var commandConstructed = new ChatCommand(command[1]);
+        ChatCommandManager.SetCommand(command[0], commandConstructed);
+    }
 
     chatBot = new ChatBot(config.botName, secrets, config.chatDelay, chatCommands);
 
@@ -1012,15 +1017,24 @@ loadChatScopes()
                     FileRepository.loadPlugins().then(function (list) {
                         //add commands to the list
                         list.forEach(function (plugin) {
-                            for (var command of plugin.commands) {
-                                var commandConstructed = new Command(command);
-	load all the commands and add them to the CommandManager
-								
-								
+
+                            if (plugin.load) {
+
+                                plugin?.load(FileRepository.log)
+                                .then(function (loadedPlugin) {
+                                    for (var command of plugin?.commands?.entries()) {
+                                        var commandConstructed = new ChatCommand(command[1]);
+                                        ChatCommandManager.SetCommand(command[0], commandConstructed);
+
+                                        if (plugin.state) {
+                                            // set a global state if the plugin has a state object
+                                            setGlobalState(plugin.name, plugin.state);
+                                        }
+                                    }
+                                });
                             }
                         });
                     });
-
                 });
             })
         })

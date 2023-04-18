@@ -12,7 +12,7 @@ import {
 }
 from "./instruments.mjs";
 
-export default ChatCommands = new Map();
+export var ChatCommands = new Map();
 // this is passed into the handler
 /*         {
 target: String,
@@ -23,7 +23,8 @@ chatBot: Object<ChatBot>
 }
  */
 
-ChatCommands.set("prenablecommand", {
+ChatCommands.set("enablecommand", {
+    name: "enablecommand",
     description: "Enable a command by name",
     cooldown: 0,
     lastExecution: 0,
@@ -40,7 +41,8 @@ ChatCommands.set("prenablecommand", {
     }
 });
 
-ChatCommands.set("prcreatesignup", {
+ChatCommands.set("createsignup", {
+    name: "createsignup",
     description: "Create a signup event",
     cooldown: 0,
     lastExecution: 0,
@@ -70,7 +72,8 @@ ChatCommands.set("prcreatesignup", {
     }
 });
 
-ChatCommands.set("prdeletesignup", {
+ChatCommands.set("deletesignup", {
+    name: "deletesignup",
     description: "Delete a signup event",
     cooldown: 0,
     lastExecution: 0,
@@ -85,7 +88,8 @@ ChatCommands.set("prdeletesignup", {
     }
 });
 
-ChatCommands.set("prsignmeup", {
+ChatCommands.set("signmeup", {
+    name: "signmeup",
     description: "Enter a signup event",
     cooldown: 0,
     lastExecution: 0,
@@ -107,7 +111,8 @@ ChatCommands.set("prsignmeup", {
     }
 });
 
-ChatCommands.set("prdisablecommand", {
+ChatCommands.set("disablecommand", {
+    name: "disablecommand",
     description: "Disable a command",
     cooldown: 0,
     lastExecution: 0,
@@ -124,7 +129,8 @@ ChatCommands.set("prdisablecommand", {
     }
 });
 
-ChatCommands.set("prroll", {
+ChatCommands.set("roll", {
+    name: "roll",
     description: "Roll the dice.  Supports keep high or low, and exploding dice.  Example: 2d6+1 k1h e",
     cooldown: 0,
     lastExecution: 0,
@@ -153,7 +159,8 @@ ChatCommands.set("prroll", {
         }
     }
 });
-ChatCommands.set("prouch", {
+ChatCommands.set("ouch", {
+    name: "ouch",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -167,7 +174,8 @@ ChatCommands.set("prouch", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prmiss", {
+ChatCommands.set("miss", {
+    name: "miss",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -181,7 +189,8 @@ ChatCommands.set("prmiss", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prcrit", {
+ChatCommands.set("crit", {
+    name: "crit",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -202,7 +211,8 @@ ChatCommands.set("prcrit", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prbadidea", {
+ChatCommands.set("badidea", {
+    name: "badidea",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -223,7 +233,8 @@ ChatCommands.set("prbadidea", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("practing", {
+ChatCommands.set("acting", {
+    name: "acting",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -246,7 +257,8 @@ ChatCommands.set("practing", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prfrost", {
+ChatCommands.set("frost", {
+    name: "frost",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -264,7 +276,8 @@ ChatCommands.set("prfrost", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("proops", {
+ChatCommands.set("oops", {
+    name: "oops",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -283,7 +296,8 @@ ChatCommands.set("proops", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prgoodidea", {
+ChatCommands.set("goodidea", {
+    name: "goodidea",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -303,7 +317,8 @@ ChatCommands.set("prgoodidea", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prcritmiss", {
+ChatCommands.set("critmiss", {
+    name: "critmiss",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -324,7 +339,8 @@ ChatCommands.set("prcritmiss", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prcheeseit", {
+ChatCommands.set("cheeseit", {
+    name: "cheeseit",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -345,7 +361,8 @@ ChatCommands.set("prcheeseit", {
         return obj.chatBot.sendMessage(obj.target.substr(1), message);
     }
 });
-ChatCommands.set("prinstrument", {
+ChatCommands.set("instrument", {
+    name: "instrument",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -357,7 +374,8 @@ ChatCommands.set("prinstrument", {
         return obj.chatBot.sendMessage(obj.target.substr(1), msg);
     }
 });
-ChatCommands.set("prgenre", {
+ChatCommands.set("genre", {
+    name: "genre",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -368,7 +386,8 @@ ChatCommands.set("prgenre", {
         return obj.chatBot.sendMessage(obj.target.substr(1), genres[index]);
     }
 });
-ChatCommands.set("prcallit", {
+ChatCommands.set("callit", {
+    name: "callit",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -380,7 +399,8 @@ ChatCommands.set("prcallit", {
         return obj.chatBot.sendMessage(obj.target.substr(1), msg);
     }
 });
-ChatCommands.set("prallit", {
+ChatCommands.set("allit", {
+    name: "allit",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -392,7 +412,8 @@ ChatCommands.set("prallit", {
         return obj.chatBot.sendMessage(obj.target.substr(1), msg);
     }
 });
-ChatCommands.set("prgbstats", {
+ChatCommands.set("gbstats", {
+    name: "gbstats",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -402,7 +423,8 @@ ChatCommands.set("prgbstats", {
         return obj.chatBot.sendMessage(obj.target.substr(1), "@" + obj.context.username + "\r\n " + gorkblorf.getStatisticsMessage(obj.context["user-id"]));
     }
 });
-ChatCommands.set("prdefine", {
+ChatCommands.set("define", {
+    name: "define",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -418,7 +440,8 @@ ChatCommands.set("prdefine", {
         }
     }
 });
-ChatCommands.set("prcword", {
+ChatCommands.set("cword", {
+    name: "cword",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -426,7 +449,8 @@ ChatCommands.set("prcword", {
     enabled: true,
     handler: commonWordHandler
 });
-ChatCommands.set("prcwords", {
+ChatCommands.set("cwords", {
+    name: "cwords",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -434,7 +458,8 @@ ChatCommands.set("prcwords", {
     enabled: true,
     handler: commonWordHandler
 });
-ChatCommands.set("prword", {
+ChatCommands.set("word", {
+    name: "word",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -442,7 +467,8 @@ ChatCommands.set("prword", {
     enabled: true,
     handler: wordHandler
 });
-ChatCommands.set("prwords", {
+ChatCommands.set("words", {
+    name: "words",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -450,7 +476,8 @@ ChatCommands.set("prwords", {
     enabled: true,
     handler: wordHandler
 });
-ChatCommands.set("prdef", {
+ChatCommands.set("def", {
+    name: "def",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -458,7 +485,8 @@ ChatCommands.set("prdef", {
     enabled: true,
     handler: defHandler
 });
-ChatCommands.set("prdefs", {
+ChatCommands.set("defs", {
+    name: "defs",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -466,7 +494,8 @@ ChatCommands.set("prdefs", {
     enabled: true,
     handler: defHandler
 });
-ChatCommands.set("prcwordle", {
+/* ChatCommands.set("cwordle", {
+    name: "cwordle",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -482,7 +511,8 @@ ChatCommands.set("prcwordle", {
         obj.chatBot.sendMessage(obj.target.substr(1), wordle.status());
     }
 });
-ChatCommands.set("prwordle", {
+ChatCommands.set("wordle", {
+    name: "wordle",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -500,7 +530,8 @@ ChatCommands.set("prwordle", {
         obj.chatBot.sendMessage(obj.target.substr(1), wordle.status());
     }
 });
-ChatCommands.set("prguess", {
+ChatCommands.set("guess", {
+    name: "guess",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -519,7 +550,8 @@ ChatCommands.set("prguess", {
         }
     }
 });
-ChatCommands.set("prwordlestatus", {
+ChatCommands.set("wordlestatus", {
+    name: "wordlestatus",
     description: "",
     cooldown: 0,
     lastExecution: 0,
@@ -535,8 +567,7 @@ ChatCommands.set("prwordlestatus", {
         }
     }
 });
-
-
+ */
 function defHandler(obj) {
     var wordCount = parseInt(obj.args);
     var words = [];

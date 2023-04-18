@@ -6,13 +6,12 @@ export default class ChatCommandManager {
     //this means that if you want a command to do two things,
     //just put those things in one function and then set it
 
-    constructor(wordGenerator, gorkblorf, config, oscManager) {
+    constructor(config, oscManager) {
         var self = this;
-        this.wordGenerator = wordGenerator;
-        this.gorkblorf = gorkblorf;
         this.config = config;
         this.oscManager = oscManager;
         this.commands = new Map();
+        this.pluginState = new Map();
 
         FileRepository.readCommandState().then(function (data) {
             try {
@@ -24,7 +23,6 @@ export default class ChatCommandManager {
                 //no state data saved
             }
         });
-
     }
 
     setCommand(name, command) {
@@ -35,6 +33,14 @@ export default class ChatCommandManager {
 
     removeCommand(name) {
         this.commands.delete(name);
+    }
+
+    setPluginState(key, value) {
+        this.pluginState.set(key, value);
+    }
+
+    removePluginState(key) {
+        this.pluginState.delete(key);
     }
 
     createCommandState(state) {

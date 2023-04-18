@@ -6,7 +6,6 @@ import {
     CommonEnglishWords
 }
 from "./CommonEnglishWords.mjs";
-import Common from '../../common/Main.mjs';
 
 var bannedTags = ["slang",
     "offensive",
@@ -136,7 +135,7 @@ console.log("EnglishDefinitions", EnglishDefinitions);
         var returnMe = Infinity;
 
         list.forEach(x => {
-            var d = Common.getLevenshteinDistance(word, x);
+            var d = getLevenshteinDistance(word, x);
 
             if (d < returnMe) {
                 returnMe = d;
@@ -233,5 +232,44 @@ console.log("EnglishDefinitions", EnglishDefinitions);
 
         return this.getPrefixedWordsFromList(keys, letter, size);
     }
+
+    getLevenshteinDistance(a, b) {
+        var prev = [];
+        var current = [];
+        for (let i = 0; i < b.length + 1; i++) {
+            prev.push(i);
+        }
+
+        for (let i = 0; i < a.length; i++) {
+            current[0] = i + 1;
+
+            for (let j = 0; j < b.length; j++) {
+                let substituteCost = null;
+                let deleteCost = prev[j + 1] + 1;
+                let insertCost = current[j] + 1;
+
+                if (a[i] === b[j]) {
+                    substituteCost = prev[j];
+                } else {
+                    substituteCost = prev[j] + 1;
+                }
+
+                current[j + 1] = substituteCost;
+
+                if (deleteCost < current[j + 1]) {
+                    current[j + 1] = deleteCost;
+                }
+                if (insertCost < current[j + 1]) {
+                    current[j + 1] = insertCost;
+                }
+
+            }
+            let temp = current;
+            current = prev;
+            prev = temp;
+        }
+        return prev[b.length];
+    }
+
 
 }
