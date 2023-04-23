@@ -22,6 +22,10 @@ import {
 }
 from "./src/ChatScopes.mjs";
 import {
+    ChatCommand
+}
+from "./src/ChatCommand.mjs";
+import {
     ChatCommands
 }
 from "./src/ChatCommands.mjs";
@@ -70,7 +74,6 @@ process.on('warning', (warning) => {
     FileRepository.log(warning.message); // Print the warning message
     FileRepository.log(warning.stack); // Print the stack trace
 });
-
 var activeApiScopes = [];
 var activeChatScopes = [];
 var botUserInfo;
@@ -102,6 +105,7 @@ var isEventSubRunning = false;
 var isPubSubRunning = false;
 var isWebServerRunning = false;
 var globalState = new Map();
+var chatCommandManager = null;
 
 var subscriptionConditionState = {
     "broadcaster_user_id": null,
@@ -181,7 +185,15 @@ function loadChatScopes() {
 
 function loadSecrets() {
     FileRepository.log("loadSecrets ");
-    return FileRepository.loadSecrets();
+    return FileRepository.loadSecrets().then(function (data) {
+        var d = null;
+        try {
+            d = JSON.parse(data);
+        } catch (e) {
+            //no data in the file
+        }
+        secrets = new Secrets(d);
+    });
 }
 
 function startWebServer() {
@@ -688,17 +700,12 @@ function initChatBot() {
         return;
     }
 
-    ChatCommandManager = new ChatCommandManager({
-        config,
-        oscManager
-    });
-
     for (var command of ChatCommands.entries()) {
         var commandConstructed = new ChatCommand(command[1]);
-        ChatCommandManager.SetCommand(command[0], commandConstructed);
+        chatCommandManager.setCommand(command[0], commandConstructed);
     }
 
-    chatBot = new ChatBot(config.botName, secrets, config.chatDelay, chatCommands);
+    chatBot = new ChatBot(config.botName, secrets, config.chatDelay, chatCommandManager);
 
     chatBot.AddHandler("message", function (x) {
         // console.log("chatbot message", x);
@@ -892,151 +899,140 @@ function startPubSub() {
 }
 
 loadChatScopes()
+.then(loadApiScopes)
+.then(loadConfig)
+.then(loadSecrets)
 .then(function () {
-    FileRepository.log("loadChatScopes");
-    return loadApiScopes()
-    .then(function () {
-        FileRepository.log("loadApiScopes");
-        return loadConfig()
-        .then(function () {
-            FileRepository.log("loadConfig");
-            oscManager = new OscManager(config.oscClientAddress, config.oscClientPort, config.oscServerAddress, config.oscServerPort);
+    oscManager = new OscManager(config.oscClientAddress, config.oscClientPort, config.oscServerAddress, config.oscServerPort);
+    chatCommandManager = new ChatCommandManager({
+        config,
+        oscManager
+    });
+})
+.then(loadOscMappings)
+.then(function () {
 
-            return loadOscMappings()
-            .then(function () {
-                FileRepository.log("loadOscMappings");
-                return loadSecrets()
-                .then(async function (data) {
-                    var d = null;
-                    try {
-                        d = JSON.parse(data);
-                    } catch (e) {
-                        //no data in the file
-                    }
-                    secrets = new Secrets(d);
+    // FileRepository.log("secrets loaded", data);
+    subscriptionConditionState["client_id"] = secrets.clientId;
 
-                    startWebServer();
-                    var promises = [];
-                    // FileRepository.log("secrets loaded", data);
-                    subscriptionConditionState["client_id"] = secrets.clientId;
+    FileRepository.log("scopes " + activeApiScopes.concat(activeChatScopes));
 
-                    FileRepository.log("scopes " + activeApiScopes.concat(activeChatScopes));
+    //todo client id missing error when txt file missing
+    oAuthProvider = new OAuthProvider(config.redirectUri, config.listenerPort, secrets, config.preferredBrowser, activeApiScopes.concat(activeChatScopes));
+    twitchAPIProvider = new TwitchAPIProvider(oAuthProvider);
 
-                    //todo client id missing error when txt file missing
-                    oAuthProvider = new OAuthProvider(config.redirectUri, config.listenerPort, secrets, config.preferredBrowser, activeApiScopes.concat(activeChatScopes));
-                    twitchAPIProvider = new TwitchAPIProvider(oAuthProvider);
+    new Promise(function (resolve, reject) {
+        twitchAPIProvider
+        .getUserInfo(config.broadcasterUsername,
+            function (data) {
+            FileRepository.log("initializing user data", twitchAPIProvider.user);
+            subscriptionConditionState.broadcaster_user_id = twitchAPIProvider.user[0].id;
+            subscriptionConditionState.user_id = twitchAPIProvider.user[0].id;
+            resolve(data);
+        });
+    });
 
-                    new Promise(function (resolve, reject) {
-                        twitchAPIProvider
-                        .getUserInfo(config.broadcasterUsername,
-                            function (data) {
-                            FileRepository.log("initializing user data", twitchAPIProvider.user);
-                            subscriptionConditionState.broadcaster_user_id = twitchAPIProvider.user[0].id;
-                            subscriptionConditionState.user_id = twitchAPIProvider.user[0].id;
-                            resolve(data);
-                        });
-                    });
+    new Promise(function (resolve, reject) {
+        twitchAPIProvider
+        .getUserInfo(config.botName,
+            function (data) {
+            FileRepository.log("initializing user data", twitchAPIProvider.user);
+            botUserInfo = twitchAPIProvider.user[0];
+            resolve(data);
+        });
+    });
 
-                    new Promise(function (resolve, reject) {
-                        twitchAPIProvider
-                        .getUserInfo(config.botName,
-                            function (data) {
-                            FileRepository.log("initializing user data", twitchAPIProvider.user);
-                            botUserInfo = twitchAPIProvider.user[0];
-                            resolve(data);
-                        });
-                    });
-
-                    FileRepository.readUsers()
-                    .then(function (data) {
-                        // FileRepository.log("got users " + data);
-                        users = new Map(JSON.parse(data));
-                    })
-                    .catch(function () {
-                        //no file
-                    });
-                    loadEventSubscriptions();
-                    twitchAPIProvider.getSubscriptions(null, function (data) {
-                        if (data?.length > 0) {
-                            FileRepository.log("EventSub already running at startup");
-                            isEventSubRunning = true;
-                        }
-                    });
-
-                    FileRepository.log("Gorkblorf is reading the chat log.  This takes a while.");
-
-                    FileRepository.loadChatMessages(
-                        function (msg) {
-                        var obj = JSON.parse(msg);
-                        var channelName = obj.target.substr(1);
-                        var messageList = chatLog.get(channelName);
-
-                        if (messageList?.length > 0) {
-                            messageList.push(obj);
-                        } else {
-                            messageList = [obj];
-                        }
-                        chatLog.set(channelName, messageList);
-                    })
-                    .then(async function (data) {
-
-                        //loading the text takes a long time because of levenshtein distance,
-                        //so we do it in another thread
-                        var worker = new Worker("./src/loadGorkblorf.js", {
-                            workerData: {
-                                chatLog: chatLog,
-                                gorkblorf: gorkblorf
-                            }
-                        });
-
-                        worker.on('message', function (data) {
-                            // console.log("message data", data);
-                            gorkblorf = new Gorkblorf(data.gorkblorf);
-                        });
-                        worker.on('error', function (err) {
-                            console.log("error", err);
-                        });
-                        worker.on('exit', (code) => {
-                            if (code !== 0)
-                                console.log(`Worker stopped with exit code ${code}`);
-                        });
-
-                        var startTime = Date.now();
-                        var keys = chatLog.keys();
-                        for (const key of keys) {
-                            var messages = chatLog.get(key);
-                            messages.forEach(function (x) {
-                                gorkblorf.read(x.msg, x.context["user-id"]);
-                            });
-                        }
-                        var endTime = Date.now();
-                        console.log("gorkblorf took " + (endTime - startTime) + " ms");
-                        console.log("checked words", gorkblorf.checkedWordCounter);
-                    });
-
-                    FileRepository.loadPlugins().then(function (list) {
-                        //add commands to the list
-                        list.forEach(function (plugin) {
-
-                            if (plugin.load) {
-
-                                plugin?.load(FileRepository.log)
-                                .then(function (loadedPlugin) {
-                                    for (var command of plugin?.commands?.entries()) {
-                                        var commandConstructed = new ChatCommand(command[1]);
-                                        ChatCommandManager.SetCommand(command[0], commandConstructed);
-
-                                        if (plugin.state) {
-                                            // set a global state if the plugin has a state object
-                                            setGlobalState(plugin.name, plugin.state);
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    });
-                });
-            })
-        })
+    FileRepository.readUsers()
+    .then(function (data) {
+        // FileRepository.log("got users " + data);
+        users = new Map(JSON.parse(data));
     })
+    .catch(function () {
+        //no file
+    });
+    loadEventSubscriptions();
+    twitchAPIProvider.getSubscriptions(null, function (data) {
+        if (data?.length > 0) {
+            FileRepository.log("EventSub already running at startup");
+            isEventSubRunning = true;
+        }
+    });
+
+    FileRepository.loadPlugins(function (plugin) {
+		
+        //add commands to the list
+        if (plugin?.default.load) {
+        console.log("loading plugin", plugin.default.name);
+            plugin.default.load(FileRepository.log)
+            .then(function (loadedPlugin) {
+                for (var command of plugin?.default.commands?.entries()) {
+                    var commandConstructed = new ChatCommand(command[1]);
+                    chatCommandManager.setCommand(command[0], commandConstructed);
+
+                    if (plugin.default.state) {
+                        // set a global state if the plugin has a state object
+                        setGlobalState(plugin.default.name, plugin.default.state);
+                    }
+                }
+            });
+        }
+		else{
+			console.log("plugin has no load function", plugin.default);
+		}
+    });
+
+})
+.then(startWebServer)
+.then(async function () {
+    FileRepository.log("Gorkblorf is reading the chat log.  This takes a while.");
+
+    FileRepository.loadChatMessages(
+        function (msg) {
+        var obj = JSON.parse(msg);
+        var channelName = obj.target.substr(1);
+        var messageList = chatLog.get(channelName);
+
+        if (messageList?.length > 0) {
+            messageList.push(obj);
+        } else {
+            messageList = [obj];
+        }
+        chatLog.set(channelName, messageList);
+    })
+    .then(async function (data) {
+
+        //loading the text takes a long time because of levenshtein distance,
+        //so we do it in another thread
+        var worker = new Worker("./src/loadGorkblorf.js", {
+            workerData: {
+                chatLog: chatLog,
+                gorkblorf: gorkblorf
+            }
+        });
+
+        worker.on('message', function (data) {
+            // console.log("message data", data);
+            gorkblorf = new Gorkblorf(data.gorkblorf);
+        });
+        worker.on('error', function (err) {
+            console.log("error", err);
+        });
+        worker.on('exit', (code) => {
+            if (code !== 0)
+                console.log(`Worker stopped with exit code ${code}`);
+        });
+
+        var startTime = Date.now();
+        var keys = chatLog.keys();
+        for (const key of keys) {
+            var messages = chatLog.get(key);
+            messages.forEach(function (x) {
+                gorkblorf.read(x.msg, x.context["user-id"]);
+            });
+        }
+        var endTime = Date.now();
+        console.log("gorkblorf took " + (endTime - startTime) + " ms");
+        console.log("checked words", gorkblorf.checkedWordCounter);
+    });
+
 });

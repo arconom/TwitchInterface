@@ -27,7 +27,7 @@ ChatCommands.set("enablecommand", {
     name: "enablecommand",
     description: "Enable a command by name",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.moderator,
     enabled: true,
     handler: function (obj) {
@@ -45,7 +45,7 @@ ChatCommands.set("createsignup", {
     name: "createsignup",
     description: "Create a signup event",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.moderator,
     enabled: true,
     handler: function (obj) {
@@ -76,7 +76,7 @@ ChatCommands.set("deletesignup", {
     name: "deletesignup",
     description: "Delete a signup event",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.moderator,
     enabled: true,
     handler: function (obj) {
@@ -92,7 +92,7 @@ ChatCommands.set("signmeup", {
     name: "signmeup",
     description: "Enter a signup event",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.moderator,
     enabled: true,
     handler: function (obj) {
@@ -115,7 +115,7 @@ ChatCommands.set("disablecommand", {
     name: "disablecommand",
     description: "Disable a command",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.moderator,
     enabled: true,
     handler: function (obj) {
@@ -133,7 +133,7 @@ ChatCommands.set("roll", {
     name: "roll",
     description: "Roll the dice.  Supports keep high or low, and exploding dice.  Example: 2d6+1 k1h e",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -163,7 +163,7 @@ ChatCommands.set("ouch", {
     name: "ouch",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -178,7 +178,7 @@ ChatCommands.set("miss", {
     name: "miss",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -193,7 +193,7 @@ ChatCommands.set("crit", {
     name: "crit",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -215,7 +215,7 @@ ChatCommands.set("badidea", {
     name: "badidea",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -237,7 +237,7 @@ ChatCommands.set("acting", {
     name: "acting",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -261,7 +261,7 @@ ChatCommands.set("frost", {
     name: "frost",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -280,7 +280,7 @@ ChatCommands.set("oops", {
     name: "oops",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -300,7 +300,7 @@ ChatCommands.set("goodidea", {
     name: "goodidea",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -321,7 +321,7 @@ ChatCommands.set("critmiss", {
     name: "critmiss",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -343,7 +343,7 @@ ChatCommands.set("cheeseit", {
     name: "cheeseit",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -365,7 +365,7 @@ ChatCommands.set("instrument", {
     name: "instrument",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -378,7 +378,7 @@ ChatCommands.set("genre", {
     name: "genre",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -390,7 +390,7 @@ ChatCommands.set("callit", {
     name: "callit",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -403,7 +403,7 @@ ChatCommands.set("allit", {
     name: "allit",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -416,7 +416,7 @@ ChatCommands.set("gbstats", {
     name: "gbstats",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -427,7 +427,7 @@ ChatCommands.set("define", {
     name: "define",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -444,7 +444,7 @@ ChatCommands.set("cword", {
     name: "cword",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: commonWordHandler
@@ -453,7 +453,7 @@ ChatCommands.set("cwords", {
     name: "cwords",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: commonWordHandler
@@ -462,7 +462,7 @@ ChatCommands.set("word", {
     name: "word",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: wordHandler
@@ -471,7 +471,7 @@ ChatCommands.set("words", {
     name: "words",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: wordHandler
@@ -480,7 +480,7 @@ ChatCommands.set("def", {
     name: "def",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: defHandler
@@ -489,7 +489,7 @@ ChatCommands.set("defs", {
     name: "defs",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: defHandler
@@ -498,7 +498,7 @@ ChatCommands.set("defs", {
     name: "cwordle",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -515,7 +515,7 @@ ChatCommands.set("wordle", {
     name: "wordle",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -534,7 +534,7 @@ ChatCommands.set("guess", {
     name: "guess",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {
@@ -554,7 +554,7 @@ ChatCommands.set("wordlestatus", {
     name: "wordlestatus",
     description: "",
     cooldown: 0,
-    lastExecution: 0,
+    
     role: Constants.chatRoles.viewer,
     enabled: true,
     handler: function (obj) {

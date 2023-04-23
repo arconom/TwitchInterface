@@ -44,18 +44,16 @@ export const FileRepository = {
         return this.readFileAsync("./data/OAuth.txt");
     },
 
-    loadPlugins: function () {
+    loadPlugins: function (importedCallback) {
         var path = "./plugins/";
 
-        return new Promise(function (resolve, reject) {
-            fs.readdir(path, (err, folders) => {
-				console.log("folders", folders);
-                folders.forEach(folder => {
-                    import("../" + path + folder + "/main.mjs").then((pl) => {
-                        console.log("imported plugin", pl);
-                    });
+        fs.readdir(path, (err, folders) => {
+            console.log("folders", folders);
+            folders.forEach(folder => {
+                import("../" + path + folder + "/main.mjs")
+                .then(function (d) {
+                    importedCallback(d)
                 });
-                resolve(folders);
             });
         });
     },

@@ -1,3 +1,22 @@
+import {
+    Constants
+}
+from "./Constants.mjs";
+
+import {
+    ChatCommand
+}
+from "./ChatCommand.mjs";
+
+import {
+    FileRepository
+}
+from "./FileRepository.mjs";
+import {
+    TwitchChatMessageContext
+}
+from './TwitchChatMessageContext.mjs';
+
 export default class ChatCommandManager {
 
     //manage a map of commands, each of which can have its own state per channel
@@ -7,11 +26,16 @@ export default class ChatCommandManager {
     //just put those things in one function and then set it
 
     constructor(config, oscManager) {
+        // config = Object<Config>
+        // oscManager = Object<OscManager>
+        // chatBot = Object<ChatBot>
         var self = this;
+        this.chatBot;
         this.config = config;
         this.oscManager = oscManager;
         this.commands = new Map();
         this.pluginState = new Map();
+        this.commandState = new Map();
 
         FileRepository.readCommandState().then(function (data) {
             try {
@@ -26,9 +50,10 @@ export default class ChatCommandManager {
     }
 
     setCommand(name, command) {
+		console.log("ChatCommandManager.setCommand", name);
         //name = String
         //command = Object<Command>
-        this.commands.set(name, new Command(command));
+        this.commands.set(name, new ChatCommand(command));
     }
 
     removeCommand(name) {
@@ -43,39 +68,31 @@ export default class ChatCommandManager {
         this.pluginState.delete(key);
     }
 
-    createCommandState(state) {
-        //state = Object
-        var stateId = crypto.randomUUID();
-        this.commandState.set(stateId, state);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
-        return stateId;
-    }
-
-    createChannelCommandState(channel, state) {
-        this.commandState.set(channel, state);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
-    }
-
     getCommandState(id) {
         return this.commandState.get(id);
     }
 
     setCommandState(id, state) {
-        var state = this.commandState.set(id, state);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
+        this.commandState.set(id, state);
+        FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
 
     deleteCommandState(id) {
         this.commandState.delete(id);
-        FileRepository.saveChatBotState(Array.from(this.commandState.entries()));
+        FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
 
-    processCommand(obj) {
+    getStateKey(obj, command) {
+        return obj.target + command.name;
+
+    }
+
+    getCommandResult(obj) {
 
         //obj = {
         // target: String,
         // msg: String,
-        // context: Object,
+        // context: TwitchChatMessageContext,
         // "self": boolean,
         // chatBot: Object<ChatBot>
         // }
@@ -86,28 +103,34 @@ export default class ChatCommandManager {
         var match = commandName.match(Constants.commandRegex);
 
         if (match?.index === 0 && match[1]?.length > 0) {
-            var commandObject = this.commands.get(match[1]);
-            // FileRepository.log("processCommand commands " + Array.from(this.commands.entries()).join("\r\n"));
-            // FileRepository.log("processCommand match " + match);
-            // FileRepository.log("processCommand command " + JSON.stringify(commandObject));
-            // FileRepository.log("processCommand enabled " + commandObject?.enabled);
-            // FileRepository.log("processCommand role " + this.hasRole(obj.context, commandObject?.role));
+            var chatCommand = this.commands.get(match[1]);
+			if(!chatCommand){
+				return "No such command";
+			}
+			var key = self.getStateKey(obj, chatCommand);
+			
+            var commandState = self.getCommandState(key);
 
-            if (commandObject?.enabled && this.hasRole(obj.context, commandObject?.role)) {
+            if (!commandState) {
+                commandState = {};
+            }
 
-                // FileRepository.log("processCommand checking cooldown");
-                if (commandObject.lastExecution + commandObject.cooldown < Date.now()) {
-                    // FileRepository.log("processCommand running command");
-                    commandObject.lastExecution = Date.now();
-                    obj.args = match[2];
-                    // console.log("processCommand sending Message");
-                    return self.sendMessage(obj.target.substr(1), commandObject.handler(obj));
-                } else {
-                    // console.log("processCommand debounced", commandObject.lastExecution, commandObject.cooldown);
-                    return self.sendMessage(obj.target.substr(1), "Wait for command to cool down in " +
-                        (commandObject.lastExecution + commandObject.cooldown - Date.now()) +
-                        " ms");
-                }
+            if (!chatCommand?.enabled) {
+                return "This command is disabled";
+            }
+            if (!self.hasRole(obj.context, chatCommand?.role)) {
+                return "You do not have the role required to run this command";
+            }
+            if ((commandState.lastExecution ?? -Infinity) + chatCommand.cooldown < Date.now()) {
+                obj.args = match[2];
+                commandState.executionCount = (commandState.executionCount ?? 0) + 1;
+                commandState.lastExecution = Date.now();
+                self.setCommandState(key, commandState);
+                return chatCommand.handler(obj);
+            } else {
+                return "Wait for command to cool down in " +
+                (chatCommand.lastExecution + chatCommand.cooldown - Date.now()) +
+                " ms";
             }
         }
     }

@@ -9,9 +9,9 @@ import {
 }
 from './Secrets.mjs';
 import {
-    exec
+    TwitchChatMessageContext
 }
-from 'child_process';
+from './TwitchChatMessageContext.mjs';
 import {
     FileRepository
 }
@@ -46,7 +46,11 @@ export default class ChatBot extends HandlerMap {
             instance.onMessageHandler.call(instance, target, context, msg, isSelf);
         });
         this.AddHandler("message", function (x) {
-            instance.processCommand(x);
+            var commandMessage = instance.commandManager.getCommandResult(x);
+
+            if (commandMessage?.length > 0) {
+                instance.sendMessage(x.target.substr(1), commandMessage);
+            }
         }, true);
         this.client.on('connected', function (address, port) {
             instance.onConnectedHandler.call(instance, address, port);
@@ -88,7 +92,7 @@ export default class ChatBot extends HandlerMap {
 
     // Called every time a message comes in
     onMessageHandler(target, context, msg, isSelf) {
-
+        var self = this;
         //example message
         /*
         interpreting chat
@@ -142,9 +146,9 @@ export default class ChatBot extends HandlerMap {
         this.ExecuteHandlers("message", {
             target: target,
             msg: msg,
-            context: context,
+            context: new TwitchChatMessageContext(context),
             "self": isSelf,
-            chatBot: this
+            chatBot: self
         });
     }
 
