@@ -5,20 +5,25 @@ import {
 from "../../src/Constants.mjs";
 var plugin = {
     name: "Wordle",
+
+    //commands is a map of keys and functions that take an object as a parameter and return a string
+    // {
+    // target: target,
+    // msg: msg,
+    // context: new TwitchChatMessageContext(context),
+    // "self": isSelf,
+    // chatBot: self
+    // }
+
     commands: new Map(),
-    load: function (log) {
-            console.log("wordle.load");
-        //log = function(string)
+    load: function (log /**/) {
+        // this function will be called by Main.js in the app
+        //load whatever dependencies you need in here and do setup
+
         //we need the wordgenerator plugin to run this
         return import("../wordgenerator/Main.mjs")
         .then(function (module) {
-            console.log("WordGenerator", module);
             var wordGenerator = new module.default();
-
-            // plugin.commandState = {
-            // wordGenerator: wordGenerator
-            // };
-
             plugin.commands.set("prcwordle", {
                 description: "",
                 cooldown: 0,
