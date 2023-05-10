@@ -2,10 +2,6 @@ import fs from 'fs';
 import path from "path";
 import Trie from './trie.mjs';
 import Dafsa from './dafsa.mjs';
-import {
-    FileRepository
-}
-from "./FileRepository.mjs";
 
 export default class LanguageLookup {
 

@@ -94,11 +94,16 @@ export default class WebServer {
                             handlerResult
                             ?.then(function (data) {
 
-                                // FileRepository.log("WebServer.start GET request returning", data);
-                                res.statusCode = 200;
-                                res.setHeader("Content-Type", "application/json");
-                                if (data) {
-                                    res.write(JSON.stringify(data))
+                                if (typeof data === "error") {
+                                    res.statusCode = data.statusCode;
+                                    res.write(data.message);
+                                } else {
+                                    // FileRepository.log("WebServer.start GET request returning", data);
+                                    res.statusCode = 200;
+                                    res.setHeader("Content-Type", "application/json");
+                                    if (data) {
+                                        res.write(JSON.stringify(data))
+                                    }
                                 }
                                 // FileRepository.log("WebServer.start end request " + req.url);
                                 res.end();

@@ -20,6 +20,7 @@
 					<v-tab value="api">Twitch API</v-tab>
 					<v-tab value="users">Users</v-tab>
 					<v-tab value="events">Events</v-tab>
+					<v-tab value="plugins">Plugins</v-tab>
 					<v-tab value="osc">OSC</v-tab>
 					<v-tab value="config">Config</v-tab>
 					<v-tab value="secrets">Secrets</v-tab>
@@ -64,7 +65,7 @@
 									<v-expansion-panel-title>
 										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatScopes">Save</v-btn>
 										Chat Scopes
-										"./chatscopes.txt"
+										"./data/chatscopes.txt"
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
 										<v-checkbox v-for="(item, i) in chatScopesDisplay" :key="i" @click="setChatScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
@@ -72,12 +73,59 @@
 								</v-expansion-panel>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatScopes">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandState">Save</v-btn>
 										Chat Command State
-										"./chatcommandstate.txt"
+										"./data/commandstate.json"
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
-										<v-checkbox v-for="(item, i) in chatCommandStateDisplay" :key="i" @click="setChatScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
+										<v-checkbox v-for="(item, i) in chatCommandStateDisplay" :key="i" 
+										@click="setChatScopes(item.name,!item.value)" 
+										v-model="item.value" 
+										:label="item.name  + ' - ' + item.description"/>
+										<v-btn style="width: calc(20% - 2em);" 
+										color="error" 
+										id="btnDeleteChatCommandState" 
+										@click="DeleteChatCommandState(i)"><v-icon icon="mdi-delete" /></v-btn>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandConfig">Save</v-btn>
+										Chat Command Config
+										"./data/commandconfig.json"
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+										<v-text-field placeholder="Search" 
+											@click="searchClickHandler"
+											v-model="searchChatCommandConfig"></v-text-field>
+									<v-row v-for="(item, i) in chatCommandConfigDisplay" :key="i" >
+										<v-col cols="1" sm="12">
+											<v-checkbox @change="updateChatCommandConfig(item.key, item)" 
+											v-model="item.enabled" />
+										</v-col>
+										<v-col cols="4" sm="6">
+											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
+											label="key" 
+											v-model="item.key"></v-text-field>
+										</v-col>
+										<v-col cols="3" sm="6">
+											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
+											type="number" 
+											label="cooldown (in seconds)" 
+											v-model="item.cooldownSeconds" ></v-text-field>
+										</v-col>
+										<v-col cols="4" sm="6">
+											<v-select @update:model-value="updateChatCommandConfig(item.key, item)" 
+											v-model="item.role" 
+											:items="roles" 
+											label="Role" ></v-select>
+										</v-col>
+										<v-col cols="12" sm="12">
+											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
+											label="description" 
+											v-model="item.description"></v-text-field>
+										</v-col>
+									</v-row>
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 							</v-expansion-panels>
@@ -111,8 +159,12 @@
 										<v-btn style="margin-right: 2em;" color="primary" @click="saveApiScopes">Save</v-btn>
 										API Scopes
 										"./apiscopes.txt"
+
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
+										<v-text-field placeholder="Search" 
+											@click="searchClickHandler"
+											v-model="searchApiScopes"></v-text-field>
 										<v-checkbox v-for="(item, i) in apiScopesDisplay" :key="i" @click="setApiScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
 									</v-expansion-panel-text>
 								</v-expansion-panel>
@@ -121,12 +173,14 @@
 					</v-window-item>
 					<v-window-item value="users">
 						<v-container>
-						
 						<v-card>
-						
-						<v-card-title>Saved Users</v-card-title>
+						<v-card-title>Saved Users
+						</v-card-title>
 						<v-card-subtitle>You can copy their id to use for Twitch API requests</v-card-subtitle>
 						<v-card-text>
+							<v-text-field placeholder="Search" 
+								@click="searchClickHandler"
+								v-model="searchUsers"></v-text-field>
 						
 							<div v-if="users.length === 0">
 								No users saved.  Use the Get User Info API end point to save a user.
@@ -162,11 +216,36 @@
 								</v-col>
 
 							</v-row>
+							<div>Entries here are saved to "./data/users.json"</div>
 						</v-card-text>
 						</v-card>
 							
 						</v-container>
 					</v-window-item>					
+					<v-window-item value="plugins">
+						<v-container>
+								<v-expansion-panels>
+									<v-expansion-panel>
+										<v-expansion-panel-title>
+											<v-btn style="margin-right: 2em;" color="primary" @click="savePluginConfig">Save</v-btn>
+												Plugins
+										</v-expansion-panel-title>
+										<v-expansion-panel-text>
+											<v-text-field placeholder="Search" 
+											@click="searchClickHandler"
+											v-model="searchPlugins"></v-text-field>
+											<v-checkbox v-for="(item, i) in pluginConfigDisplay" :key="i" 
+												@click="setPluginConfig(item[0],!item[1])" 
+												:label="item[0]"
+												v-model="item[1]"
+												/>
+										</v-expansion-panel-text>
+									</v-expansion-panel>
+								</v-expansion-panels>
+							<div>Entries here are saved to "./data/pluginConfig.json"</div>
+							<div>Restart the bot to pick up changes here.</div>
+						</v-container>
+					</v-window-item>
 
 					<v-window-item value="events">
 						<v-container>
@@ -202,20 +281,25 @@
 									<v-expansion-panel-title>
 										<v-btn style="margin-right: 2em;" color="primary" @click="saveEventSubscriptions">Save</v-btn>
 							Event Subscriptions
+
 							</v-expansion-panel-title>
 									<v-expansion-panel-text>
-									<v-row v-for="(item, i) in eventSubscriptionsDisplay">
-										<v-col cols="10">
-											<v-checkbox :key="i" 
-											@click="setEventSubscription(item.name, i, !item.value)" 
-											v-model="item.value"
-											:label="item.name"/>
-										</v-col>
-										<v-col cols="1">
-											<v-btn @click="removeEventSubscription(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
-										</v-col>
-									</v-row>
+										<v-text-field placeholder="Search" 
+											@click="searchClickHandler"
+											v-model="searchEvents"></v-text-field>
+										<v-row v-for="(item, i) in eventSubscriptionsDisplay">
+											<v-col cols="10">
+												<v-checkbox :key="i" 
+												@click="setEventSubscription(item.name, i, !item.value)" 
+												v-model="item.value"
+												:label="item.name"/>
+											</v-col>
+											<v-col cols="1">
+												<v-btn @click="removeEventSubscription(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
+											</v-col>
+										</v-row>
 									</v-expansion-panel-text>
+									<div>Entries here are saved to"./data/EventSubscriptions.json"</div>
 								</v-expansion-panel>
 								</v-expansion-panels>
 						</v-container>
@@ -226,15 +310,18 @@
 								<v-expansion-panel>
 									<v-expansion-panel-title>
 										<v-btn style="margin-right: 2em;" color="primary" @click="saveOscMappings">Save</v-btn>
-							OSC Mappings
-							</v-expansion-panel-title>
+										OSC Mappings
+									</v-expansion-panel-title>
 									<v-expansion-panel-text>
+										<v-text-field placeholder="Search" 
+											@click="searchClickHandler"
+											v-model="searchOscMappings"></v-text-field>
+
 										<v-checkbox v-for="(item, i) in oscMappingsDisplay" :key="i" @click="setOscEvent(item.name,!item.value)" v-model="item.value" :label="item.name"/>
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 								</v-expansion-panels>
-							<div>OSC mappings are saved to "./OscMappings.txt"</div>
-							<div>Event subscriptions are saved to "./EventSubscriptions.txt"</div>
+							<div>Entries here are saved to "./data/OscMappings.txt"</div>
 						</v-container>
 					</v-window-item>
 					<v-window-item value="config">
@@ -260,7 +347,7 @@
 							</v-row>
 							<v-list>
 								<v-list-item>
-									<div>Entries here are saved to "./config.txt"</div>
+									<div>Entries here are saved to "./data/config.json"</div>
 								</v-list-item>
 							</v-list>
 						</v-container>
@@ -295,7 +382,7 @@
 								<a href="https://twitchapps.com/tmi">Get your tmi password here</a>
 							</v-list-item>
 							<v-list-item>
-							<div>Entries here are saved to "./secrets.txt"</div>
+							<div>Entries here are saved to "./data/secrets.txt"</div>
 							</v-list-item>
 							
 							</v-list>

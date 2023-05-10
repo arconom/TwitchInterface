@@ -16,48 +16,90 @@ import {
     FileRepository
 }
 from "./FileRepository.mjs";
+import {
+    ChatCommand
+}
+from "./ChatCommand.mjs";
+import {
+    ChatCommands
+}
+from "./ChatCommands.mjs";
+import ChatCommandManager from "./ChatCommandManager.mjs";
 
 export default class ChatBot extends HandlerMap {
-    constructor(username, secrets, chatDelay, commandManager) {
+    constructor(config, secrets, oscManager) {
         // console.log("ChatBot.ctor " + commands);
         super();
         var self = this;
+        self.config = config;
+        self.oscManager = oscManager;
+		self.username = config.botName;
         secrets = new Secrets(secrets);
-        var instance = this;
-        this.commandManager = commandManager;
-
         // Define configuration options
-        const opts = {
+        self.tmiOptions = {
             identity: {
-                username: username,
+                username: config.botName,
                 password: secrets.tmi
             }
         };
+		
+		console.log("ChatBot.tmiOptions", JSON.stringify(self.tmiOptions));
+		
+        self.commandState = new Map();
+        self.channels = new Set();
+        self.chatCommandManager = new ChatCommandManager({
+            config: self.config,
+            oscManager: self.oscManager
+        });
+		
+		self.loadCommands();
+    }
 
-        this.commandState = new Map();
-        this.chatDelay = chatDelay;
-        this.channels = new Set();
+    loadCommands() {
+		var self = this;
+        for (var command of ChatCommands.entries()) {
+            var commandConstructed = new ChatCommand(command[1]);
+            self.chatCommandManager.setCommand(command[0], commandConstructed);
+        }
+    }
+
+    isConnected() {
+		console.log("this.client.isConnected", this.client?.isConnected);
+        return this.client?.isConnected;
+    }
+
+    connect() {
+        var self = this;
 
         // Create a client with our options
-        this.client = new tmi.client(opts);
+        self.client = new tmi.client(self.tmiOptions);
 
         // Register our event handlers (defined below)
-        this.client.on('message', function (target, context, msg, isSelf) {
-            instance.onMessageHandler.call(instance, target, context, msg, isSelf);
+        self.client.on('message', function (target, context, msg, isSelf) {
+            //todo parse args here?
+            self.onMessageHandler.call(self, target, context, msg, isSelf);
         });
-        this.AddHandler("message", function (x) {
-            var commandMessage = instance.commandManager.getCommandResult(x);
+        self.AddHandler("message", function (x) {
+            // FileRepository.log("ChatBot base message handler " + Object.keys(x)
+            // .reduce(function(a,i,c){
+            // a += c + ":  " + x[c];
+            // return a;
+            // },""));
+            var commandMessage = self.chatCommandManager.getCommandResult(x);
 
-            if (commandMessage?.length > 0) {
-                instance.sendMessage(x.target.substr(1), commandMessage);
+            if (typeof commandMessage === "string" && commandMessage?.length > 0) {
+                self.sendMessage(x.target.substr(1), commandMessage);
+            } else if (typeof commandMessage === "object" && commandMessage?.length > 0) {
+                self.sendMessages(x.target.substr(1), commandMessage);
             }
         }, true);
-        this.client.on('connected', function (address, port) {
-            instance.onConnectedHandler.call(instance, address, port);
+        self.client.on('connected', function (address, port) {
+            self.onConnectedHandler.call(self, address, port);
         });
 
         // Connect to Twitch:
-        this.client.connect();
+        self.client.connect();
+
     }
 
     joinChannel(name) {
@@ -74,21 +116,21 @@ export default class ChatBot extends HandlerMap {
         }
     }
 
-    addCommand(key, value) {
-        this.commands.set(key, value);
-    }
+    // addCommand(key, value) {
+    // this.commands.set(key, value);
+    // }
 
-    enableCommand(key, value) {
-        var command = this.commands.get(key);
-        comand.enabled = true;
-        this.commands.set(key, command);
-    }
+    // enableCommand(key, value) {
+    // var command = this.commands.get(key);
+    // comand.enabled = true;
+    // this.commands.set(key, command);
+    // }
 
-    disableCommand(key, value) {
-        var command = this.commands.get(key);
-        comand.enabled = false;
-        this.commands.set(key, command);
-    }
+    // disableCommand(key, value) {
+    // var command = this.commands.get(key);
+    // comand.enabled = false;
+    // this.commands.set(key, command);
+    // }
 
     // Called every time a message comes in
     onMessageHandler(target, context, msg, isSelf) {
@@ -143,19 +185,31 @@ export default class ChatBot extends HandlerMap {
         // return;
         // } // Ignore messages from the bot
 
+        var args = msg.split(" ");
+        args.shift();
+
         this.ExecuteHandlers("message", {
             target: target,
             msg: msg,
             context: new TwitchChatMessageContext(context),
             "self": isSelf,
-            chatBot: self
+            chatBot: self,
+            args: args
         });
     }
 
     sendMessage(channel, text) {
         FileRepository.log("sendMessage " + channel + ": " + text);
+		if(!this.client){
+			this.connect();
+		}
+		
         if (text && text.length > 0) {
-            return this.client.say(channel, text);
+            return this.client?.say(channel, text)
+			.catch(function(err){
+				console.log("error trying to say: \"" + text + "\" in channel: " + channel);
+				console.log(err);
+			});
         }
     }
 
@@ -164,12 +218,11 @@ export default class ChatBot extends HandlerMap {
     }
 
     sendMessages(channel, messages) {
+        FileRepository.log("sendMessages " + channel + " " + messages.join(";"));
         var self = this;
-        if (messages.length > 0) {
+        if (messages?.length > 0) {
 
             return messages.reduce(function (a, c, i, arr) {
-                // return new Promise(function(resolve, reject){
-                // setTimeout(function(){
                 return a.then(function () {
                     return self.sendMessage(channel, c);
                 })
@@ -177,16 +230,12 @@ export default class ChatBot extends HandlerMap {
                     return new Promise(function (resolve, reject) {
                         setTimeout(function () {
                             resolve();
-                        }, self.chatDelay);
+                        }, self.config.chatDelay);
                     });
                 });
-                // resolve();
-                // }, delay);
-                // });
             }, Promise.resolve());
         } else {
             return null;
-
         }
     }
 

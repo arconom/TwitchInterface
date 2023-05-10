@@ -1,6 +1,7 @@
 import fs from 'fs';
 import {
-    open
+    open,
+    readdir
 }
 from 'node:fs/promises';
 import LineByLineReader from 'line-by-line';
@@ -13,27 +14,43 @@ export const FileRepository = {
     saveUsers: function (data) {
         this.log("FileRepository.saveUsers");
 
-        return this.writeFileAsync("./data/Users.txt", data);
+        return this.writeFileAsync("./data/Users.json", data);
     },
 
     readUsers: function () {
-        return this.readFileAsync("./data/Users.txt");
+        return this.readFileAsync("./data/Users.json");
     },
 
     saveCommandState: function (state) {
-        return this.writeFileAsync("./data/commandState.txt", state);
+        return this.writeFileAsync("./data/commandState.json", state);
     },
 
     readCommandState: function () {
-        return this.readFileAsync("./data/commandState.txt");
+        return this.readFileAsync("./data/commandState.json");
+    },
+
+    saveChatCommandConfig: function (state) {
+        return this.writeFileAsync("./data/commandConfig.json", state);
+    },
+
+    readChatCommandConfig: function () {
+        return this.readFileAsync("./data/commandConfig.json");
+    },
+
+    savePluginConfig: function (state) {
+        return this.writeFileAsync("./data/pluginConfig.json", state);
+    },
+
+    readPluginConfig: function () {
+        return this.readFileAsync("./data/pluginConfig.json").then((data) => JSON.parse(data));
     },
 
     saveBookmarkedChannels: function (state) {
-        return this.writeFileAsync("./data/savedChannels.txt", state);
+        return this.writeFileAsync("./data/savedChannels.json", state);
     },
 
     readBookmarkedChannels: function () {
-        return this.readFileAsync("./data/savedChannels.txt");
+        return this.readFileAsync("./data/savedChannels.json");
     },
 
     saveAuth: function (token) {
@@ -44,18 +61,27 @@ export const FileRepository = {
         return this.readFileAsync("./data/OAuth.txt");
     },
 
-    loadPlugins: function (importedCallback) {
+    loadPlugins: function (activePluginMap) {
+        var path = "./plugins/";
+        return this.getPluginList()
+        .then((folders) => {
+            console.log("folders", folders);
+			var promises = [];
+
+            folders.forEach(folder => {
+                if (activePluginMap.get(folder)) {
+                    promises.push(import("../" + path + folder + "/main.mjs"));
+                }
+            });
+			
+			return Promise.all(promises);
+        });
+    },
+
+    getPluginList: function () {
         var path = "./plugins/";
 
-        fs.readdir(path, (err, folders) => {
-            console.log("folders", folders);
-            folders.forEach(folder => {
-                import("../" + path + folder + "/main.mjs")
-                .then(function (d) {
-                    importedCallback(d)
-                });
-            });
-        });
+        return readdir(path);
     },
 
     log: function (message) {
@@ -80,93 +106,84 @@ export const FileRepository = {
     },
 
     saveChatMessage: function (data) {
-        return this.appendFileAsync("./data/chatlog.txt", data + "\r\n");
+        return this.appendFileAsync("./data/chatlog.json", data + "\r\n");
     },
 
     loadChatMessages: async function (callback) {
-        await this.readLargeFileAsync("./data/chatlog.txt", callback);
+        await this.readLargeFileAsync("./data/chatlog.json", callback);
     },
 
     loadEventSubscriptions: function () {
         // FileRepository.log("loadEventSubscriptions");
-        return this.readFileAsync("./data/EventSubscriptions.txt");
-    },
-
-    loadGorkblorfVocab: async function (callback) {
-        await this.readLargeFileAsync("./data/gorkblorfVocab.txt", callback);
-    },
-
-    saveGorkblorfVocab: function (data) {
-        // FileRepository.log("saveEventSubscriptions", data);
-        return this.appendFileAsync("./data/gorkblorfVocab.txt", data + "\r\n");
+        return this.readFileAsync("./data/EventSubscriptions.json");
     },
 
     saveApiResults: function (name, data) {
         // FileRepository.log("saveEventSubscriptions", data);
         var dir = "./api";
-        return this.appendFileAsync(dir + "/" + name + ".txt", data);
+        return this.appendFileAsync(dir + "/" + name + ".json", data);
     },
 
-    readApiResults: function (name, data) {
+    readApiResults: function (name) {
         // FileRepository.log("saveEventSubscriptions", data);
         var dir = "./api";
 
-        return this.readFileAsync(dir + "/" + "name.txt");
+        return this.readFileAsync(dir + "/" + name + ".json");
     },
 
     saveEventSubscriptions: function (data) {
         FileRepository.log("saveEventSubscriptions", data);
-        return this.writeFileAsync("./data/EventSubscriptions.txt", data);
+        return this.writeFileAsync("./data/EventSubscriptions.json", data);
     },
 
     loadOscMappings: function () {
         // FileRepository.log("loadOscMappings");
-        return this.readFileAsync("./data/OscMappings.txt");
+        return this.readFileAsync("./data/OscMappings.json");
     },
 
     saveOscMappings: function (data) {
         // FileRepository.log("saveOscMappings", data);
-        return this.writeFileAsync("./data/OscMappings.txt", data)
+        return this.writeFileAsync("./data/OscMappings.json", data)
     },
 
     loadSecrets: function () {
         // FileRepository.log("loadSecrets");
-        return this.readFileAsync("./data/secrets.txt");
+        return this.readFileAsync("./data/secrets.json");
     },
 
     saveSecrets: function (data) {
         // FileRepository.log("saveSecrets", JSON.stringify(data));
-        return this.writeFileAsync("./data/secrets.txt", data)
+        return this.writeFileAsync("./data/secrets.json", data)
     },
 
     loadConfig: function () {
         // FileRepository.log("loadConfig");
-        return this.readFileAsync("./data/config.txt");
+        return this.readFileAsync("./data/config.json");
     },
 
     saveConfig: function (data) {
         // FileRepository.log("saveConfig", JSON.stringify(data));
-        return this.writeFileAsync("./data/config.txt", data)
+        return this.writeFileAsync("./data/config.json", data)
     },
 
     loadApiScopes: function () {
         // FileRepository.log("loadApiScopes");
-        return this.readFileAsync("./data/apiScopes.txt");
+        return this.readFileAsync("./data/apiScopes.json");
     },
 
     saveApiScopes: function (data) {
         // FileRepository.log("saveApiScopes", JSON.stringify(data));
-        return this.writeFileAsync("./data/apiScopes.txt", data)
+        return this.writeFileAsync("./data/apiScopes.json", data)
     },
 
     loadChatScopes: function () {
         // FileRepository.log("loadChatScopes");
-        return this.readFileAsync("./data/chatScopes.txt");
+        return this.readFileAsync("./data/chatScopes.json");
     },
 
     saveChatScopes: function (data) {
         // FileRepository.log("saveChatScopes", JSON.stringify(data));
-        return this.writeFileAsync("./data/chatScopes.txt", data)
+        return this.writeFileAsync("./data/chatScopes.json", data)
     },
 
     readFileAsync: function (filename) {

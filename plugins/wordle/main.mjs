@@ -1,95 +1,98 @@
 import Wordle from "./src/Wordle.mjs";
-import {
-    Constants
-}
-from "../../src/Constants.mjs";
+
 var plugin = {
-    name: "Wordle",
+    name: "wordle",
 
     //commands is a map of keys and functions that take an object as a parameter and return a string
     // {
-    // target: target,
-    // msg: msg,
-    // context: new TwitchChatMessageContext(context),
-    // "self": isSelf,
-    // chatBot: self
+    // target: string,
+    // msg: string,
+    // context: Object<TwitchChatMessageContext>,
+    // "self": bool,
+    // chatBot: Object<ChatBot>
     // }
-
+    dependencies: ["wordgenerator"],
     commands: new Map(),
-    load: function (log /**/) {
-        // this function will be called by Main.js in the app
-        //load whatever dependencies you need in here and do setup
+    load: function (globalState) {
+        var FileRepository = globalState.get("filerepository");
+        FileRepository.log("wordle.load");
+        const stateKey = "wordle"
 
-        //we need the wordgenerator plugin to run this
-        return import("../wordgenerator/Main.mjs")
-        .then(function (module) {
-            var wordGenerator = new module.default();
-            plugin.commands.set("prcwordle", {
-                description: "",
-                cooldown: 0,
+            // this function will be called by Main.js in the app
+            //load whatever dependencies you need in here and do setup
 
-                role: Constants.chatRoles.viewer,
-                enabled: true,
-                handler: function (obj) {
-                    var length = 0;
-                    if (obj.args) {
-                        length = parseInt(obj.args);
-                    }
-                    var wordle = new Wordle(wordGenerator.getCommonWord(length));
-                    var key = obj.target + "wordle";
+            //we need the wordgenerator plugin to run this
+            var Constants = globalState.get("constants");
 
-                    obj.chatBot.commandManager.setCommandState(key, wordle);
-                    return wordle.status();
+        plugin.commands.set("prcwordle", {
+            description: "",
+            handler: function (obj) {
+                var wordGenerator = globalState.get("wordgenerator").wordGenerator;
+                var key = obj.target + stateKey;
+                var length = 0;
+                var maxAttempts = 0;
+
+                if (obj.args) {
+                    length = parseInt(obj.args);
                 }
-            });
-            plugin.commands.set("prwordle", {
-                description: "",
-                cooldown: 0,
 
-                role: Constants.chatRoles.viewer,
-                enabled: true,
-                handler: function (obj) {
+                var wordle = new Wordle(wordGenerator.getCommonWord(length), maxAttempts, wordGenerator);
+                obj.chatBot.chatCommandManager.setCommandState(key, wordle.getState());
+                return wordle.status();
+            }
+        });
+        plugin.commands.set("prwordle", {
+            description: "",
+            handler: function (obj) {
+                var wordGenerator = globalState.get("wordgenerator").wordGenerator;
+                var key = obj.target + stateKey;
+                var length = 0;
+                var maxAttempts = 0;
 
-                    var length = 0;
-                    if (obj.args) {
-                        length = parseInt(obj.args);
-                    }
-                    var key = obj.target + "wordle";
-
-                    var wordle = new Wordle(wordGenerator.getRandomWord(length));
-                    obj.chatBot.commandManager.setCommandState(obj.target.substr(1) + "wordle", wordle);
-                    return wordle.status();
+                if (obj.args) {
+                    length = parseInt(obj.args);
                 }
-            });
-            plugin.commands.set("prguess", {
-                description: "",
-                cooldown: 0,
 
-                role: Constants.chatRoles.viewer,
-                enabled: true,
-                handler: function (obj) {
-                    if (obj && obj.args && obj.args.length > 0) {
-                        var key = obj.target + "wordle";
-                        var wordle = obj.chatBot.commandManager.getCommandState(key);
+                var wordle = new Wordle(wordGenerator.getRandomWord(length), maxAttempts, wordGenerator);
+                obj.chatBot.chatCommandManager.setCommandState(key, wordle.getState());
+                return wordle.status();
+            }
+        });
+        plugin.commands.set("prguess", {
+            description: "",
+            handler: function (obj) {
+                if (obj && obj.args && obj.args.length > 0) {
+                    var key = obj.target + stateKey;
+                    var wordle;
+                    var wordleState = obj.chatBot.chatCommandManager.getCommandState(key);
+
+                    if (wordleState) {
+                        wordle = new Wordle(wordleState);
 
                         if (wordle) {
                             wordle.submit(obj.args);
+
+                            obj.chatBot.chatCommandManager.setCommandState(key, wordle.getState());
+
                             return wordle.status();
                         } else {
                             return "wordle has not been started";
                         }
                     }
                 }
-            });
-            plugin.commands.set("prwordlestatus", {
-                description: "",
-                cooldown: 0,
+            }
+        });
+        plugin.commands.set("prwordlestatus", {
+            description: "",
+            handler: function (obj) {
+                var key = obj.target + stateKey;
+                var wordle;
+                var wordleState = obj.chatBot.chatCommandManager.getCommandState(key);
+                console.log("wordleState", wordleState);
 
-                role: Constants.chatRoles.viewer,
-                enabled: true,
-                handler: function (obj) {
-                    var key = obj.target + "wordle";
-                    var wordle = obj.chatBot.commandManager.getCommandState(key);
+                if (wordleState) {
+                    wordle = new Wordle(wordleState);
+                    console.log("wordle", wordle);
 
                     if (wordle) {
                         return wordle.status(true);
@@ -97,8 +100,10 @@ var plugin = {
                         return "wordle has not been started";
                     }
                 }
-            });
+            }
         });
+
+        return Promise.resolve();
     }
 };
 

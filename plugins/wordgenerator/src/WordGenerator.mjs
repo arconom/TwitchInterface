@@ -1,7 +1,6 @@
 import fs from 'fs';
 import zl from "zip-lib";
 
-
 import {
     CommonEnglishWords
 }
@@ -23,16 +22,34 @@ var bannedDefs = ["past of",
     "alternative form of",
     "spelling of"];
 
-var bannedWords = ["sexual", "fuck", "shit", "piss", "cunt", "cock", "dick", "penis", "vagina"];
+var bannedWords = [
+    "bullshit",
+    "glans",
+    "labia",
+    "phallus",
+    "sex",
+    "vulva",
+    "cock",
+    "cunt",
+    "dick",
+    "fuck",
+    "penis",
+    "piss",
+    "sexual",
+    "shit",
+    "vagina",
+];
 
 var EnglishDefinitions;
 await import("./EnglishDefinitions.mjs").then(function (data) {
     // console.log("EnglishDefinitions.mjs done", data);
     EnglishDefinitions = data.EnglishDefinitions;
+    console.log("EnglishDefinitions.mjs " + EnglishDefinitions.length + " definitions loaded");
+
 })
 .catch(function (err) {
     zl.extract('./plugins/wordgenerator/src/EnglishDefinitions.zip', "./plugins/wordgenerator/src/")
-	.then(function (data) {
+    .then(function (data) {
         // console.log("EnglishDefinitions.zip done", data);
         EnglishDefinitions = data.EnglishDefinitions;
     }, function (err) {
@@ -52,7 +69,7 @@ export default class WordGenerator {
         this.commonWords = this.initCommonWords();
         this.wordList = null;
         this.commonWordList = null;
-        
+        this.initializeWordList()
     }
 
     getWordList() {
@@ -82,12 +99,12 @@ export default class WordGenerator {
     initializeWordList() {
         var startTime = Date.now();
 
-		if(EnglishDefinitions?.length < 1){
-			throw "EnglishDefinitions did not load";
-			
-		}
+        if (EnglishDefinitions?.length < 1) {
+            throw "EnglishDefinitions did not load";
 
-console.log("EnglishDefinitions", EnglishDefinitions);
+        }
+
+        // console.log("EnglishDefinitions", EnglishDefinitions);
 
         for (var x of EnglishDefinitions) {
             //no spaces
@@ -128,6 +145,9 @@ console.log("EnglishDefinitions", EnglishDefinitions);
                 }
             }
         }
+
+        console.log("word count", this.words.size);
+
         var endTime = Date.now();
     }
 
@@ -135,7 +155,7 @@ console.log("EnglishDefinitions", EnglishDefinitions);
         var returnMe = Infinity;
 
         list.forEach(x => {
-            var d = getLevenshteinDistance(word, x);
+            var d = this.getLevenshteinDistance(word, x);
 
             if (d < returnMe) {
                 returnMe = d;
@@ -152,6 +172,8 @@ console.log("EnglishDefinitions", EnglishDefinitions);
 
         var index = Math.floor(Math.random() * list.length);
         this.lastWord = list[index];
+        console.log("this is a word", list[index]);
+        this.usedWords.push(list[index]);
         return list[index];
     }
 
@@ -164,13 +186,17 @@ console.log("EnglishDefinitions", EnglishDefinitions);
     }
 
     getDefinition(key) {
+		console.log("getDefinition", key);
         var self = this;
         if (!key && this.lastWord) {
             key = this.lastWord;
         }
+		if(!key){
+			return null;
+		}
+		
         key = key.toLowerCase();
 
-        this.usedWords.push(key);
         var arr = this.definitions.get(key);
 
         if (arr) {
@@ -179,6 +205,7 @@ console.log("EnglishDefinitions", EnglishDefinitions);
             //get one of the definitions for the given key
             var defIndex = Math.floor(Math.random() * arr.length);
 
+			//we don't want self-referencing definitions
             bannedDefs.forEach(function (element, index, array) {
                 var i = arr[defIndex].definition.indexOf(element);
                 if (i > -1) {
@@ -227,7 +254,7 @@ console.log("EnglishDefinitions", EnglishDefinitions);
 
     getAlliteration(letter, size) {
         letter = letter.toLowerCase();
-        var keys = Array.from(this.definitions.keys())
+        var keys = Array.from(this.words.keys())
             .filter(x => x.indexOf(letter) === 0);
 
         return this.getPrefixedWordsFromList(keys, letter, size);
@@ -270,6 +297,5 @@ console.log("EnglishDefinitions", EnglishDefinitions);
         }
         return prev[b.length];
     }
-
 
 }

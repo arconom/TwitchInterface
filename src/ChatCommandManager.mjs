@@ -13,9 +13,17 @@ import {
 }
 from "./FileRepository.mjs";
 import {
+    ChatCommandConfigItem
+}
+from "./ChatCommandConfigItem.mjs";
+import {
     TwitchChatMessageContext
 }
 from './TwitchChatMessageContext.mjs';
+import {
+    ChatRoles
+}
+from './ChatRoles.mjs';
 
 export default class ChatCommandManager {
 
@@ -36,6 +44,7 @@ export default class ChatCommandManager {
         this.commands = new Map();
         this.pluginState = new Map();
         this.commandState = new Map();
+        this.commandConfig = new Map();
 
         FileRepository.readCommandState().then(function (data) {
             try {
@@ -47,12 +56,31 @@ export default class ChatCommandManager {
                 //no state data saved
             }
         });
+
+        FileRepository.readChatCommandConfig()
+        .then(function (data) {
+            if (data) {
+                var commandConfigArray = JSON.parse(data);
+
+                if (commandConfigArray.length > 0) {
+                    commandConfigArray.forEach(function (chatCommandConfigItem) {
+                        self.setCommandConfig(chatCommandConfigItem[0], chatCommandConfigItem[1]);
+                    });
+                }
+            }
+        });
+    }
+
+    getCommandConfig(key) {
+        return this.commandConfig.get(key);
+    }
+
+    setCommandConfig(key, value) {
+        this.commandConfig.set(key, new ChatCommandConfigItem(value));
     }
 
     setCommand(name, command) {
-		console.log("ChatCommandManager.setCommand", name);
-        //name = String
-        //command = Object<Command>
+        // FileRepository.log("ChatCommandManager.setCommand " + name);
         this.commands.set(name, new ChatCommand(command));
     }
 
@@ -69,10 +97,12 @@ export default class ChatCommandManager {
     }
 
     getCommandState(id) {
+        console.log("getCommandState", id, this.commandState.get(id));
         return this.commandState.get(id);
     }
 
     setCommandState(id, state) {
+        console.log("setCommandState", id, state);
         this.commandState.set(id, state);
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
@@ -80,11 +110,6 @@ export default class ChatCommandManager {
     deleteCommandState(id) {
         this.commandState.delete(id);
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
-    }
-
-    getStateKey(obj, command) {
-        return obj.target + command.name;
-
     }
 
     getCommandResult(obj) {
@@ -104,34 +129,35 @@ export default class ChatCommandManager {
 
         if (match?.index === 0 && match[1]?.length > 0) {
             var chatCommand = this.commands.get(match[1]);
-			if(!chatCommand){
-				return "No such command";
-			}
-			var key = self.getStateKey(obj, chatCommand);
-			
+            var commandConfig = self.commandConfig.get(match[1]);
+
+            if (!chatCommand) {
+                return "";
+            }
+            var key = obj.target + match[1];
             var commandState = self.getCommandState(key);
 
             if (!commandState) {
                 commandState = {};
             }
 
-            if (!chatCommand?.enabled) {
-                return "This command is disabled";
-            }
-            if (!self.hasRole(obj.context, chatCommand?.role)) {
-                return "You do not have the role required to run this command";
-            }
-            if ((commandState.lastExecution ?? -Infinity) + chatCommand.cooldown < Date.now()) {
-                obj.args = match[2];
-                commandState.executionCount = (commandState.executionCount ?? 0) + 1;
-                commandState.lastExecution = Date.now();
-                self.setCommandState(key, commandState);
-                return chatCommand.handler(obj);
-            } else {
-                return "Wait for command to cool down in " +
-                (chatCommand.lastExecution + chatCommand.cooldown - Date.now()) +
-                " ms";
-            }
+            // if (!commandConfig?.enabled) {
+            // FileRepository.log("Command: " + match[1] + " is disabled");
+            // }
+            if (self.hasRole(obj.context, commandConfig?.role)) {
+                if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
+                    commandState.executionCount = (commandState.executionCount ?? 0) + 1;
+                    commandState.lastExecution = Date.now();
+                    self.setCommandState(key, commandState);
+                    return chatCommand.handler(obj);
+                } else {
+                    return "Wait for command to cool down in " +
+                    (commandState.lastExecution + (commandConfig.cooldownSeconds * 1000) - Date.now()) +
+                    " ms";
+                }
+            // }else{
+				//don't have the role
+			}
         }
     }
 
@@ -147,19 +173,32 @@ export default class ChatCommandManager {
     }
 
     hasRole(context, role) {
-        //context = Object
+        console.log("hasRole(context, role)", typeof role);
+        //context = Object<TwitchChatMessageContext>
         //role = String
-        if (role === "" || role === Constants.chatRoles.viewer) {
-            return true;
-        } else if (role === Constants.chatRoles.subscriber) {
-            return context.subscriber;
-        } else if (role === Constants.chatRoles.moderator) {
-            return context.mod;
-        } else if (role === Constants.chatRoles.broadcaster) {
-            return context.badges.broadcaster === "1";
-        } else {
-            return false;
-        }
-    }
 
+        // if (typeof role === "string") {
+        // role = parseInt(role);
+        // }
+
+        var userRoleValue = ChatRoles.get(Constants.chatRoles.viewer);
+
+        if (context.subscriber) {
+            userRoleValue = ChatRoles.get(Constants.chatRoles.subscriber);
+        }
+
+        if (context.mod) {
+            userRoleValue = ChatRoles.get(Constants.chatRoles.moderator);
+        }
+
+        if (context.badges.broadcaster === " 1 ") {
+            userRoleValue = ChatRoles.get(Constants.chatRoles.broadcaster);
+        }
+
+        if (context.badges.vip === " 1 ") {
+            userRoleValue = ChatRoles.get(Constants.chatRoles.vip);
+        }
+
+        return userRoleValue >= role;
+    }
 }

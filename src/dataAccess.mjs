@@ -19,6 +19,45 @@ export default class dataAccess {
         });
     }
 
+    getPluginConfig() {
+        var self = this;
+        return fetch(this.hostname + "/plugin/config").then(function (res) {
+            return res.json();
+			//should be Array.from(Map.entries())
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+
+    }
+    getPluginList() {
+        var self = this;
+        return fetch(this.hostname + "/plugin").then(function (res) {
+            return res.json();
+			//should be Array.from(Map.entries())
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+
+    }
+    putPluginConfig(config) {
+
+		//config = Array.from(Map.entries())
+
+        if (!config) {
+            return;
+        }
+
+        return fetch(this.hostname + "/plugin/config", {
+            method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config) // body data type must match "Content-Type" header
+        });
+    }
+
     putActiveChatScopes(chatScopes) {
 
         if (!chatScopes) {
@@ -301,6 +340,15 @@ export default class dataAccess {
             console.log(e);
         });
     }
+    getChatCommands() {
+        var self = this;
+        return fetch(this.hostname + "/chat/commands").then(function (res) {
+            return res.json();
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+    }
     getChatCommandState() {
         var self = this;
         return fetch(this.hostname + "/chat/commandstate").then(function (res) {
@@ -309,6 +357,28 @@ export default class dataAccess {
         .catch(function (e) {
             console.log(e);
         });
+    }
+    getChatCommandConfig() {
+        var self = this;
+        return fetch(this.hostname + "/chat/command/config").then(function (res) {
+            return res.json();
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+    }
+    putChatCommandConfig(config) {
+        var self = this;
+        return fetch(this.hostname + "/chat/command/config", {
+            method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config) // body data type must match "Content-Type" header
+        });
+
+
+
     }
     getActiveChatScopes() {
         var self = this;
@@ -395,7 +465,7 @@ export default class dataAccess {
             "message": message
         };
 
-        fetch(this.hostname + "/say", {
+        fetch(this.hostname + "/chat/say", {
             method: 'POST', // *GET, POST, PUT, DELETE, etc.
             headers: {
                 'Content-Type': 'application/json'

@@ -1,24 +1,58 @@
-import WordGenerator from "../../WordGenerator/Main.mjs";
 
 export default class Wordle {
 
-    constructor(word, maxAttempts) {
-        this.selectedWord = word?.toLowerCase();
+    constructor(word, maxAttempts, WordGenerator) {
 
-        if (!maxAttempts) {
-            maxAttempts = word.length + 2;
+        //word = string
+        //maxAttempts = number
+        //WordGenerator = Object<WordGenerator>
+
+        if (!word) {
+            return null;
         }
 
-        this.maxAttempts = maxAttempts;
+        if (typeof(word) == "object") {
+            this.wordGenerator = word.wordGenerator;
+            this.attempts = word.attempts ?? 0;
+            this.hasLetters = word.hasLetters ?? new Set();
+            this.lastGuess = word.lastGuess ?? "";
+            this.matchingLetters = word.matchingLetters ?? new Map();
+            this.maxAttempts = word.maxAttempts;
+            this.missingLetters = word.missingLetters ?? new Set();
+            this.previousAttempts = word.previousAttempts ?? new Set();
+            this.selectedWord = word.selectedWord;
+        } else {
 
-        this.attempts = 0;
-        this.previousAttempts = new Set();
-        this.missingLetters = new Set();
-        this.hasLetters = new Set();
-        this.matchingLetters = new Map();
-        this.lastGuess = "";
+            this.selectedWord = word?.toLowerCase();
 
-        this.wordGenerator = new WordGenerator();
+            if (!maxAttempts) {
+                maxAttempts = word.length + 2;
+            }
+
+            this.maxAttempts = maxAttempts;
+
+            this.attempts = 0;
+            this.previousAttempts = new Set();
+            this.missingLetters = new Set();
+            this.hasLetters = new Set();
+            this.matchingLetters = new Map();
+            this.lastGuess = "";
+
+            this.wordGenerator = WordGenerator;
+        }
+    }
+
+    getState() {
+        return {
+            attempts: this.attempts,
+            hasLetters: this.hasLetters,
+            lastGuess: this.lastGuess,
+            matchingLetters: this.matchingLetters,
+            maxAttempts: this.maxAttempts,
+            missingLetters: this.missingLetters,
+            previousAttempts: this.previousAttempts,
+            selectedWord: this.selectedWord,
+        };
     }
 
     submit(word) {

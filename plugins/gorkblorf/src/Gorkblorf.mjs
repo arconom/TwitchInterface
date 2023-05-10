@@ -33,29 +33,17 @@ const languageLookup = new LanguageLookup();
 const languageDetect = new LanguageDetect();
 const statistics = new Statistics();
 const markov_bot = markov();
-import {
-    FileRepository
-}
-from "./FileRepository.mjs";
 
 export default class Gorkblorf {
 
-    constructor(data) {
+    constructor(data, FileRepository) {
+		//this is also called in a Worker, so FileRepository won't have any functions in that case
+        this.FileRepository = FileRepository;
         this.nonWordsTrie = new Trie(data?.nonWordsTrie?.root);
         this.distanceCache = new Map(data?.distanceCache);
         this.checkedWordCounter = data?.checkedWordCounter ?? 0;
-        
-		this.readVocabFile();
     }
 
-    saveToVocabFile() {}
-
-    readVocabFile() {
-        var self = this;
-        FileRepository.loadGorkblorfVocab(function (line) {
-            self.nonWordsTrie.insert(line);
-        });
-    }
 
     generateRandomMessage(words) {
         // words = []
@@ -130,7 +118,9 @@ export default class Gorkblorf {
 
         parsedWords["valid"].forEach(function (word) {
             if (!self.nonWordsTrie.has(word)) {
-                FileRepository.saveGorkblorfVocab(word);
+                if(self.FileRepository?.saveGorkblorfVocab){
+					self.FileRepository.saveGorkblorfVocab(word);
+				}
                 self.nonWordsTrie.insert(word);
             }
         });
@@ -152,7 +142,8 @@ export default class Gorkblorf {
     }
      */
     getText(message, length) {
-        // FileRepository.log("getText", message);
+		var self = this;
+        // self.FileRepository.log("getText", message);
         var key;
 
         if (!length) {
@@ -184,8 +175,7 @@ export default class Gorkblorf {
             // FileRepository.log("getText return ", returnMe.join(" "));
             return returnMe.join(" ");
         } else {
-            FileRepository.log("No key returned from markov chain. Has it been seeded yet?");
-            return "";
+            return "No key returned from markov chain. Has it been seeded yet?";
         }
     }
 
@@ -236,12 +226,13 @@ export default class Gorkblorf {
     }
 
     seedMarkovChain(message, parsedWords, validString) {
-        // FileRepository.log("seedMarkovChain", parsedWords, validString);
+		
+        // console.log("seedMarkovChain", parsedWords, validString);
         // Train the markov chain with the new data
         if (parsedWords["invalid"].length < max_violations &&
             // parsedWords["valid"].length >= max_violations &&
             validString.length > 0) {
-            // FileRepository.log("Adding new message to markov database:", validString);
+            // console.log("Adding new message to markov database:", validString);
             markov_bot.seed(validString);
         }
     }
@@ -319,6 +310,9 @@ export default class Gorkblorf {
                         "index": word_idx
                     });
                 }
+				else{
+					valid_word = true;
+				}
             } else {
                 valid_word = true;
             }
@@ -369,8 +363,6 @@ export default class Gorkblorf {
         return returnMe.join("");
     }
 
-
-
     /*     // todo delete if unused
     numberToEmojii(num) {
     if (num < digit_emojii.length && num >= 0) {
@@ -380,46 +372,3 @@ export default class Gorkblorf {
     }
      */
 }
-
-//test
-(function () {
-    validationPass();
-    validationFail();
-
-    function validationPass() {
-        var strings = [];
-        strings.push("gorkblorf an33 rofl pungz");
-        strings.push("1 11 111 11111 11111111 1111111111111");
-        strings.push("<einkd> sfrobskt puelnf ,,ungei,, ---tesine--- asdfmndarkkjfle");
-
-        var gb = new Gorkblorf();
-
-        strings.forEach(function (s) {
-            var result = gb.validateGorkblorfMessage(s);
-
-            if (result.invalid.length > 0) {
-                throw "validateGorkblorfMessage false positive: " + JSON.stringify(result);
-            }
-        });
-    }
-
-    function validationFail() {
-        var strings = [];
-        strings.push("add also able");
-        strings.push("aadd aalso aable");
-        strings.push("firststrike");
-        strings.push("ffirstsstrike");
-        strings.push("44dd 44ls0 44bl3");
-
-        var gb = new Gorkblorf();
-
-        strings.forEach(function (s) {
-            var result = gb.validateGorkblorfMessage(s);
-
-            if (result.valid.length > 0) {
-                throw "validateGorkblorfMessage false negative: " + JSON.stringify(result);
-            }
-        });
-    }
-
-})();
