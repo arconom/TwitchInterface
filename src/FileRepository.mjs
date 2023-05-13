@@ -65,16 +65,15 @@ export const FileRepository = {
         var path = "./plugins/";
         return this.getPluginList()
         .then((folders) => {
-            console.log("folders", folders);
-			var promises = [];
+            var promises = [];
 
             folders.forEach(folder => {
                 if (activePluginMap.get(folder)) {
                     promises.push(import("../" + path + folder + "/main.mjs"));
                 }
             });
-			
-			return Promise.all(promises);
+
+            return Promise.all(promises);
         });
     },
 

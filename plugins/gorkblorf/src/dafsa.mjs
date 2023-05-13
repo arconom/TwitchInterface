@@ -105,7 +105,6 @@ export default class Dafsa {
             throw "getLevenshteinDistanceRecursively node is undefined";
         }
 
-        // console.log("getLevenshteinDistanceRecursively", "word", (word ?? ""),  "node", (node.symbol ?? ""), "previousRow", previousRow, "results", results);
         var currentRow = [previousRow[0] + 1];
 
         for (let i = 1; i < word.length + 1; i++) {
@@ -137,7 +136,6 @@ export default class Dafsa {
             currentRow[currentRow.length - 1] <= maxCost &&
             node.final &&
             currentRow[currentRow.length - 1] < results.cost) {
-            // console.log("updating result ", node.symbol, currentRow[currentRow.length - 1]);
             results.word = potentialMatch;
             results.cost = currentRow[currentRow.length - 1] ?? Infinity;
         }

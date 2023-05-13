@@ -83,7 +83,6 @@ var plugin = {
                 });
 
                 worker.on('message', function (data) {
-                    // console.log("gorkblorf loaded", data);
                     plugin.exports.gorkblorf = new Gorkblorf(data.gorkblorf, FileRepository);
                 });
                 worker.on('error', function (err) {
@@ -104,8 +103,6 @@ var plugin = {
                         });
                     }
                     var endTime = Date.now();
-                    // console.log("gorkblorf took " + (endTime - startTime) + " ms");
-                    // console.log("checked words", plugin.exports.gorkblorf.checkedWordCounter);
                     resolve();
                 });
             });
@@ -113,7 +110,6 @@ var plugin = {
 
         function loadGorkblorfVocab() {
             var self = this;
-            // console.log("loadGorkblorfVocab", self);
             return FileRepository.readLargeFileAsync("./data/gorkblorfVocab.json",
                 function (line) {
                 plugin.exports.vocab.push(line);
@@ -121,7 +117,6 @@ var plugin = {
         }
 
         function saveGorkblorfVocab(data) {
-            // FileRepository.log("saveEventSubscriptions", data);
             return FileRepository.appendFileAsync("./data/gorkblorfVocab.json", data + "\r\n");
         }
 

@@ -7,7 +7,6 @@ import {
 }
 from 'node:worker_threads';
 
-// console.log("workerData", workerData);
 
 var keys = workerData.chatLog.keys();
 var gorkblorf = new Gorkblorf({});
@@ -20,7 +19,6 @@ for (const key of keys) {
     });
 }
 
-// console.log("gorkblorf", gorkblorf);
 workerData.gorkblorf = gorkblorf;
 
 parentPort.postMessage(workerData);

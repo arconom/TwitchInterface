@@ -63,7 +63,6 @@ export default class Gorkblorf {
     }
 
     mutateVocab(words) {
-        // FileRepository.log("mutateVocab", words);
         // words = "all words to mutate"
         for (let j = 0; j < 2; j++) {
             //let's run twice, just to get some variance
@@ -71,8 +70,6 @@ export default class Gorkblorf {
             for (let i = 0; i < words.length / 5; i++) {
                 let validWords = this.validateGorkblorfMessage(wordEvolver.getNewWords(words).join(" "))["valid"];
                 if (validWords.length > 0) {
-                    // FileRepository.log("mutateVocab seeding", validWords);
-
                     var list = words.concat(validWords);
 
                     for (let j = 0; j < list.length / 5; j++) {
@@ -100,8 +97,6 @@ export default class Gorkblorf {
     }
 
     read(message, authorId) {
-        // console.log("gorkblorf.read ", authorId, message);
-        // FileRepository.log("gorkblorf.read " + authorId + " " + message);
         // Make sure message is a valid gorkblorf and get violating words
         var self = this;
 
@@ -143,7 +138,6 @@ export default class Gorkblorf {
      */
     getText(message, length) {
 		var self = this;
-        // self.FileRepository.log("getText", message);
         var key;
 
         if (!length) {
@@ -172,7 +166,6 @@ export default class Gorkblorf {
             // var returnMe = returnMe + suffix;
             // returnMe = returnMe.replace(',', ' ');
 
-            // FileRepository.log("getText return ", returnMe.join(" "));
             return returnMe.join(" ");
         } else {
             return "No key returned from markov chain. Has it been seeded yet?";
@@ -227,19 +220,16 @@ export default class Gorkblorf {
 
     seedMarkovChain(message, parsedWords, validString) {
 		
-        // console.log("seedMarkovChain", parsedWords, validString);
         // Train the markov chain with the new data
         if (parsedWords["invalid"].length < max_violations &&
             // parsedWords["valid"].length >= max_violations &&
             validString.length > 0) {
-            // console.log("Adding new message to markov database:", validString);
             markov_bot.seed(validString);
         }
     }
 
     validateGorkblorfMessage(message) {
         var self = this;
-        // FileRepository.log("validateGorkblorfMessage message" + message);
         var violations = [];
         var valid_words = [];
         var clean_message = this.sanitizeMessage(message);
@@ -251,7 +241,6 @@ export default class Gorkblorf {
         var word_idx = 0;
         split_phrase.forEach(word => {
             var lowerCaseWord = word.toLowerCase();
-            // FileRepository.log("word", word);
             var valid_word = false;
 
             if (word.length < 3) {
@@ -275,7 +264,6 @@ export default class Gorkblorf {
                     "language": languages,
                     "index": word_idx
                 });
-                // FileRepository.log("Violation:", word + ",", "Language:", languages + ",", "Confidence:", detected_languages.length);
             } else if (detectedLanguages.length > 0) {
                 violations.push({
                     "word": word,
@@ -289,7 +277,6 @@ export default class Gorkblorf {
                 if (self.distanceCache.has(word)) {
                     match = self.distanceCache.get(word);
                 } else {
-                    // console.log("checking distance for word", lowerCaseWord);
                     var trimmedWord = this.removeRepeatedLetters(lowerCaseWord);
                     match = languageLookup.getClosestMatchTrie(lowerCaseWord).distance;
                     var otherMatch = languageLookup.getClosestMatchTrie(trimmedWord).distance;
@@ -324,13 +311,6 @@ export default class Gorkblorf {
             word_idx += 1;
         });
 
-        // Reset existing reaction
-        // FileRepository.log(message.reactions);
-        // if(message.reactions){
-        //   message.reactions.forEach(reaction => reaction.remove(client.user.id));
-        // }
-
-
         return {
             "valid": valid_words,
             "invalid": violations
@@ -338,7 +318,6 @@ export default class Gorkblorf {
     }
 
     sanitizeMessage(message_str) {
-        // FileRepository.log("sanitizeMessage", message_str);
         if (message_str) {
             return message_str.replace(url_re, '')
             .replace(mention_re, '');

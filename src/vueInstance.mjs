@@ -38,6 +38,7 @@ export const vueInstance = {
             savedChannels: new Set(),
             searchChatCommandConfig: "",
             searchApiScopes: "",
+            searchConfig: "",
             searchEvents: "",
             searchOscMappings: "",
             searchUsers: "",
@@ -51,31 +52,70 @@ export const vueInstance = {
             snackbarTimeout: 2000,
             twitchEndpoints: new Map(),
             users: new Map(),
-            webSocket: new WebSocket("ws://localhost:8080")
+            webSocket: null
         }
     },
     methods: {
+        getRowColor: function (index) {
+            if (index % 2 === 0) {
+                // return "grey-darken-3";
+                return "row-even";
+            }
+            // return "grey-darken-4";
+            return "row-odd";
+        },
         searchClickHandler: function (event) {
             event.stopPropagation();
             event.preventDefault();
         },
+        saveApiScopesClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveApiScopes();
+        },
+        refreshChatCommandStateClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.getChatCommandState();
+        },
+        saveChatCommandStateClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveChatCommandState();
+        },
+        savePluginConfigClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.savePluginConfig();
+        },
+        saveEventSubscriptionsClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveEventSubscriptions();
+        },
+        saveOscMappingsClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveOscMappings();
+        },
+        saveChatCommandConfigClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveChatCommandConfig();
+        },
         updateChatCommandConfig: function (key, value) {
-            console.log("updateChatCommandConfig", key, value);
             this.chatCommandConfig.set(key, value);
         },
         getChatCommandState: function () {
             var self = this;
             return dataAccess.getChatCommandState()
             .then(function (data) {
-                // console.log("getChatCommandState().then", data);
                 var temp = self.chatCommandState;
                 if (data?.length > 0) {
                     data.forEach(function (x) {
-                        // console.log("chat scope", x);
                         temp.set(x[0], x[1]);
                     });
                 }
-                // console.log("command state", self.chatCommandState);
             })
             .catch(function (err) {
                 console.log(err);
@@ -96,17 +136,14 @@ export const vueInstance = {
             var self = this;
             return dataAccess.getChatCommandConfig()
             .then(function (data) {
-                // console.log("getApiScopes().then", data);
                 var temp = self.chatCommandConfig;
                 if (data?.length > 0) {
                     data.forEach(function (x) {
-                        // console.log("active chat scope", x);
-						// this needs to be a number, so the v-select displays the string
-						x[1].role = parseInt(x[1].role);
+                        // this needs to be a number, so the v-select displays the string
+                        x[1].role = parseInt(x[1].role);
                         temp.set(x[0], x[1]);
                     });
                 }
-                // console.log("api scopes after load", self.eventSubscriptions);
                 self.chatCommandConfig = temp;
             })
             .catch(function (err) {
@@ -114,10 +151,8 @@ export const vueInstance = {
             });
 
         },
-        saveChatCommandConfig: function (event) {
-            console.log("saveChatCommandConfig");
+        saveChatCommandConfig: function () {
             var self = this;
-            event.stopPropagation();
 
             return dataAccess.putChatCommandConfig(
                 Array.from(self.chatCommandConfig.entries()))
@@ -148,7 +183,6 @@ export const vueInstance = {
             var arr = [];
 
             for (const [key, value] of self.apiScopes.entries()) {
-                // console.log("api scope", key, value);
 
                 if (value.value) {
                     arr.push(key);
@@ -166,7 +200,6 @@ export const vueInstance = {
             var arr = [];
 
             for (const [key, value] of self.chatScopes.entries()) {
-                // console.log("chat scope", key, value);
 
                 if (value.value) {
                     arr.push(key);
@@ -251,7 +284,6 @@ export const vueInstance = {
             });
         },
         startChat: function () {
-            console.log("startChat");
             var self = this;
 
             if (!self.chatConnected) {
@@ -271,14 +303,10 @@ export const vueInstance = {
         leaveChannel: function () {
             var self = this;
             dataAccess.leaveChannel(self.activeChannels[self.currentChannel]).then(x => {
-                // console.log("leaveChannel fin", x);
                 self.snackbarText = "Left channel " + self.activeChannels[self.currentChannel];
                 self.snackbar = true;
                 self.activeChannels.splice(self.currentChannel, 1);
                 self.currentChannel = 0;
-                // if (self.activeChannels.length === 0) {
-                // self.chatConnected = false;
-                // }
             });
         },
         joinCurrentChannel: function () {
@@ -298,8 +326,9 @@ export const vueInstance = {
         },
         createWebSocket: function () {
             var self = this;
+
+            self.webSocket = new WebSocket("ws://localhost:8080");
             self.webSocket.addEventListener('message', (event) => {
-                // console.log("websocket message", event);
 
                 var message;
 
@@ -321,33 +350,23 @@ export const vueInstance = {
                 }
             });
         },
-        saveOscMappings: function (event) {
-            event.stopPropagation();
+        saveOscMappings: function () {
             var arr = Array.from(this.oscMappings);
+
             return dataAccess.putOscEvents(arr)
             .then(function () {
                 self.snackbarText = "OSC settings saved";
                 self.snackbar = true;
             });
         },
-        saveEventSubscriptions: function (event) {
-
-            if (event) {
-                event.stopPropagation();
-            }
-
+        saveEventSubscriptions: function () {
             return dataAccess.updateSubscriptions(Array.from(this.eventSubscriptions.entries()))
             .then(function () {
                 self.snackbarText = "Event subscriptions saved";
                 self.snackbar = true;
             });
         },
-        savePluginConfig: function (event) {
-
-            if (event) {
-                event.stopPropagation();
-            }
-
+        savePluginConfig: function () {
             return dataAccess.putPluginConfig(Array.from(this.pluginConfig.entries()))
             .then(function () {
                 self.snackbarText = "Plugin Config saved.  Restart the bot to see the changes.";
@@ -355,27 +374,23 @@ export const vueInstance = {
             });
         },
         setApiScopes: function (name, value) {
-            // console.log("setApiScopes", name, value);
             var temp = this.apiScopes;
             var val = temp.get(name);
             val.value = value;
             this.apiScopes = temp;
         },
         setChatScopes: function (name, value) {
-            // console.log("setChatScopes", name, value);
             var temp = this.chatScopes;
             var val = temp.get(name);
             val.value = value;
             this.chatScopes = temp;
         },
         setOscEvent: function (name, value) {
-            // console.log("setOscEvent", name, value);
             var temp = this.oscMappings;
             temp.set(name, value);
             this.oscMappings = temp;
         },
         setPluginConfig: function (name, value) {
-            // console.log("setOscEvent", name, value);
             var temp = this.pluginConfig;
             temp.set(name, value);
             this.pluginConfig = temp;
@@ -394,8 +409,6 @@ export const vueInstance = {
             this.saveEventSubscriptions();
         },
         setEventSubscription: function (key, index, value) {
-            // console.log("setEventSubscription", eventSubscriptions, index, value);
-
             //because of the way we are rendering the list and storing the data,
             //the index doesn't point to the array index within the key,
             //so we have to count from the beginning until we reach the index.
@@ -412,8 +425,6 @@ export const vueInstance = {
             }
         },
         removeEventSubscription: function (index) {
-            // console.log("setEventSubscription", eventSubscriptions, index, value);
-
             //because of the way we are rendering the list and storing the data,
             //the index doesn't point to the array index within the key,
             //so we have to count from the beginning until we reach the index.
@@ -433,7 +444,6 @@ export const vueInstance = {
             }
         },
         say: function () {
-            // console.log("say", this.activeChannels, this.currentChannel);
             dataAccess.say(this.activeChannels[this.currentChannel], this.message);
         },
         getChannelTabClass: function (i) {
@@ -443,20 +453,28 @@ export const vueInstance = {
         getMessageDisplay: function (item) {
             return item.context.username + ' : ' + item.msg;
         },
-		getRoleDisplay: function(role){
-			var roleMap = new Map();
-			
-			roleMap.set(0, "viewer");
-			roleMap.set(1, "vip");
-			roleMap.set(2, "subscriber");
-			roleMap.set(3, "moderator");
-			roleMap.set(4, "broadcaster");
-			
-			return roleMap.get(role.toLowerCase());
-		}
+        getRoleDisplay: function (role) {
+            var roleMap = new Map();
+
+            roleMap.set(0, "viewer");
+            roleMap.set(1, "vip");
+            roleMap.set(2, "subscriber");
+            roleMap.set(3, "moderator");
+            roleMap.set(4, "broadcaster");
+
+            return roleMap.get(role.toLowerCase());
+        }
 
     },
     computed: {
+        configDisplay: function () {
+            var self = this;
+            return self.config.filter(function (x) {
+                return x.title.indexOf(self.searchConfig) > -1 ||
+                x.value.indexOf(self.searchConfig) > -1;
+            });
+        },
+
         pluginConfigDisplay: function () {
             return Array.from(this.pluginConfig.entries())
             .filter((x) =>
@@ -466,11 +484,11 @@ export const vueInstance = {
         },
         roles: function () {
             return Array.from(ChatRoles.entries()).map(x => {
-				return {
-					title: x[0],
-					value: x[1]
-				};
-			});
+                return {
+                    title: x[0],
+                    value: x[1]
+                };
+            });
         },
         userTableHeaders: function () {
             return [{
@@ -515,10 +533,6 @@ export const vueInstance = {
         },
 
         selectedEventSubscriptionType: function () {
-            // console.log("selectedEventSubscriptionType", this.eventSubscriptionTypes);
-            // console.log("types", this.eventSubscriptionTypes);
-            // console.log("key", this.selectedEventSubscriptionKey);
-
             return this.eventSubscriptionTypes.get(this.selectedEventSubscriptionKey) ?? {
                 args: []
             };
@@ -543,7 +557,6 @@ export const vueInstance = {
         chatScopesDisplay: function () {
             return Array.from(this.chatScopes)
             .map(function (x) {
-                // console.log("chat scope display", x);
                 return {
                     name: x[0],
                     description: x[1].description,
@@ -613,7 +626,6 @@ export const vueInstance = {
         },
 
         eventSubscriptionsDisplay: function () {
-            console.log("eventSubscriptionsDisplay", this.eventSubscriptions);
             var self = this;
             var returnMe = [];
             var entries = Array.from(this.eventSubscriptions.entries());
@@ -664,13 +676,10 @@ export const vueInstance = {
             dataAccess.getBotUserInfo()
             .then(function (data) {
                 if (data) {
-                    console.log("after getBotUserInfo", data);
                     self.botUserInfo = data;
-                    console.log("bot id", self.botUserInfo["id"]);
 
                     dataAccess.getSubscriptionTypes()
                     .then(function (data) {
-                        console.log("getAvailableSubscriptions().then", data);
                         var temp = self.eventSubscriptionTypes;
                         if (data?.length > 0) {
                             data.forEach(function (x) {
@@ -683,7 +692,6 @@ export const vueInstance = {
                             });
                         }
                         self.eventSubscriptionTypes = temp;
-                        console.log("available eventSubscriptions after load", self.eventSubscriptionTypes);
                     })
                     .catch(function (err) {
                         console.log(err);
@@ -699,7 +707,6 @@ export const vueInstance = {
 
         dataAccess.getSubscriptions()
         .then(function (data) {
-            console.log("getSubscriptions().then", data);
             self.eventSubscriptions = new Map(data);
         })
         .catch(function (err) {
@@ -708,8 +715,6 @@ export const vueInstance = {
 
         dataAccess.getOscMappings()
         .then(function (data) {
-            // console.log("getOscMappings().then", data);
-
             var temp = self.oscMappings;
             if (data?.length > 0) {
                 data.forEach(function (x) {
@@ -718,7 +723,6 @@ export const vueInstance = {
                 });
             }
             self.oscMappings = temp;
-            // console.log("oscMappings after load", self.oscMappings);
         })
         .catch(function (err) {
             console.log(err);
@@ -726,7 +730,6 @@ export const vueInstance = {
 
         dataAccess.getActiveChannels()
         .then(function (data) {
-            // console.log("getActiveChannels().then", data);
             if (data?.length > 0) {
                 data.forEach(function (x) {
                     self.activeChannels.push(x);
@@ -737,9 +740,7 @@ export const vueInstance = {
 
         dataAccess.getConfig()
         .then(function (data) {
-            // console.log("getActiveChannels().then", data);
             if (data) {
-                // console.log("config", data);
                 Object.keys(data).forEach(function (key) {
                     self.config.push({
                         title: key,
@@ -755,7 +756,6 @@ export const vueInstance = {
         dataAccess.getSecrets()
         .then(function (data) {
             if (data) {
-                // console.log("secrets", data);
                 Object.keys(data).forEach(function (key) {
                     self.secrets.push({
                         title: key,
@@ -771,26 +771,21 @@ export const vueInstance = {
         dataAccess.getTwitchEndpoints()
         .then(function (data) {
             if (data) {
-                // console.log("twitchEndpoints", data);
                 self.twitchEndpoints = new Map(data);
             }
         });
 
         dataAccess.getApiScopes()
         .then(function (data) {
-            // console.log("getApiScopes().then", data);
             var temp = self.apiScopes;
-            // console.log("getApiScopes", data);
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    // console.log("api scope", x);
                     temp.set(x[0], {
                         description: x[1],
                         value: false
                     });
                 });
             }
-            // console.log("api scopes after load", temp);
             self.apiScopes = temp;
         })
         .catch(function (err) {
@@ -799,17 +794,13 @@ export const vueInstance = {
 
         dataAccess.getActiveApiScopes()
         .then(function (data) {
-            // console.log("getApiScopes().then", data);
             var temp = self.apiScopes;
 
-            // console.log("getActiveApiScopes", data);
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    // console.log("active api scope", x);
                     temp.set(x[0], x[1]);
                 });
             }
-            // console.log("api scopes after load", self.eventSubscriptions);
             self.apiScopes = temp;
         })
         .catch(function (err) {
@@ -818,18 +809,15 @@ export const vueInstance = {
 
         dataAccess.getChatScopes()
         .then(function (data) {
-            // console.log("getChatScopes().then", data);
             var temp = self.chatScopes;
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    // console.log("chat scope", x);
                     temp.set(x[0], {
                         description: x[1],
                         value: false
                     });
                 });
             }
-            // console.log("chat scopes after load", self.eventSubscriptions);
             self.chatScopes = temp;
         })
         .catch(function (err) {
@@ -838,17 +826,14 @@ export const vueInstance = {
 
         dataAccess.getActiveChatScopes()
         .then(function (data) {
-            // console.log("getApiScopes().then", data);
             var temp = self.chatScopes;
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    console.log("active chat scope", x);
                     var val = temp.get(x);
                     val.value = true;
                     temp.set(x, val);
                 });
             }
-            // console.log("api scopes after load", self.eventSubscriptions);
             self.chatScopes = temp;
         })
         .catch(function (err) {
@@ -859,7 +844,6 @@ export const vueInstance = {
         .then(function (data) {
             if (data?.length > 0) {
                 self.users = new Map(data);
-                console.log("saved users", self.users);
             }
         });
 
@@ -871,16 +855,13 @@ export const vueInstance = {
 
         dataAccess.getPluginConfig()
         .then(function (data) {
-            console.log("dataAccess.getPluginConfig", data);
             var temp = self.pluginConfig;
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    // console.log("plugin", x);
                     temp.set(x[0], x[1]);
                 });
             }
             self.pluginConfig = temp;
-            console.log("plugin config after load", self.pluginConfig);
         })
         .catch(function (err) {
             console.log(err);
@@ -888,15 +869,12 @@ export const vueInstance = {
 
         dataAccess.getChatCommands()
         .then(function (data) {
-            // console.log("getApiScopes().then", data);
             var temp = self.chatCommands;
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    // console.log("chat command", x);
                     temp.set(x[0], x[1]);
                 });
             }
-            // console.log("api scopes after load", self.eventSubscriptions);
             self.chatCommands = temp;
         })
         .then(function () {

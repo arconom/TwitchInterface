@@ -97,12 +97,10 @@ export default class ChatCommandManager {
     }
 
     getCommandState(id) {
-        console.log("getCommandState", id, this.commandState.get(id));
         return this.commandState.get(id);
     }
 
     setCommandState(id, state) {
-        console.log("setCommandState", id, state);
         this.commandState.set(id, state);
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
@@ -173,7 +171,6 @@ export default class ChatCommandManager {
     }
 
     hasRole(context, role) {
-        console.log("hasRole(context, role)", typeof role);
         //context = Object<TwitchChatMessageContext>
         //role = String
 

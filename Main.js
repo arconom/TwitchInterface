@@ -1,4 +1,3 @@
-import zl from "zip-lib";
 import http from "http";
 import WebServer from "./src/WebServer.mjs";
 import ChatBot from "./src/ChatBot.mjs";
@@ -135,18 +134,6 @@ class App {
             });
         })
         .then(function () {
-
-            /*     new Promise(function (resolve, reject) {
-            App.twitchAPIProvider
-            .getUserInfo(App.config.broadcasterUsername,
-            function (data) {
-            FileRepository.log("initializing user data", App.twitchAPIProvider.user);
-            // subscriptionConditionState.broadcaster_user_id = twitchAPIProvider.user[0].id;
-            // subscriptionConditionState.user_id = twitchAPIProvider.user[0].id;
-            resolve(data);
-            });
-            });
-             */
             new Promise(function (resolve, reject) {
                 App.twitchAPIProvider
                 .getUserInfo(App.config.botName,
@@ -211,23 +198,6 @@ class App {
         .then(App.startWebServer);
 
     }
-
-    // var subscriptionConditionState = {
-    // "broadcaster_user_id": null,
-    // "campaign_id": null // optional to specify campaign
-    // ,
-    // "category_id": null // optional to specify category/game
-    // ,
-    // "client_id": null,
-    // "extension_client_id": null,
-    // "moderator_user_id": null,
-    // "organization_id": null,
-    // "reward_id": null // optional; gets notifications for a specific reward
-    // ,
-    // "to_broadcaster_user_id": null // could provide from_broadcaster_user_id instead
-    // ,
-    // "user_id": null
-    // };
 
     //todo figure out a way to fix the maxlisteners error
 
@@ -879,6 +849,10 @@ class App {
 
     static initChatBot() {
 
+        if (App.chatBot.isConnected()) {
+            return Promise.resolve();
+        }
+
         App.chatBot.AddHandler("message", function (x) {
             // console.log("chatbot message", x);
             // FileRepository.saveChatMessage(x.target.substr(1), x.msg);
@@ -971,11 +945,9 @@ class App {
         }
          */
 
-        console.log("App.chatBot.isConnected()", App.chatBot.isConnected());
-        if (!App.chatBot.isConnected()) {
-            console.log("connecting to chat");
-            App.chatBot.connect();
-        }
+        FileRepository.log("connecting to chat");
+        App.chatBot.connect();
+
         return Promise.resolve();
     }
 
@@ -1020,13 +992,11 @@ class App {
 
         App.eventSubListener.AddHandler("message", function (event) {
             // FileRepository.log("eventSubListener message", event);
-
             var obj = JSON.parse(event.data);
 
-            if (obj.metadata.message_type === Constants.session_welcome && !subbed) {
-
+            if (obj.metadata.message_type === Constants.session_welcome && !App.subbed) {
                 // FileRepository.log("welcome in. do subs");
-                subbed = true;
+                App.subbed = true;
                 for (var [key, value] of subs) {
                     FileRepository.log("sub: " + key + " " + JSON.stringify(value));
                     App.eventSubListener.subscribe(key, value.condition)
@@ -1044,7 +1014,7 @@ class App {
                 subs.get(obj.metadata.subscription_type).handler(obj);
             }
         }, true);
-        return Promise.resolve(eventSubListener.connect());
+        return Promise.resolve(App.eventSubListener.connect());
     }
 
     static endPubSub() {

@@ -28,12 +28,11 @@ import ChatCommandManager from "./ChatCommandManager.mjs";
 
 export default class ChatBot extends HandlerMap {
     constructor(config, secrets, oscManager) {
-        // console.log("ChatBot.ctor " + commands);
         super();
         var self = this;
         self.config = config;
         self.oscManager = oscManager;
-		self.username = config.botName;
+        self.username = config.botName;
         secrets = new Secrets(secrets);
         // Define configuration options
         self.tmiOptions = {
@@ -42,21 +41,19 @@ export default class ChatBot extends HandlerMap {
                 password: secrets.tmi
             }
         };
-		
-		console.log("ChatBot.tmiOptions", JSON.stringify(self.tmiOptions));
-		
+
         self.commandState = new Map();
         self.channels = new Set();
         self.chatCommandManager = new ChatCommandManager({
             config: self.config,
             oscManager: self.oscManager
         });
-		
-		self.loadCommands();
+
+        self.loadCommands();
     }
 
     loadCommands() {
-		var self = this;
+        var self = this;
         for (var command of ChatCommands.entries()) {
             var commandConstructed = new ChatCommand(command[1]);
             self.chatCommandManager.setCommand(command[0], commandConstructed);
@@ -64,11 +61,12 @@ export default class ChatBot extends HandlerMap {
     }
 
     isConnected() {
-		console.log("this.client.isConnected", this.client?.isConnected);
-        return this.client?.isConnected;
+        // console.log("this.client", this.client);
+        return this.client?.server.length > 0;
     }
 
     connect() {
+
         var self = this;
 
         // Create a client with our options
@@ -80,11 +78,6 @@ export default class ChatBot extends HandlerMap {
             self.onMessageHandler.call(self, target, context, msg, isSelf);
         });
         self.AddHandler("message", function (x) {
-            // FileRepository.log("ChatBot base message handler " + Object.keys(x)
-            // .reduce(function(a,i,c){
-            // a += c + ":  " + x[c];
-            // return a;
-            // },""));
             var commandMessage = self.chatCommandManager.getCommandResult(x);
 
             if (typeof commandMessage === "string" && commandMessage?.length > 0) {
@@ -99,7 +92,6 @@ export default class ChatBot extends HandlerMap {
 
         // Connect to Twitch:
         self.client.connect();
-
     }
 
     joinChannel(name) {
@@ -178,11 +170,6 @@ export default class ChatBot extends HandlerMap {
         false
          */
 
-        // FileRepository.log(target, context.username, msg, self);
-        // if (self) {
-        // FileRepository.log("Ignore messages from the bot");
-
-        // return;
         // } // Ignore messages from the bot
 
         var args = msg.split(" ");
@@ -199,17 +186,16 @@ export default class ChatBot extends HandlerMap {
     }
 
     sendMessage(channel, text) {
-        FileRepository.log("sendMessage " + channel + ": " + text);
-		if(!this.client){
-			this.connect();
-		}
-		
+        if (!this.client) {
+            this.connect();
+        }
+
         if (text && text.length > 0) {
             return this.client?.say(channel, text)
-			.catch(function(err){
-				console.log("error trying to say: \"" + text + "\" in channel: " + channel);
-				console.log(err);
-			});
+            .catch(function (err) {
+                console.log("error trying to say: \"" + text + "\" in channel: " + channel);
+                console.log(err);
+            });
         }
     }
 
@@ -218,7 +204,6 @@ export default class ChatBot extends HandlerMap {
     }
 
     sendMessages(channel, messages) {
-        FileRepository.log("sendMessages " + channel + " " + messages.join(";"));
         var self = this;
         if (messages?.length > 0) {
 

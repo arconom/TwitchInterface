@@ -42,15 +42,12 @@ var bannedWords = [
 
 var EnglishDefinitions;
 await import("./EnglishDefinitions.mjs").then(function (data) {
-    // console.log("EnglishDefinitions.mjs done", data);
     EnglishDefinitions = data.EnglishDefinitions;
     console.log("EnglishDefinitions.mjs " + EnglishDefinitions.length + " definitions loaded");
-
 })
 .catch(function (err) {
     zl.extract('./plugins/wordgenerator/src/EnglishDefinitions.zip', "./plugins/wordgenerator/src/")
     .then(function (data) {
-        // console.log("EnglishDefinitions.zip done", data);
         EnglishDefinitions = data.EnglishDefinitions;
     }, function (err) {
         console.log("EnglishDefinitions.mjs error", err);
@@ -104,8 +101,6 @@ export default class WordGenerator {
 
         }
 
-        // console.log("EnglishDefinitions", EnglishDefinitions);
-
         for (var x of EnglishDefinitions) {
             //no spaces
             //no initialism
@@ -114,39 +109,40 @@ export default class WordGenerator {
             //no ALL CAPS
             //no short words
             //only alpha
-            var match = x.word.match(/[A-Z]?[a-z]*/);
+			
+			var key = x.word.toLowerCase();
+            var match = key.match(/[a-z]*/);
 
             if (
                 match &&
-                match[0].length === x.word.length &&
-                x.word.indexOf(" ") === -1 &&
-                x.word.length > 2 &&
-                bannedWords.every(b => x.word.indexOf(b) === -1) &&
+                match[0].length === key.length &&
+                key.indexOf(" ") === -1 &&
+                key.length > 2 &&
+                bannedWords.every(b => key.indexOf(b) === -1) &&
                 bannedDefs.every(b => x.definition.indexOf(b) === -1) &&
                 bannedTags.every(b => x.tags.indexOf(b) === -1) &&
                 x.partOfSpeech.indexOf("Prepositional phrase") === -1 &&
-                this.getClosestDistance(x.word, x.definition.split(" ")) > 2) {
-                this.words.add(x.word);
+                this.getClosestDistance(key, x.definition.split(" ")) > 2) {
+                this.words.add(key);
             }
 
             if (x.definition) {
-                var activeDef = this.definitions.get(x.word);
+                var activeDef = this.definitions.get(key);
+
                 if (activeDef) {
                     //if there is already a definition for the word
                     //add the new one to the list
                     activeDef.push(x);
-                    this.definitions.set(x.word, activeDef);
+                    this.definitions.set(key, activeDef);
                 } else {
                     //there isn't a definition yet
                     //create the array and push
                     var arr = [];
                     arr.push(x);
-                    this.definitions.set(x.word, arr);
+                    this.definitions.set(key, arr);
                 }
             }
         }
-
-        console.log("word count", this.words.size);
 
         var endTime = Date.now();
     }
@@ -172,7 +168,6 @@ export default class WordGenerator {
 
         var index = Math.floor(Math.random() * list.length);
         this.lastWord = list[index];
-        console.log("this is a word", list[index]);
         this.usedWords.push(list[index]);
         return list[index];
     }
@@ -186,15 +181,14 @@ export default class WordGenerator {
     }
 
     getDefinition(key) {
-		console.log("getDefinition", key);
         var self = this;
         if (!key && this.lastWord) {
             key = this.lastWord;
         }
-		if(!key){
-			return null;
-		}
-		
+        if (!key) {
+            return null;
+        }
+
         key = key.toLowerCase();
 
         var arr = this.definitions.get(key);
@@ -205,7 +199,7 @@ export default class WordGenerator {
             //get one of the definitions for the given key
             var defIndex = Math.floor(Math.random() * arr.length);
 
-			//we don't want self-referencing definitions
+            //we don't want self-referencing definitions
             bannedDefs.forEach(function (element, index, array) {
                 var i = arr[defIndex].definition.indexOf(element);
                 if (i > -1) {

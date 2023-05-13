@@ -180,18 +180,15 @@ export default class WebServer {
         });
 
         self.server.on("connection", (socket) => {
-            // FileRepository.log("WebServer.start socket connection established", socket);
             self.sockets.add(socket);
-            self.server.once("close", function () {
-                FileRepository.log("server close");
-                self.socket.delete(socket);
-            });
+        });
+		
+        self.server.on("close", function () {
+            self.sockets.clear();
         });
 
-        var server = self.server;
-
         this.httpTerminator = createHttpTerminator({
-            server,
+            server: self.server
         });
     }
 

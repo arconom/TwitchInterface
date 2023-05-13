@@ -88,11 +88,9 @@ var plugin = {
                 var key = obj.target + stateKey;
                 var wordle;
                 var wordleState = obj.chatBot.chatCommandManager.getCommandState(key);
-                console.log("wordleState", wordleState);
 
                 if (wordleState) {
                     wordle = new Wordle(wordleState);
-                    console.log("wordle", wordle);
 
                     if (wordle) {
                         return wordle.status(true);

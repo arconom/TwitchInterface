@@ -1,48 +1,31 @@
 {
-    "name": "fractal-twitch-interface",
+    "name": "popular-rhinoceros-bot",
     "version": "1.0.0",
     "bin": {
         "execute": "main.js"
     },
     "pkg": {
         "assets": [
-            "./**"
+            "**"
         ],
-        "output": "dist"
+        "output": "dist",
+		"targets": ["node19"]
     },
     "scripts": {
-        "start": "node main.js",
-        "ChatBot": "ChatBot.mjs",
-        "Constants": "Constants.mjs",
-        "EventSubListener": "EventSubListener.mjs",
-        "FileRepository": "FileRepository.mjs",
-        "HandlerMap": "HandlerMap.mjs",
-        "OAuthProvider": "OAuthProvider.mjs",
-        "PubSubListenables": "PubSubListenables.mjs",
-        "PubSubListener": "PubSubListener.mjs",
-        "Secrets": "Secrets.mjs",
-        "SubscriptionTypes": "SubscriptionTypes.mjs",
-        "TwitchAPIProvider": "TwitchAPIProvider.mjs",
-        "Utility": "Utility.mjs",
-        "WebSocketListener": "WebSocketListener.mjs",
-        "WebSocketMessage": "WebSocketMessage.mjs",
-        "WebSocketMessageList": "WebSocketMessageList.mjs"
+        "start": "node main.js"
     },
-    "author": "",
+    "author": "arconom",
     "license": "ISC",
     "main": "Main.js",
     "type": "module",
-    "keywords": [],
+    "keywords": ["twitch", "bot", "osc"],
     "dependencies": {
-        "crypto": "^1.0.1",
         "fs": "^0.0.1-security",
         "http": "^0.0.1-security",
         "http-terminator": "^3.2.0",
         "languagedetect": "^2.0.0",
         "line-by-line": "^0.1.6",
         "markov": "^0.0.7",
-        "node-7z-archive": "^1.1.4",
-        "node-7z-forall": "^2.1.5",
         "node-osc": "^8.0.6",
         "nvm": "^0.0.4",
         "open": "^8.4.0",
@@ -52,5 +35,5 @@
         "ws": "^8.11.0",
         "zip-lib": "^0.7.3"
     },
-    "description": ""
+    "description": "This program runs a Node instance that interfaces with Twitch API and OSC.  It also has a browser based UI."
 }

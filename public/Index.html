@@ -2,6 +2,12 @@
 	<head>
 
 <style>
+.row-even{
+	background-color: #212121;
+}
+.row-odd{
+	background-color: #424242;
+}
 .margin-sm{
 	margin-bottom: 4px;
 }
@@ -45,7 +51,7 @@
 										<v-icon @click="removeChannel(c)" v-show="savedChannels.has(c)">mdi-bookmark-remove</v-icon>
 										</v-tab>
 									</v-tabs>
-									<v-list style="height: 10em; overflow: auto;" :items="currentChannelMessages"/>
+									<v-list style="height: 30em; overflow: scroll;" :items="currentChannelMessages"/>
 								</v-card-text>
 								<v-card-actions></v-card-actions>
 							</v-card>
@@ -73,7 +79,8 @@
 								</v-expansion-panel>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandState">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandStateClickHandler">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click="refreshChatCommandStateClickHandler">Refresh</v-btn>
 										Chat Command State
 										"./data/commandstate.json"
 									</v-expansion-panel-title>
@@ -98,23 +105,23 @@
 										<v-text-field placeholder="Search" 
 											@click="searchClickHandler"
 											v-model="searchChatCommandConfig"></v-text-field>
-									<v-row v-for="(item, i) in chatCommandConfigDisplay" :key="i" >
-										<v-col cols="1" sm="12">
+									<v-row v-for="(item, i) in chatCommandConfigDisplay" :key="i" :class="getRowColor(i)">
+										<v-col cols="1" sm="1">
 											<v-checkbox @change="updateChatCommandConfig(item.key, item)" 
 											v-model="item.enabled" />
 										</v-col>
-										<v-col cols="4" sm="6">
+										<v-col cols="11" sm="11">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="key" 
 											v-model="item.key"></v-text-field>
 										</v-col>
-										<v-col cols="3" sm="6">
+										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											type="number" 
 											label="cooldown (in seconds)" 
 											v-model="item.cooldownSeconds" ></v-text-field>
 										</v-col>
-										<v-col cols="4" sm="6">
+										<v-col cols="6" sm="6">
 											<v-select @update:model-value="updateChatCommandConfig(item.key, item)" 
 											v-model="item.role" 
 											:items="roles" 
@@ -156,16 +163,18 @@
 							<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveApiScopes">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveApiScopesClickHandler">Save</v-btn>
 										API Scopes
-										"./apiscopes.txt"
-
+										"./data/apiscopes.txt"
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
 										<v-text-field placeholder="Search" 
 											@click="searchClickHandler"
 											v-model="searchApiScopes"></v-text-field>
-										<v-checkbox v-for="(item, i) in apiScopesDisplay" :key="i" @click="setApiScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>
+										<v-checkbox v-for="(item, i) in apiScopesDisplay" :key="i" 
+											@click="setApiScopes(item.name,!item.value)" 
+											v-model="item.value" 
+											:label="item.name  + ' - ' + item.description"/>
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 							</v-expansion-panels>
@@ -188,7 +197,6 @@
 							<v-row>
 								<v-col cols="3" sm="3">Name</v-col>
 								<v-col cols="2" sm="2">Id</v-col>
-								<v-col cols="2" sm="2">Type</v-col>
 								<v-col cols="3" sm="3">Created</v-col>
 								<v-col cols="2" sm="2">Actions</v-col>
 							</v-row>
@@ -200,9 +208,6 @@
 								</v-col>
 								<v-col cols="2" sm="2">
 									{{item.id}}
-								</v-col>
-								<v-col cols="2" sm="2">
-									{{item.type}}
 								</v-col>
 								<v-col cols="3" sm="3">
 									{{item.created_at}}
@@ -227,8 +232,9 @@
 								<v-expansion-panels>
 									<v-expansion-panel>
 										<v-expansion-panel-title>
-											<v-btn style="margin-right: 2em;" color="primary" @click="savePluginConfig">Save</v-btn>
+											<v-btn style="margin-right: 2em;" color="primary" @click="savePluginConfigClickHandler">Save</v-btn>
 												Plugins
+												"./data/pluginConfig.json"
 										</v-expansion-panel-title>
 										<v-expansion-panel-text>
 											<v-text-field placeholder="Search" 
@@ -242,7 +248,6 @@
 										</v-expansion-panel-text>
 									</v-expansion-panel>
 								</v-expansion-panels>
-							<div>Entries here are saved to "./data/pluginConfig.json"</div>
 							<div>Restart the bot to pick up changes here.</div>
 						</v-container>
 					</v-window-item>
@@ -279,9 +284,9 @@
 								<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveEventSubscriptions">Save</v-btn>
-							Event Subscriptions
-
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveEventSubscriptionsClickHandler">Save</v-btn>
+										Event Subscriptions
+										Entries here are saved to"./data/EventSubscriptions.json"
 							</v-expansion-panel-title>
 									<v-expansion-panel-text>
 										<v-text-field placeholder="Search" 
@@ -299,7 +304,6 @@
 											</v-col>
 										</v-row>
 									</v-expansion-panel-text>
-									<div>Entries here are saved to"./data/EventSubscriptions.json"</div>
 								</v-expansion-panel>
 								</v-expansion-panels>
 						</v-container>
@@ -309,8 +313,9 @@
 								<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveOscMappings">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click="saveOscMappingsClickHandler">Save</v-btn>
 										OSC Mappings
+										"./data/OscMappings.txt"
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
 										<v-text-field placeholder="Search" 
@@ -321,7 +326,6 @@
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 								</v-expansion-panels>
-							<div>Entries here are saved to "./data/OscMappings.txt"</div>
 						</v-container>
 					</v-window-item>
 					<v-window-item value="config">
@@ -333,8 +337,11 @@
 								<v-col cols="2" sm="2">
 									<v-btn color="primary" @click="addConfig">Add</v-btn>
 								</v-col>
+								<v-text-field placeholder="Search" 
+									@click="searchClickHandler"
+									v-model="searchConfig"></v-text-field>
 							</v-row>
-							<v-row v-for="(item, i) in config" :key="i" @change="updateConfig(i,item)">
+							<v-row v-for="(item, i) in configDisplay" :key="i" @change="updateConfig(i,item)">
 								<v-col cols="3" sm="3">
 									<v-text-field v-model="item.title"></v-text-field>
 								</v-col>

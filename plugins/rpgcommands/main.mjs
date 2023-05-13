@@ -211,7 +211,6 @@ var plugin = {
             }
         });
         function getDiceResult(options) {
-            console.log("getDiceResult", options);
             var returnMe = "";
 
             function rollDice(count, faces, explode, dice = []) {
