@@ -42,7 +42,12 @@ export const FileRepository = {
     },
 
     readPluginConfig: function () {
-        return this.readFileAsync("./data/pluginConfig.json").then((data) => JSON.parse(data));
+        return this.readFileAsync("./data/pluginConfig.json")
+        .then((data) => {
+            JSON.parse(data);
+        }).catch(function(err){
+			FileRepository.log("no plugin data");
+		});
     },
 
     saveBookmarkedChannels: function (state) {
@@ -198,6 +203,8 @@ export const FileRepository = {
                     resolve(data);
                 }
             });
+        }).catch(function (err) {
+            FileRepository.log("error while accessing file " + filename + " " + err);
         });
     },
 

@@ -255,7 +255,9 @@ class App {
             if (data !== undefined && data.length > 0) {
                 App.activeChatScopes = JSON.parse(data);
             }
-        });
+        }).catch(function(err){
+			//file not exist, user needs to make one
+		});
     }
 
     static loadSecrets() {

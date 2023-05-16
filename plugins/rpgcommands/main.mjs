@@ -12,7 +12,7 @@ var plugin = {
     // context: new TwitchChatMessageContext(context),
     // "self": isSelf,
     // chatBot: self,
-	// args: [] an array of strings split from the user input
+    // args: [] an array of strings split from the user input
     // }
     exports: {},
     commands: new Map(),
@@ -271,7 +271,9 @@ var plugin = {
                 returnMe += options.operator + options.operand;
             }
 
-            returnMe += "=" + totalPips;
+            if (options.numDice > 1 || options.operator) {
+                returnMe += "=" + totalPips;
+            }
 
             if (returnMe.indexOf("-") === 0 ||
                 returnMe.indexOf("+") === 0) {
