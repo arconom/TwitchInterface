@@ -4,6 +4,14 @@ export default class dataAccess {
         this.hostname = "http://127.0.0.1:6969";
     }
 
+	putOauth(){
+        var self = this;
+        return fetch(this.hostname + "/app/oauth")
+        .catch(function (e) {
+            console.log(e);
+        });
+	}
+
     putActiveApiScopes(apiScopes) {
 
         if (!apiScopes) {

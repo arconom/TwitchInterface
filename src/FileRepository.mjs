@@ -44,7 +44,7 @@ export const FileRepository = {
     readPluginConfig: function () {
         return this.readFileAsync("./data/pluginConfig.json")
         .then((data) => {
-            JSON.parse(data);
+            return JSON.parse(data);
         }).catch(function(err){
 			FileRepository.log("no plugin data");
 		});

@@ -4,7 +4,10 @@ import {
     Nonce
 }
 from "./Utility.mjs";
-import {ApiScopes} from "./ApiScopes.mjs";
+import {
+    ApiScopes
+}
+from "./ApiScopes.mjs";
 import {
     Secrets
 }
@@ -14,27 +17,30 @@ import {
 }
 from "./Constants.mjs";
 import open from 'open';
-import {FileRepository} from "./FileRepository.mjs";
+import {
+    FileRepository
+}
+from "./FileRepository.mjs";
 
 export default class OAuthProvider extends HandlerMap {
 
     constructor(redirectUri, port, secretsConfig, preferredBrowser, scopes) {
         super();
-		var secrets = new Secrets(secretsConfig);
-		this.port = port;
+        var secrets = new Secrets(secretsConfig);
+        this.port = port;
         this.oAuthToken;
         this.token = {};
         this.secret = secrets.secret;
         this.clientId = secrets.clientId;
         this.redirectUri = redirectUri + port;
         this.scope = scopes.join(" ");
-        FileRepository.log( "OAuthProvider.scope " + this.scope);
-		
+        FileRepository.log("OAuthProvider.scope " + this.scope);
+
         this.server;
         this.inProgress = false;
         this.setupListener();
         this.accessTokenDebouncer = 0;
-		this.preferredBrowser = preferredBrowser;
+        this.preferredBrowser = preferredBrowser;
     }
 
     readJson(data) {
@@ -50,7 +56,7 @@ export default class OAuthProvider extends HandlerMap {
         var self = this;
         // FileRepository.log( "OAuthProvider.setupListener");
         self.server = http.createServer(function (req, res) {
-            FileRepository.log( "OAuthProvider response received");
+            FileRepository.log("OAuthProvider response received");
             onRequest(req, res);
         });
         self.server.listen(self.port);
@@ -59,17 +65,17 @@ export default class OAuthProvider extends HandlerMap {
             if (req.url) {
                 var match = req.url.match(Constants.codeRegex);
                 if (match?.length > 0) {
-                    FileRepository.log( "setupListener code", match[1]);
+                    FileRepository.log("setupListener code", match[1]);
                     self.oAuthToken = match[1];
                     self.getAccessToken(function (x) {
                         self.ExecuteHandlers("authorize", self);
                         self.inProgress = false;
                     });
                 } else {
-                    FileRepository.log( "no code found in response url", req.url);
+                    FileRepository.log("no code found in response url", req.url);
                 }
             } else {
-                FileRepository.log( "no url found in response", req, res);
+                FileRepository.log("no url found in response", req, res);
             }
 
             res.write('Response');
@@ -78,30 +84,30 @@ export default class OAuthProvider extends HandlerMap {
     }
 
     getAuthorizationHeader() {
-        FileRepository.log( "OAuthProvider.getAuthorizationHeader");
+        FileRepository.log("OAuthProvider.getAuthorizationHeader");
         if (this.token && this.token.token_type) {
             return this.token.token_type[0].toUpperCase() +
             this.token.token_type.substr(1) + " " +
             this.token.access_token;
         } else {
-            FileRepository.log( "no auth token");
+            FileRepository.log("no auth token");
         }
     }
 
     validateAccess(callback) {
-        FileRepository.log( "OAuthProvider.validateAccess");
+        FileRepository.log("OAuthProvider.validateAccess");
         var self = this;
         if (self?.token?.access_token?.length === undefined || self?.token?.access_token?.length === 0) {
-            FileRepository.log( "no token found, getting one");
+            FileRepository.log("no token found, getting one");
             return self.getAccessToken(callback);
         } else {
-            FileRepository.log( "we have a token, moving on");
+            FileRepository.log("we have a token, moving on");
             return callback(self);
         }
     }
 
     authorizeImplicit() {
-		var self = this;
+        var self = this;
         this.state = this.getState();
         var url = "https://id.twitch.tv/oauth2/authorize?" +
             "client_id=" + encodeURIComponent(this.clientId) +
@@ -119,7 +125,7 @@ export default class OAuthProvider extends HandlerMap {
     }
 
     authorize(callback) {
-        FileRepository.log( "OAuthProvider.authorize");
+        FileRepository.log("OAuthProvider.authorize");
         var self = this;
         this.AddHandler("authorize", callback, false);
 
@@ -155,11 +161,15 @@ export default class OAuthProvider extends HandlerMap {
     }
 
     getAccessToken(callback) {
-        FileRepository.log( "OAuthProvider.getAccessToken");
+        FileRepository.log("OAuthProvider.getAccessToken");
         var self = this;
 
+        if (self.clientId?.length == 0) {
+            return Promise.resolve();
+        }
+
         if (Date.now() < self.accessTokenDebouncer) {
-            FileRepository.log( "OAuthProvider.getAccessToken debounced");
+            FileRepository.log("OAuthProvider.getAccessToken debounced");
             return Promise.resolve();
         }
 
@@ -167,7 +177,7 @@ export default class OAuthProvider extends HandlerMap {
         var url = `https://id.twitch.tv/oauth2/token`;
 
         return self.validateToken(function () {
-            FileRepository.log( "getAccessToken after validateToken");
+            FileRepository.log("getAccessToken after validateToken");
             var data = {
                 client_id: self.clientId,
                 client_secret: self.secret,
@@ -207,16 +217,16 @@ export default class OAuthProvider extends HandlerMap {
             .then(self.readJson)
             .then(function (data) {
                 if (data.access_token) {
-                    FileRepository.log( "getAccessToken result", data);
+                    FileRepository.log("getAccessToken result", data);
                     self.token = data;
                     return self.ExecuteHandlers("token", self);
                 } else {
-                    FileRepository.log( "OAuthProvider.getAccessToken failed to get token", data);
-					return Promise.resolve();
+                    FileRepository.log("OAuthProvider.getAccessToken failed to get token", data);
+                    return Promise.resolve();
                 }
             })
             .catch(function (e) {
-                FileRepository.log( "getAccessToken exception", e);
+                FileRepository.log("getAccessToken exception", e);
                 self.server.close();
             });
 
@@ -238,13 +248,13 @@ export default class OAuthProvider extends HandlerMap {
 
     validateToken(callback) {
         var self = this;
-        FileRepository.log( "OAuthProvider.validateToken");
+        FileRepository.log("OAuthProvider.validateToken");
         //if we don't have a code already
         if (!self.oAuthToken || self.oAuthToken.length === 0) {
-            FileRepository.log( "validateToken getting new token");
+            FileRepository.log("validateToken getting new token");
             return self.authorize(callback);
         } else {
-            FileRepository.log( "validateToken already has token");
+            FileRepository.log("validateToken already has token");
             return callback(self);
             // return Promise.resolve();
         }

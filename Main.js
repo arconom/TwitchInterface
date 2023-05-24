@@ -124,7 +124,6 @@ class App {
                 return FileRepository.readPluginConfig()
                 .then(function (pluginConfig) {
                     App.pluginConfig = new Map(pluginConfig);
-
                     App.pluginList.forEach(function (plugin) {
                         if (!App.pluginConfig.get(plugin)) {
                             App.pluginConfig.set(plugin, false);
@@ -771,6 +770,25 @@ class App {
             },
             "PUT": function (args) {
                 throw "method not allowed";
+            },
+            "DELETE": function (args) {
+                throw "method not allowed";
+            },
+        });
+
+        Controller.set("/app/oauth", {
+            "GET": function (args) {
+                throw "method not allowed";
+            },
+            "POST": function (args) {
+                throw "method not allowed";
+            },
+            "PUT": function (args) {
+                FileRepository.log("/app/oauth args " + args);
+                // FileRepository.log("TwitchAPIProvider[args.key]", twitchAPIProvider[args.key]);
+                return new Promise(function (resolve, reject) {
+					App.initOAuthProvider();                
+				});
             },
             "DELETE": function (args) {
                 throw "method not allowed";

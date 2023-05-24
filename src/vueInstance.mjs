@@ -56,6 +56,9 @@ export const vueInstance = {
         }
     },
     methods: {
+		authenticate: function(){
+			dataAccess.putOauth();
+		},
         getRowColor: function (index) {
             if (index % 2 === 0) {
                 // return "grey-darken-3";
@@ -467,6 +470,16 @@ export const vueInstance = {
 
     },
     computed: {
+		isAuthenticateButtonDisabled: function(){
+			for(let i = 0; i < this.secrets.length; i++){
+				let item = this.secrets[i];
+				
+				if(item.title === "clientId" && item.value.length > 0){
+					return false;
+				}
+			}
+			return true;
+		},
         configDisplay: function () {
             var self = this;
             return self.config.filter(function (x) {

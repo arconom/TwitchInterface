@@ -368,6 +368,9 @@
 								<v-col cols="2" sm="2">
 									<v-btn color="primary" @click="addSecret">Add</v-btn>
 								</v-col>
+								<v-col cols="2" sm="2">
+									<v-btn color="primary" :disabled="isAuthenticateButtonDisabled" @click="authenticate">Authenticate</v-btn>
+								</v-col>
 							</v-row>
 							<v-row v-for="(item, i) in secrets" :key="i" @change="updateSecret(i,item)">
 								<v-col cols="3" sm="3">
@@ -390,6 +393,7 @@
 							</v-list-item>
 							<v-list-item>
 							<div>Entries here are saved to "./data/secrets.txt"</div>
+							<div>If this is your first time running this program, enter your info here and then click Authenticate.</div>
 							</v-list-item>
 							
 							</v-list>
