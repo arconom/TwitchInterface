@@ -6,7 +6,7 @@ export default class dataAccess {
 
 	putOauth(){
         var self = this;
-        return fetch(this.hostname + "/app/oauth")
+        return fetch(this.hostname + "/app/oauth", {method: "POST"})
         .catch(function (e) {
             console.log(e);
         });
