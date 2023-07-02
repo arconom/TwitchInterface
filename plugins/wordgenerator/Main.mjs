@@ -21,17 +21,32 @@ var plugin = {
 
         var Constants = globalState.get("constants");
 
+        plugin.commands.set("prcacro", {
+            description: "Generate an acronym using common words, pass the word to acronymize",
+            handler: function (obj) {
+                var msg = plugin.exports.wordGenerator.getCommonAcronym(obj.args[0].toLowerCase());
+                return msg;
+            }
+        });
+        plugin.commands.set("pracro", {
+            description: "Generate an acronym, pass the word to acronymize",
+            handler: function (obj) {
+                var msg = plugin.exports.wordGenerator.getAcronym(obj.args[0].toLowerCase());
+                return msg;
+            }
+        });
         plugin.commands.set("prcallit", {
+			
             description: "Generate an alliteration using common words, pass the first letter and then the number of words",
             handler: function (obj) {
-                var msg = plugin.exports.wordGenerator.getCommonAlliteration(obj.args[0], parseInt(obj.args[1]));
+                var msg = plugin.exports.wordGenerator.getCommonAlliteration(obj.args[0].toLowerCase(), parseInt(obj.args[1]));
                 return msg;
             }
         });
         plugin.commands.set("prallit", {
             description: "Generate an alliteration, pass the first letter and then the number of words",
             handler: function (obj) {
-                var msg = plugin.exports.wordGenerator.getAlliteration(obj.args[0], parseInt(obj.args[1]));
+                var msg = plugin.exports.wordGenerator.getAlliteration(obj.args[0].toLowerCase(), parseInt(obj.args[1]));
                 return msg;
             }
         });
@@ -39,7 +54,7 @@ var plugin = {
         plugin.commands.set("prdefine", {
             description: "Get the definition of the given word, if no word is given, get the definition of the most recently generated random word",
             handler: function (obj) {
-                var def = plugin.exports.wordGenerator.getDefinition(obj.args[0]);
+                var def = plugin.exports.wordGenerator.getDefinition(obj.args[0].toLowerCase());
 
                 if (def) {
                     return (obj.args[0] ?? plugin.exports.wordGenerator.lastWord) + def;

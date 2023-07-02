@@ -137,6 +137,7 @@ var plugin = {
                 var messages = [
                     `I'm not with him.`, 
 `Don't worry, he's just....unique.`,
+"His personality is disarming"
                 ];
                 var message = messages[Math.floor(Math.random() * messages.length)];
                 return message;

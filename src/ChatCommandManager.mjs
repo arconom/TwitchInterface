@@ -139,9 +139,6 @@ export default class ChatCommandManager {
                 commandState = {};
             }
 
-            // if (!commandConfig?.enabled) {
-            // FileRepository.log("Command: " + match[1] + " is disabled");
-            // }
             if (self.hasRole(obj.context, commandConfig?.role)) {
                 if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
                     commandState.executionCount = (commandState.executionCount ?? 0) + 1;
@@ -153,8 +150,6 @@ export default class ChatCommandManager {
                     (commandState.lastExecution + (commandConfig.cooldownSeconds * 1000) - Date.now()) +
                     " ms";
                 }
-            // }else{
-				//don't have the role
 			}
         }
     }
@@ -173,10 +168,6 @@ export default class ChatCommandManager {
     hasRole(context, role) {
         //context = Object<TwitchChatMessageContext>
         //role = String
-
-        // if (typeof role === "string") {
-        // role = parseInt(role);
-        // }
 
         var userRoleValue = ChatRoles.get(Constants.chatRoles.viewer);
 

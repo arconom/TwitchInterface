@@ -29,4 +29,5 @@ export const Constants = {
     commandRegex: /!(\w+)\s*(.+)?/,
     //match 6d6+5 k4l e
     dieRollRegex: /(\d+)d(\d+)(\+|-)?(\d+)?\s?(?:k(\d+)(h|l))?\s?(e)?/
+	
 };

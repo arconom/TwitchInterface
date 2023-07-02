@@ -13,7 +13,7 @@ import {
 from "../../src/Constants.mjs";
 var plugin = {
     name: "gorkblorf",
-
+    loadComplete: false,
     //commands is a map of keys and functions that take an object as a parameter and return a string
     // {
     // target: target,
@@ -22,9 +22,11 @@ var plugin = {
     // "self": isSelf,
     // chatBot: self
     // }
-    exports: {},
+    exports: {
+        //gorkblorf: Gorkblorf
+    },
     chatMessageHandler: function (message) {
-        if (!message.self) {
+        if (!message.self && plugin.loadComplete) {
             plugin.exports.gorkblorf?.read(message.msg, message.context["user-id"]);
 
             if (message.msg.toLowerCase().indexOf("@" + message.chatBot.username.toLowerCase()) > -1) {
@@ -34,9 +36,15 @@ var plugin = {
                 if (responseMessage.length === 0) {
                     responseMessage = "gorkblorf molunga spafs spafs spafs >><<";
                 }
-                return respondingTo + " " + responseMessage;
+				
+				message.chatBot.sendMessage(message.target.substr(1), respondingTo + " " + responseMessage);
             }
-        }
+			else{
+				console.log("gorkblorf chose not to respond to you");
+			}
+        }else{
+			console.log("gorkblorf not done loading, so it can't respond");
+		}
     },
     commands: new Map(),
     load: function (globalState) {
@@ -84,6 +92,8 @@ var plugin = {
 
                 worker.on('message', function (data) {
                     plugin.exports.gorkblorf = new Gorkblorf(data.gorkblorf, FileRepository);
+                    plugin.loadComplete = true;
+                    FileRepository.log("Gorkblorf load complete.");
                 });
                 worker.on('error', function (err) {
                     console.log("error", err);
@@ -112,6 +122,9 @@ var plugin = {
             var self = this;
             return FileRepository.readLargeFileAsync("./data/gorkblorfVocab.json",
                 function (line) {
+                if (!plugin.exports.vocab) {
+                    plugin.exports.vocab = [];
+                }
                 plugin.exports.vocab.push(line);
             });
         }

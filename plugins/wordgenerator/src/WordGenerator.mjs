@@ -20,7 +20,9 @@ var bannedDefs = ["past of",
     "singular of",
     "participle of",
     "alternative form of",
-    "spelling of"];
+    "spelling of",
+	"misspelling of"
+	];
 
 var bannedWords = [
     "bullshit",
@@ -109,8 +111,8 @@ export default class WordGenerator {
             //no ALL CAPS
             //no short words
             //only alpha
-			
-			var key = x.word.toLowerCase();
+
+            var key = x.word.toLowerCase();
             var match = key.match(/[a-z]*/);
 
             if (
@@ -194,7 +196,6 @@ export default class WordGenerator {
         var arr = this.definitions.get(key);
 
         if (arr) {
-
             var returnMe = null;
             //get one of the definitions for the given key
             var defIndex = Math.floor(Math.random() * arr.length);
@@ -290,6 +291,28 @@ export default class WordGenerator {
             prev = temp;
         }
         return prev[b.length];
+    }
+
+    getAcronym(word) {
+        return this.getAcro(this.getWordList(), word);
+    }
+
+    getCommonAcronym(word) {
+        return this.getAcro(this.getCommonWordList(), word);
+    }
+
+    getAcro(list, word) {
+        var self = this;
+        var returnMe = "";
+
+        word.split("").forEach(function (letter) {
+			var wordList = Array.from(list)
+                .filter(x => x.indexOf(letter) === 0);
+
+            returnMe += " " + self.getPrefixedWordsFromList(wordList, letter, 1);
+        });
+		
+        return returnMe.trim();
     }
 
 }

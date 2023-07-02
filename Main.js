@@ -119,7 +119,6 @@ class App {
             return FileRepository.getPluginList()
             .then(function (list) {
                 App.pluginList = list;
-
             }).then(function () {
                 return FileRepository.readPluginConfig()
                 .then(function (pluginConfig) {
@@ -930,7 +929,7 @@ class App {
         }, true);
 
         App.pluginChatHandlers.forEach(function (handler) {
-            App.chatBot.AddHandler("message", handler);
+            App.chatBot.AddHandler("message", handler, true);
         });
 
         //example object passed to command

@@ -38,7 +38,7 @@ var plugin = {
             handler: function (obj) {
                 var index = Math.floor(Math.random() * instruments.length);
                 var msg = instruments[index].word + " - " + instruments[index].definition;
-                return obj.chatBot.sendMessage(obj.target.substr(1), msg);
+                return msg;
             }
         });
 
@@ -46,7 +46,7 @@ var plugin = {
             description: "",
             handler: function (obj) {
                 var index = Math.floor(Math.random() * genres.length);
-                return obj.chatBot.sendMessage(obj.target.substr(1), genres[index]);
+                return genres[index];
             }
         });
 
