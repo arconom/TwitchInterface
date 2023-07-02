@@ -54,7 +54,7 @@ export default class OAuthProvider extends HandlerMap {
 
     setupListener() {
         var self = this;
-        // FileRepository.log( "OAuthProvider.setupListener");
+
         self.server = http.createServer(function (req, res) {
             FileRepository.log("OAuthProvider response received");
             onRequest(req, res);

@@ -253,9 +253,9 @@ class App {
             if (data !== undefined && data.length > 0) {
                 App.activeChatScopes = JSON.parse(data);
             }
-        }).catch(function(err){
-			//file not exist, user needs to make one
-		});
+        }).catch(function (err) {
+            //file not exist, user needs to make one
+        });
     }
 
     static loadSecrets() {
@@ -786,8 +786,9 @@ class App {
                 FileRepository.log("/app/oauth args " + args);
                 // FileRepository.log("TwitchAPIProvider[args.key]", twitchAPIProvider[args.key]);
                 return new Promise(function (resolve, reject) {
-					App.initOAuthProvider();                
-				});
+                    App.initOAuthProvider();
+					resolve();
+                });
             },
             "DELETE": function (args) {
                 throw "method not allowed";
@@ -1068,12 +1069,15 @@ class App {
 
     static initOAuthProvider() {
         //todo client id missing error when txt file missing
-        App.oAuthProvider = new OAuthProvider(App.config.redirectUri,
-                App.config.listenerPort,
-                App.secrets,
-                App.config.preferredBrowser,
-                App.activeApiScopes.concat(App.activeChatScopes));
-    }
+
+        if (!App.oAuthProvider) {
+            App.oAuthProvider = new OAuthProvider(App.config.redirectUri,
+                    App.config.listenerPort,
+                    App.secrets,
+                    App.config.preferredBrowser,
+                    App.activeApiScopes.concat(App.activeChatScopes));
+        }
+    } 
 
     static initTwitchAPIProvider() {
         App.twitchAPIProvider = new TwitchAPIProvider(App.oAuthProvider);

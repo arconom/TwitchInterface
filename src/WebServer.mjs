@@ -133,8 +133,14 @@ export default class WebServer {
                 req.on("end", function () {
                     // FileRepository.log("WebServer.start request.end " + body);
 
+                    var b;
+
                     //todo figure out why null shows up at the end of the object
-                    var b = JSON.parse(body.substr(0, body.length - 4));
+                    try {
+                        b = JSON.parse(body.substr(0, body.length - 4));
+                    } catch (e) {
+                        FileRepository.log("error parsing response:  " + e);
+                    }
 
                     //routes passed from main look like this
                     /*
@@ -182,7 +188,7 @@ export default class WebServer {
         self.server.on("connection", (socket) => {
             self.sockets.add(socket);
         });
-		
+
         self.server.on("close", function () {
             self.sockets.clear();
         });
