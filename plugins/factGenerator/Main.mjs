@@ -26,7 +26,7 @@ var plugin = {
             description: "Get a random fact",
             handler: function (obj) {
 
-                console.log("prfact handler");
+                // console.log("prfact handler");
 
                 var wordGenerator = globalState.get("wordgenerator").wordGenerator;
                 var key = obj.target + stateKey;
@@ -78,7 +78,7 @@ var plugin = {
                     }).then(function (result) {
                         return result.json();
                     }).then(function (result) {
-                        console.log(result);
+                        // console.log(result);
 
                         ccToken = result.ccToken;
                         mediaAuthToken = result.mediaAuthToken;
@@ -236,10 +236,10 @@ var plugin = {
                     }).then(function (result) {
                         return result.json();
                     }).then(function (result2) {
-                        console.log("prfact handler returning", result2);
+                        // console.log("prfact handler returning", result2);
 
                         if (result2.items) {
-                            console.log(result2.items[0].title);
+                            // console.log(result2.items[0].title);
                             return result2.items[0].title;
                         } else {
                             return result2.message;

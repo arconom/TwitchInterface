@@ -85,15 +85,15 @@ export default class ChatBot extends HandlerMap {
 
                     if (typeof commandMessage === "string" && commandMessage?.length > 0) {
                         //send one message
-        console.log("string message: ", commandMessage);
+        // console.log("string message: ", commandMessage);
                         self.sendMessage(x.target.substr(1), commandMessage);
                     } else if (typeof commandMessage === "object" && commandMessage?.length > 0) {
                         //loop through the array and send a separate message for each item
-        console.log("array message: ", commandMessage);
+        // console.log("array message: ", commandMessage);
                         self.sendMessages(x.target.substr(1), commandMessage);
                     } else if (commandMessage.then) {
                         //wait until the promise fulfils and then send a message
-        console.log("promise message: ", commandMessage);
+        // console.log("promise message: ", commandMessage);
                         commandMessage.then(function (message) {
                             if (message) {
 								console.log(message);
@@ -102,7 +102,7 @@ export default class ChatBot extends HandlerMap {
                         });
                     } else if (typeof commandMessage === "function") {
                         //pass in a callback because the command will run more than once
-        console.log("function message: ", commandMessage);
+        // console.log("function message: ", commandMessage);
                         commandMessage(function (message) {
                             self.sendMessage(x.target.substr(1), message);
                         });

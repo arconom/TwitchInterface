@@ -71,7 +71,7 @@
 									<v-expansion-panel-title>
 										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatScopes">Save</v-btn>
 										Chat Scopes
-										"./data/chatscopes.txt"
+										"./data/chatscopes.json"
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
 										<v-checkbox v-for="(item, i) in chatScopesDisplay" :key="i" @click="setChatScopes(item.name,!item.value)" v-model="item.value" :label="item.name  + ' - ' + item.description"/>

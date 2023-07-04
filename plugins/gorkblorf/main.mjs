@@ -40,10 +40,10 @@ var plugin = {
 				message.chatBot.sendMessage(message.target.substr(1), respondingTo + " " + responseMessage);
             }
 			else{
-				console.log("gorkblorf chose not to respond to you");
+				// console.log("gorkblorf chose not to respond to you");
 			}
         }else{
-			console.log("gorkblorf not done loading, so it can't respond");
+			// console.log("gorkblorf not done loading, so it can't respond");
 		}
     },
     commands: new Map(),

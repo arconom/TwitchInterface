@@ -56,9 +56,9 @@ export const vueInstance = {
         }
     },
     methods: {
-		authenticate: function(){
-			dataAccess.putOauth();
-		},
+        authenticate: function () {
+            dataAccess.putOauth();
+        },
         getRowColor: function (index) {
             if (index % 2 === 0) {
                 // return "grey-darken-3";
@@ -107,6 +107,7 @@ export const vueInstance = {
             this.saveChatCommandConfig();
         },
         updateChatCommandConfig: function (key, value) {
+            console.log("updateChatCommandConfig", key, value);
             this.chatCommandConfig.set(key, value);
         },
         getChatCommandState: function () {
@@ -470,16 +471,16 @@ export const vueInstance = {
 
     },
     computed: {
-		isAuthenticateButtonDisabled: function(){
-			for(let i = 0; i < this.secrets.length; i++){
-				let item = this.secrets[i];
-				
-				if(item.title === "clientId" && item.value.length > 0){
-					return false;
-				}
-			}
-			return true;
-		},
+        isAuthenticateButtonDisabled: function () {
+            for (let i = 0; i < this.secrets.length; i++) {
+                let item = this.secrets[i];
+
+                if (item.title === "clientId" && item.value.length > 0) {
+                    return false;
+                }
+            }
+            return true;
+        },
         configDisplay: function () {
             var self = this;
             return self.config.filter(function (x) {
@@ -583,14 +584,15 @@ export const vueInstance = {
         chatCommandConfigDisplay: function () {
             var self = this;
 
-            return Array.from(self.chatCommands.entries())
-            .map(function (command, index, array) {
-                return Object.assign(command[1],
-                    self.chatCommandConfig.get(command[0]));
-            }).filter((x) =>
-                Object.values(x).some((v) => typeof v === "string" ?
-                    v.indexOf(this.searchChatCommandConfig) > -1
-                     : false));
+            var ret = Array.from(self.chatCommands.entries())
+                .map(function (command, index, array) {
+                    return Object.assign(command[1],
+                        self.chatCommandConfig.get(command[0]));
+                }).filter((x) =>
+                    Object.values(x).some((v) => typeof v === "string" &&
+                        v.indexOf(this.searchChatCommandConfig) > -1));
+
+            return ret;
         },
         apiScopesDisplay: function () {
             return Array.from(this.apiScopes)
@@ -602,9 +604,8 @@ export const vueInstance = {
                 };
             })
             .filter((x) =>
-                Object.values(x).some((v) => typeof v === "string" ?
-                    v.indexOf(this.searchApiScopes) > -1
-                     : false));
+                Object.values(x).some((v) => typeof v === "string" &&
+                    v.indexOf(this.searchApiScopes) > -1));
         },
         oscMappingsDisplay: function () {
             return Array.from(this.oscMappings)
@@ -614,9 +615,8 @@ export const vueInstance = {
                     value: x[1]
                 };
             }).filter((x) =>
-                Object.values(x).some((v) => typeof v === "string" ?
-                    v.indexOf(this.searchOscMappings) > -1
-                     : false));
+                Object.values(x).some((v) => typeof v === "string" &&
+                    v.indexOf(this.searchOscMappings) > -1));
         },
         eventSubscriptionTypesDisplay: function () {
             return Array.from(this.eventSubscriptionTypes.entries())
@@ -633,9 +633,8 @@ export const vueInstance = {
                 return x[1];
             })
             .filter((x) =>
-                Object.values(x).some((v) => typeof v === "string" ?
-                    v.indexOf(this.searchUsers) > -1
-                     : false));
+                Object.values(x).some((v) => typeof v === "string" &&
+                    v.indexOf(this.searchUsers) > -1));
         },
 
         eventSubscriptionsDisplay: function () {

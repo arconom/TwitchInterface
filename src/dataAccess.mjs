@@ -143,12 +143,7 @@ export default class dataAccess {
 
     getStartChat() {
         var self = this;
-        return fetch(this.hostname + "/chat/start").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return fetch(this.hostname + "/chat/start");
 
     }
     getActiveChannels() {
