@@ -43,9 +43,19 @@ export default class WebServer {
 
             if (req.method === "GET" || req.method === "DELETE") {
                 if (req.url === "/") {
-                    // FileRepository.log("WebServer.start index.html");
+                    FileRepository.log("WebServer.start index.html");
                     //root, serve index
                     fs.readFile("./public/Index.html", function (error, data) {
+                        res.statusCode = 200;
+                        res.setHeader("Content-Type", "text/html");
+                        res.write(data);
+                        // FileRepository.log("WebServer.start end request " + req.url);
+                        res.end();
+                    });
+                } else if (req.url.indexOf("overlay") > -1 ){
+                    FileRepository.log("WebServer.start overlay.html");
+                    //root, serve index
+                    fs.readFile("./public/overlay.html", function (error, data) {
                         res.statusCode = 200;
                         res.setHeader("Content-Type", "text/html");
                         res.write(data);
@@ -157,6 +167,8 @@ export default class WebServer {
                     },
                     });
                      */
+					 
+					 try{
                     self.routes.get(req.url)[req.method](b).then(function (data) {
 
                         res.statusCode = 200;
@@ -169,6 +181,11 @@ export default class WebServer {
                         res.end();
 
                     });
+					 }
+					 catch(e){
+						 FileRepository.log("Route " + req.url + ":" + req.method + " created an error: " + e);
+					 }
+					
                 });
             }
 

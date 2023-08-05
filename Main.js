@@ -1,4 +1,5 @@
 import http from "http";
+import openBrowser from "open";
 import WebServer from "./src/WebServer.mjs";
 import ChatBot from "./src/ChatBot.mjs";
 import OscManager from "./src/OscManager.mjs";
@@ -42,20 +43,15 @@ import {
     HTTPError
 }
 from "./src/HTTPError.mjs";
+import Wallet from "./src/Wallet.mjs";
+import RepeatingMessage from "./src/RepeatingMessage.mjs";
 import PubSubListener from "./src/PubSubListener.mjs";
 import WebUIInterface from "./src/webUIInterface.mjs";
-import WebSocketListener from "./src/WebSocketListener.mjs";
-import readline from "readline/promises";
-import fs from 'fs';
+import ObsManager from "./src/ObsManager.mjs";
 import {
     Constants
 }
 from "./src/Constants.mjs";
-
-import {
-    open
-}
-from 'node:fs/promises';
 
 process.on('warning', (warning) => {
     FileRepository.log(warning.name); // Print the warning name
@@ -68,30 +64,30 @@ class App {
     static activeApiScopes = [];
     static activeChatScopes = [];
     static botUserInfo;
+    static chatBot;
     static chatLog = new Map();
+    static chatSaveTimeout = null;
     static config = {};
     static eventSubListener;
     static eventSubscriptionConfig = new Map();
-    static oAuthProvider;
-    static oscManager;
-    static pubSubListener;
-    static secrets = new Secrets();
-    static twitchAPIProvider;
-    static webServer;
-    static webUIInterface = new WebUIInterface(8080);
-    static subbed = false;
-    static chatSaveTimeout = null;
+    static globalState = new Map();
     static isEventSubRunning = false;
     static isPubSubRunning = false;
     static isWebServerRunning = false;
-    static users = new Map();
-    static globalState = new Map();
+    static oAuthProvider;
+    static oscManager;
+    static overlayWebSocket = new WebUIInterface(8081);
+    static pluginChatHandlers = [];
     static pluginConfig = new Map();
     static pluginList = [];
-
-    static chatBot;
-
-    static pluginChatHandlers = [];
+    static pubSubListener;
+    static secrets = new Secrets();
+    static subbed = false;
+    static twitchAPIProvider;
+    static users = new Map();
+    static wallets = new Map();
+    static webServer;
+    static webUIInterface = new WebUIInterface(8080);
 
     // var VRChatInterface = new OscManager("127.0.0.1", 9000, "127.0.0.1", 9001);
     // var VRChatInterface = new OscManager("127.0.0.1", 5656, "127.0.0.1", 5657);
@@ -99,11 +95,14 @@ class App {
     // VRChatInterface.setEvent("/chatbox/Input", true);
     // VRChatInterface.setEvent("/input/Jump", true);
 
+
+
     static init() {
 
-        App.globalState.set("chatlog", App.chatLog);
+        App.globalState.set("app", App);
         App.globalState.set("filerepository", FileRepository);
         App.globalState.set("constants", Constants);
+
         App.loadChatScopes()
         .then(App.loadApiScopes)
         .then(App.loadConfig)
@@ -114,6 +113,16 @@ class App {
             App.initTwitchAPIProvider();
             App.chatBot = new ChatBot(App.config, App.secrets, App.oscManager);
         })
+        .then(function () {
+            FileRepository.readCommandState()
+            .then(function (result) {
+                // console.log(result);
+                App.chatBot.chatCommandManager.commandState = new Map(JSON.parse(result));
+                // console.log(App.chatBot.chatCommandManager.commandState);
+            });
+        })
+        .then(App.loadRepeatingMessages)
+        .then(App.startObsManager)
         .then(App.loadOscMappings)
         .then(function () {
             return FileRepository.getPluginList()
@@ -131,16 +140,22 @@ class App {
                 });
             });
         })
+        // .then(function () {
+        // return FileRepository.getImages()
+        // .then(function (list) {
+        // list.forEach(function (image) {
+        // //send a websocket message to upload the image to the browser source
+        // overlayWebSocket.send("");
+        // });
+        // });
+        // })
         .then(function () {
-            new Promise(function (resolve, reject) {
                 App.twitchAPIProvider
                 .getUserInfo(App.config.botName,
                     function (data) {
-                    FileRepository.log("initializing user data", App.twitchAPIProvider.user);
                     App.botUserInfo = App.twitchAPIProvider.user[0];
-                    resolve(data);
+                    FileRepository.log("App.botUserInfo " + JSON.stringify(App.botUserInfo));
                 });
-            });
 
             FileRepository.readUsers()
             .then(function (data) {
@@ -150,6 +165,24 @@ class App {
             .catch(function () {
                 //no file
             });
+
+            FileRepository.readWallets()
+            .then(function (data) {
+				try{
+					
+					data.foreach(function(x){
+						const w = new Wallet(JSON.parse(x));
+						App.wallets.set(w.userId, w);
+					});
+				}
+				catch(e){
+					App.wallets = new Map();
+				}
+            })
+            .catch(function () {
+                //no file
+            });
+
             App.loadEventSubscriptions();
             App.twitchAPIProvider.getSubscriptions(null, function (data) {
                 if (data?.length > 0) {
@@ -193,12 +226,18 @@ class App {
             });
 
         })
-        .then(App.startWebServer);
-
+        .then(App.startWalletSaveInterval)
+        .then(App.startWebServer)
+        .then(App.startOverlay);
     }
 
     //todo figure out a way to fix the maxlisteners error
 
+	static startWalletSaveInterval(){
+		let interval = setInterval(function(){
+			FileRepository.saveWallets(Array.from(App.wallets.entries()));
+		}, 5*60*1000);
+	}
 
     static loadEventSubscriptions() {
 
@@ -212,6 +251,18 @@ class App {
                 });
             } else {
                 FileRepository.log("loadEventSubscriptions found no data");
+            }
+        });
+    }
+
+    static loadRepeatingMessages() {
+        return FileRepository.readRepeatingMessages()
+        .then(function (data) {
+            if (data) {
+                var arr = JSON.parse(JSON.parse(data));
+                for (const x of arr) {
+                    App.chatBot.repeatingMessages.set(x[0], new RepeatingMessage(x[1]));
+                }
             }
         });
     }
@@ -272,9 +323,37 @@ class App {
         });
     }
 
+    static startOverlay() {
+        let hostname = "127.0.0.1";
+        let port = App.config.webServerPort;
+        return openBrowser(hostname + ":" + port + "/overlay", {
+            app: {
+                name: "chrome"
+            }
+        });
+    }
+
+    static startObsManager() {
+        App.ObsManager = new ObsManager("127.0.0.1", "4455", App.secrets.obspassword);
+
+        App.globalState.set("obsManager", App.ObsManager);
+
+        return App.ObsManager.connect().then(function (result) {
+            FileRepository.log("ObsManager connected " + result);
+
+            App.ObsManager.send("GetHotkeyList").then(function (res) {
+                FileRepository.saveHotkeyList(res);
+            });
+        })
+        .catch(function (e) {
+            FileRepository.log("OBS connection error");
+        });
+    }
+
     static startWebServer() {
 
         //todo make a way for plugins to create endpoints
+        //maybe not, name collisions are bad
 
         if (App.isWebServerRunning) {
             return;
@@ -400,7 +479,7 @@ class App {
         Controller.set("/chat/commandstate", {
             "GET": function (args) {
                 // FileRepository.log("/chat/scopes", ChatScopes.entries());
-                return Promise.resolve(Array.from(App.chatBot?.commandState.entries() ?? []));
+                return Promise.resolve(Array.from(App.chatBot?.chatCommandManager?.commandState?.entries() ?? []));
             },
             "POST": function (args) {
                 throw "method not allowed";
@@ -429,6 +508,53 @@ class App {
                 throw "method not allowed";
             },
 
+        });
+
+        Controller.set("/chat/repeatingmessages", {
+            "GET": function (args) {
+                return Promise.resolve(Array.from(App.chatBot?.repeatingMessages.entries()) ?? []);
+            },
+            "POST": function (args) {
+                throw "method not allowed";
+            },
+            "PUT": function (args) {
+				if(App.chatBot){
+					let map = new Map(Array.from(args));
+					App.chatBot.repeatingMessages = map;
+					return FileRepository.saveRepeatingMessages(
+						JSON.stringify(
+							Array.from(
+								App.chatBot?.repeatingMessages.entries())));
+				}
+				else{
+                    return 400;
+				}
+            },
+            "DELETE": function (id) {
+                //remove a repeating message
+                App.chatBot?.repeatingMessages.delete(id);
+                return FileRepository.saveRepeatingMessages(JSON.stringify(Array.from(App.chatBot?.repeatingMessages)));
+            },
+        });
+
+        Controller.set("/chat/repeatingmessages/toggle", {
+            "GET": function (args) {
+                throw "method not allowed";
+            },
+            "POST": function (args) {
+                App.chatBot?.toggleRepeatingMessage(args.id);
+                return FileRepository
+                .saveRepeatingMessages(
+                    JSON.stringify(
+                        Array.from(
+                            App.chatBot?.repeatingMessages.entries())));
+            },
+            "PUT": function (args) {
+                throw "method not allowed";
+            },
+            "DELETE": function (id) {
+                throw "method not allowed";
+            },
         });
 
         Controller.set("/chat/command/config", {
@@ -461,6 +587,7 @@ class App {
                 throw "method not allowed";
             },
             "PUT": function (args) {
+                FileRepository.Log("/chat/scopes/active " + JSON.stringify(args));
                 if (args.length !== undefined && args.length !== null) {
                     App.activeChatScopes = args;
                     return FileRepository.saveChatScopes(args, function (x) {});
@@ -591,7 +718,7 @@ class App {
             },
             "DELETE": function (args) {
                 //remove a user from the list
-                App.users.remove(args.id);
+                App.users.delete(args.id);
                 return FileRepository.saveUsers(App.users);
             },
         });
@@ -787,7 +914,7 @@ class App {
                 // FileRepository.log("TwitchAPIProvider[args.key]", twitchAPIProvider[args.key]);
                 return new Promise(function (resolve, reject) {
                     App.initOAuthProvider();
-					resolve();
+                    resolve();
                 });
             },
             "DELETE": function (args) {
@@ -800,7 +927,7 @@ class App {
                 throw "method not allowed";
             },
             "POST": function (args) {
-                FileRepository.log("/api args " + args);
+                FileRepository.log("/api args " + JSON.stringify(args));
                 // FileRepository.log("TwitchAPIProvider[args.key]", twitchAPIProvider[args.key]);
                 return new Promise(function (resolve, reject) {
                     App.twitchAPIProvider[args.key](args.args, function (data) {
@@ -815,7 +942,6 @@ class App {
                             FileRepository.saveApiResults(args.key, JSON.stringify(data));
                         }
                         resolve(data);
-                        // return data;
                     });
                 });
             },
@@ -872,6 +998,16 @@ class App {
         if (App.chatBot.isConnected()) {
             return Promise.resolve();
         }
+
+        App.chatBot.AddHandler("repeatingMessageTerminate", function (x) {
+			FileRepository.log("repeatingMessageTerminate", x);
+            App.webUIInterface.send(JSON.stringify({
+				"command": "repeatingMessageTerminate",
+				"arguments": {
+					"id": x.id
+				}
+			}));
+		});
 
         App.chatBot.AddHandler("message", function (x) {
             // console.log("chatbot message", x);
@@ -1077,12 +1213,24 @@ class App {
                     App.config.preferredBrowser,
                     App.activeApiScopes.concat(App.activeChatScopes));
         }
-    } 
+    }
 
     static initTwitchAPIProvider() {
         App.twitchAPIProvider = new TwitchAPIProvider(App.oAuthProvider);
     }
 
+    static getWallet(userId, username, channel) {
+		const key = userId + ":" + channel;
+        if (!App.wallets.has(key)) {
+            App.wallets.set(key, new Wallet({
+				userId: userId,
+				username: username,
+				channel: channel
+			}));
+        }
+
+        return App.wallets.get(key);
+    }
 }
 
 App.init();

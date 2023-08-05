@@ -109,8 +109,6 @@ export default class dataAccess {
             body: JSON.stringify(config) // body data type must match "Content-Type" header
         });
     }
-
-
     putOscEvents(events) {
 
         if (!events) {
@@ -361,6 +359,49 @@ export default class dataAccess {
             console.log(e);
         });
     }
+    getRepeatingMessages() {
+        var self = this;
+        return fetch(this.hostname + "/chat/repeatingmessages").then(function (res) {
+            return res.json();
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+    }
+
+    putRepeatingMessages(list) {
+        if (!list) {
+            return;
+        }
+
+        return fetch(this.hostname + "/chat/repeatingmessages", {
+            method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(list) // body data type must match "Content-Type" header
+        });
+    }
+
+    toggleRepeatingMessage(id) {
+        return fetch(this.hostname + "/chat/repeatingmessages/toggle", {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+			body: JSON.stringify({id: id})
+        });
+    }
+
+    deleteRepeatingMessage(id) {
+        return fetch(this.hostname + "/chat/repeatingmessages?id=" + id, {
+            method: 'DELETE', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+
     getChatCommandConfig() {
         var self = this;
         return fetch(this.hostname + "/chat/command/config").then(function (res) {
@@ -428,7 +469,7 @@ export default class dataAccess {
 	deleteSavedUser(id) {
         var self = this;
 
-        return fetch(this.hostname + "/users/saved/" + id, {
+        return fetch(this.hostname + "/users/saved?id=" + id, {
             method: 'DELETE', // *GET, POST, PUT, DELETE, etc.
             headers: {
                 'Content-Type': 'application/json'

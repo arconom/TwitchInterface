@@ -8,6 +8,18 @@ TwitchEndpoints.set(
     }
 });
 
+
+
+TwitchEndpoints.set(
+    "sendWhisper", {
+    name: "Send Whisper",
+    args: {"from_user_id": "", 
+		"to_user_id": "",
+		"message": ""
+	}
+});
+
+
 TwitchEndpoints.set(
     "getSubscriptions", {
     name: "Get Active Event Subscriptions",

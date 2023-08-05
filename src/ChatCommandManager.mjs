@@ -64,6 +64,8 @@ export default class ChatCommandManager {
 
                 if (commandConfigArray.length > 0) {
                     commandConfigArray.forEach(function (chatCommandConfigItem) {
+						// FileRepository.log("ChatCommandManager.constructor chatCommandConfigItem " + JSON.stringify(chatCommandConfigItem[1]));
+						
                         self.setCommandConfig(chatCommandConfigItem[0], chatCommandConfigItem[1]);
                     });
                 }
@@ -111,6 +113,8 @@ export default class ChatCommandManager {
     }
 
     getCommandResult(obj) {
+        //FileRepository.log("getCommandResult " + obj.msg);
+
 
         //obj = {
         // target: String,
@@ -120,27 +124,40 @@ export default class ChatCommandManager {
         // chatBot: Object<ChatBot>
         // }
 
-        var self = this;
+        const self = this;
         // Remove whitespace from chat message
         const commandName = obj.msg.trim();
         var match = commandName.match(Constants.commandRegex);
+            FileRepository.log("getCommandResult:  " + commandName);
 
         if (match?.index === 0 && match[1]?.length > 0) {
-            var chatCommand = this.commands.get(match[1]);
-            var commandConfig = self.commandConfig.get(match[1]);
+            FileRepository.log("getCommandResult match found");
+            const chatCommand = self.commands.get(match[1]);
+            const commandConfig = self.commandConfig.get(match[1]);
 
-            if (!chatCommand) {
+            // ["prroll", {
+            // "key": "prroll",
+            // "cooldownSeconds": 0,
+            // "role": 0,
+            // "enabled": true
+            // }
+            // ],
+
+            if (!chatCommand || !commandConfig.enabled) {
+                FileRepository.log("getCommandResult command disabled");
                 return "";
             }
-            var key = obj.target + match[1];
-            var commandState = self.getCommandState(key);
+            const key = obj.target + match[1];
+            let commandState = self.getCommandState(key);
 
             if (!commandState) {
                 commandState = {};
             }
 
             if (self.hasRole(obj.context, commandConfig?.role)) {
+                FileRepository.log("getCommandResult permission granted");
                 if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
+                    FileRepository.log("getCommandResult executing command");
                     commandState.executionCount = (commandState.executionCount ?? 0) + 1;
                     commandState.lastExecution = Date.now();
                     self.setCommandState(key, commandState);
@@ -150,7 +167,7 @@ export default class ChatCommandManager {
                     (commandState.lastExecution + (commandConfig.cooldownSeconds * 1000) - Date.now()) +
                     " ms";
                 }
-			}
+            }
         }
     }
 
@@ -169,22 +186,33 @@ export default class ChatCommandManager {
         //context = Object<TwitchChatMessageContext>
         //role = String
 
+        FileRepository.log("hasRole " + JSON.stringify(context) + " " + role);
+
         var userRoleValue = ChatRoles.get(Constants.chatRoles.viewer);
 
         if (context.subscriber) {
+            FileRepository.log("hasRole subscriber");
             userRoleValue = ChatRoles.get(Constants.chatRoles.subscriber);
         }
 
         if (context.mod) {
+            FileRepository.log("hasRole moderator");
             userRoleValue = ChatRoles.get(Constants.chatRoles.moderator);
         }
 
-        if (context.badges.broadcaster === " 1 ") {
+        if (context.badges.broadcaster === "1") {
+            FileRepository.log("hasRole broadcaster");
             userRoleValue = ChatRoles.get(Constants.chatRoles.broadcaster);
         }
 
         if (context.badges.vip === " 1 ") {
+            FileRepository.log("hasRole vip");
             userRoleValue = ChatRoles.get(Constants.chatRoles.vip);
+        }
+
+        if (userRoleValue < role) {
+            FileRepository.log("command access denied to user " + context.username + ".  Current role " + userRoleValue);
+
         }
 
         return userRoleValue >= role;

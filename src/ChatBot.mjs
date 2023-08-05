@@ -1,3 +1,4 @@
+import Crypto from "crypto";
 import tmi from 'tmi.js';
 import HandlerMap from "./HandlerMap.mjs";
 import {
@@ -24,6 +25,7 @@ import {
     ChatCommands
 }
 from "./ChatCommands.mjs";
+import RepeatingMessage from "./RepeatingMessage.mjs";
 import ChatCommandManager from "./ChatCommandManager.mjs";
 
 export default class ChatBot extends HandlerMap {
@@ -49,6 +51,8 @@ export default class ChatBot extends HandlerMap {
             oscManager: self.oscManager
         });
 
+        self.repeatingMessages = new Map();
+        self.repeatingMessageIntervals = new Map();
         self.loadCommands();
     }
 
@@ -85,24 +89,24 @@ export default class ChatBot extends HandlerMap {
 
                     if (typeof commandMessage === "string" && commandMessage?.length > 0) {
                         //send one message
-        // console.log("string message: ", commandMessage);
+                        // console.log("string message: ", commandMessage);
                         self.sendMessage(x.target.substr(1), commandMessage);
                     } else if (typeof commandMessage === "object" && commandMessage?.length > 0) {
                         //loop through the array and send a separate message for each item
-        // console.log("array message: ", commandMessage);
+                        // console.log("array message: ", commandMessage);
                         self.sendMessages(x.target.substr(1), commandMessage);
                     } else if (commandMessage.then) {
                         //wait until the promise fulfils and then send a message
-        // console.log("promise message: ", commandMessage);
+                        // console.log("promise message: ", commandMessage);
                         commandMessage.then(function (message) {
                             if (message) {
-								console.log(message);
+                                console.log(message);
                                 self.sendMessage(x.target.substr(1), message);
                             }
                         });
                     } else if (typeof commandMessage === "function") {
                         //pass in a callback because the command will run more than once
-        // console.log("function message: ", commandMessage);
+                        // console.log("function message: ", commandMessage);
                         commandMessage(function (message) {
                             self.sendMessage(x.target.substr(1), message);
                         });
@@ -212,6 +216,7 @@ export default class ChatBot extends HandlerMap {
     }
 
     sendMessage(channel, text) {
+		        FileRepository.log(`sendMessage ` + channel + " " + text);
         if (!this.client) {
             this.connect();
         }
@@ -253,5 +258,59 @@ export default class ChatBot extends HandlerMap {
     // Called every time the bot connects to Twitch chat
     onConnectedHandler(addr, port) {
         FileRepository.log(`* Connected to ${addr}:${port}`);
+    }
+
+    toggleRepeatingMessage(key) {
+		var self = this;
+        let rm = self.repeatingMessages.get(key);
+        rm.enabled = !rm.enabled;
+		rm.iterations = 0;
+
+        if (rm.enabled) {
+            let interval = setInterval(function () {
+                self.sendMessage(rm.channel, rm.message);
+                rm.iterations++;
+
+                if (rm.iterations >= rm.maxIterations) {
+					rm.enabled = false;
+                    clearInterval(interval);
+					//tell the UI to uncheck the message
+					
+					self.ExecuteHandlers("repeatingMessageTerminate", {
+						id: key
+					});
+                }
+
+                self.repeatingMessageIntervals.set(key, interval);
+            }, rm.intervalSeconds * 1000);
+
+        } else {
+            let interval = self.repeatingMessageIntervals.get(key);
+            clearInterval(interval);
+        }
+    }
+
+	clearRepeatingMessages(){
+        self.repeatingMessages = new Map();
+	}
+
+    addRepeatingMessage(data) {
+
+        var self = this;
+        var id = Crypto();
+
+        var RepeatingMessage = new RepeatingMessage(data);
+
+        self.repeatingMessages.set(id, RepeatingMessage);
+    }
+
+    removeRepeatingMessage(id) {
+        var self = this;
+
+        if (self.repeatingMessages.has(id)) {
+            var message = self.repeatingMessages.get(id);
+            clearInterval(message.interval);
+            self.repeatingMessages.delete(id);
+        }
     }
 }

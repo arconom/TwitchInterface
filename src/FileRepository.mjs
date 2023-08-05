@@ -12,13 +12,35 @@ export const FileRepository = {
     suffix: Math.floor(Date.now() / (1000 * 60 * 60 * 24)),
 
     saveUsers: function (data) {
-        this.log("FileRepository.saveUsers");
-
         return this.writeFileAsync("./data/Users.json", data);
     },
 
     readUsers: function () {
         return this.readFileAsync("./data/Users.json");
+    },
+
+    saveWallets: function (data) {
+        return this.writeFileAsync("./data/Wallets.json", data);
+    },
+
+    readWallets: function () {
+        return this.readFileAsync("./data/Wallets.json");
+    },
+
+    saveHotkeyList: function (data) {
+        return this.writeFileAsync("./data/HotkeyList.json", data);
+    },
+
+    readHotkeyList: function () {
+        return this.readFileAsync("./data/HotkeyList.json");
+    },
+
+    saveRepeatingMessages: function (data) {
+        return this.writeFileAsync("./data/repeatingMessages.json", data);
+    },
+
+    readRepeatingMessages: function () {
+        return this.readFileAsync("./data/repeatingMessages.json");
     },
 
     saveCommandState: function (state) {
@@ -84,7 +106,16 @@ export const FileRepository = {
 
     getPluginList: function () {
         var path = "./plugins/";
+        return readdir(path);
+    },
 
+    getImages: function () {
+        var path = "./images/";
+        return readdir(path);
+    },
+
+    getSounds: function () {
+        var path = "./sounds/";
         return readdir(path);
     },
 

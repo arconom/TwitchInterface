@@ -50,7 +50,7 @@ var plugin = {
     load: function (globalState) {
         var FileRepository = globalState.get("filerepository");
         FileRepository.log("gorkblorf.load");
-        var ChatLog = globalState.get("chatlog");
+        var ChatLog = globalState.get("app").chatLog;
         // this function will be called by Main.js in the app
         //load whatever dependencies you need in here and do setup
 

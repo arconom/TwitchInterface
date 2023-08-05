@@ -39,6 +39,7 @@ var plugin = {
                 if (!name) {
                     name = "timer";
                 }
+				
                 if (!seconds) {
                     seconds = 60;
                 }

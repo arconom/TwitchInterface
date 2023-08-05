@@ -9,7 +9,9 @@
             "**"
         ],
         "output": "dist",
-		"targets": ["node19"]
+        "targets": [
+            "node19"
+        ]
     },
     "scripts": {
         "start": "node main.js"
@@ -18,7 +20,11 @@
     "license": "ISC",
     "main": "Main.js",
     "type": "module",
-    "keywords": ["twitch", "bot", "osc"],
+    "keywords": [
+        "twitch",
+        "bot",
+        "osc"
+    ],
     "dependencies": {
         "fs": "^0.0.1-security",
         "http": "^0.0.1-security",
@@ -28,6 +34,7 @@
         "markov": "^0.0.7",
         "node-osc": "^8.0.6",
         "nvm": "^0.0.4",
+        "obs-websocket-js": "^5.0.3",
         "open": "^8.4.0",
         "pkg": "^5.8.0",
         "readline": "^1.3.0",

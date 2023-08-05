@@ -1,0 +1,205 @@
+<html>
+	<head>
+
+<style>
+#tiltContainer{
+	flex-direction: column;
+	height: 25%;
+	float: right;
+	position: relative;
+}
+
+.tilt-text{
+	text-align: center;
+}
+
+.tilt-gauge-color{
+	height: 100%;
+}
+
+.tilt-gauge-empty{
+	z-index: 100;
+	background-color: white;
+}
+
+.tilt-gauge-color,
+.tilt-gauge-empty
+{
+	position: absolute;
+	width: 16px;
+	border-radius: 4px;
+}
+
+.tilt-progress{
+	border-width: 4px;
+	border-radius: 16px;
+	border-style: groove;
+	border-color: grey;
+	width: 16px;
+	height: 100%;
+}
+
+#imageDiv{
+	width: 25%;
+	height: 25%;
+	min-width: 320px;
+	min-height: 240px;
+}
+
+#imageDiv > img{
+	width: 100%;
+	height: 100%;
+	display: none;
+}
+
+#btn{
+	background-color: lightgrey;
+	border-radius: 8px;
+}
+
+body
+{
+	background-color: rgba(0,1,0,0);
+}
+
+iframe
+{
+	width: 0;
+	height: 0;
+}
+
+</style>
+
+	</head>
+<body>
+	<div id="tiltContainer">
+		<div class="tilt-text">Tilt</div>
+		<div class="tilt-progress">
+			<div class="tilt-gauge-color"></div>
+			<div class="tilt-gauge-empty"></div>
+		</div>
+	</div>
+	
+	<div id="imageDiv">
+		<img id="image"/>
+	</div>
+	<div id="messageDiv"></div>
+</body>
+	<script type="module">
+	import OverlayMessage from "./src/OverlayMessage.mjs"
+
+	var state = {
+		images: new Map(),
+		sounds: new Map(),
+		tiltValue: 0
+	};
+	
+		const tiltGaugeColor = document.querySelector(".tilt-gauge-color");
+		const tiltGaugeHeight = document.querySelector(".tilt-gauge-empty");
+	
+	
+	
+	createWebSocket();
+	
+	function createWebSocket() {
+	    var webSocket = new WebSocket("ws://127.0.0.1:8081");
+	    webSocket.addEventListener('message', (event) => {
+	        console.log('message', event);
+	        var message;
+
+	        try {
+	            message = JSON.parse(event.data);
+	        } catch (e) {}
+
+	        if (message) {
+	            //message.type
+	            document.querySelector("#messageDiv").textContent = message.text;
+
+	            message.sounds.forEach(function (x) {
+	                playSound(x);
+	            });
+
+	            message.images.forEach(function (x) {
+	                showImage(x);
+					setTimeout(function () {
+						clearImage();
+					}, 2000);
+	            });
+	 
+				if (message.type === "setTilt") {
+	                state.tiltValue = parseFloat(message.data.value);
+	            } else if (message.type === "tilt") {
+	                state.tiltValue = 0;
+	            }
+
+	            tiltGaugeColor.style.backgroundColor = getTiltColour(state.tiltValue);
+	            tiltGaugeHeight.style.height = ((1 - state.tiltValue) * 100) + "%";
+	        }
+	    });
+	}
+	function getTiltColour(value){
+		if(value < 0.25){
+			return "green";
+		}
+		else if(value > 0.25 && value <= 0.50){
+			return "yellow";
+		}
+		else if(value > 0.5){
+			return "red";
+		}
+	}
+	
+	function addSound(path){
+		state.sounds.set(path, path);
+	}
+	
+	function addImage(path){
+		state.images.set(path, path);
+	}
+
+	function playSound(path) {
+	    console.log("URL", path);
+
+		var audio = new Audio(path);
+		//audio.play();
+
+	    //var source = document.getElementById("source");
+	    //var audio = document.getElementById("audio");
+	    //audio.src = path;
+		//audio.load();
+		
+	    var playPromise = audio.play();
+
+	    // In browsers that don’t yet support this functionality,
+	    // playPromise won’t be defined.
+	    if (playPromise !== undefined) {
+	        playPromise.then(function () {
+	            // Automatic playback started!
+				console.log("playback started");
+	        }).catch(function (error) {
+	            // Automatic playback failed.
+	            // Show a UI element to let the user manually start playback.
+				console.log(error);
+	        });
+	    }
+	}
+	
+	function showImage(path){
+		var img = document.querySelector("img");
+		img.src = path;
+		img.style.display = "block";
+	}
+	
+	function clearImage(){
+		var img = document.querySelector("img");
+		img.src = "";
+		img.style.display = "none";
+	}
+	
+	function setTiltValue(newValue){
+		state.tiltValue = newValue;
+	}
+
+	
+	</script>
+</html>

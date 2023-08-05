@@ -13,12 +13,16 @@ import {
     ObjectToQuerystring
 }
 from "./Utility.mjs";
+import User from "./User.mjs";
 import {
     FileRepository
 }
 from "./FileRepository.mjs";
 
 export default class TwitchAPIProvider {
+
+//args are in TwitchEndpoints.mjs
+
 
     constructor(OAuthProvider) {
         var self = this;
@@ -222,14 +226,6 @@ export default class TwitchAPIProvider {
         FileRepository.log("getChatters");
         var self = this;
 
-        if (!broadcasterId) {
-            broadcasterId = self.user.id;
-        }
-
-        if (!moderatorId) {
-            moderatorId = self.user.id;
-        }
-
         // self.state = self.oAuthProvider.getState();
 
         var url = this.baseUri + `chat/chatters` + ObjectToQuerystring(args);
@@ -237,6 +233,33 @@ export default class TwitchAPIProvider {
         var requestOptions = {
             method: 'GET', // *GET, POST, PUT, DELETE, etc.
             headers: self.getHeaders()
+        };
+
+        return self.requestJson(url, requestOptions, function(chatters){
+			let users = chatters.map(function(x){
+				return new User(x);
+			});
+			
+			callback(users);
+		});
+    }
+
+    sendWhisper(args, callback) {
+        FileRepository.log("sendWhisper");
+        var self = this;
+
+        // self.state = self.oAuthProvider.getState();
+
+        var message = args.message;
+        //we don't want the message in the querystring
+        delete args.message;
+
+        var url = this.baseUri + `whispers` + ObjectToQuerystring(args);
+
+        var requestOptions = {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            headers: self.getHeaders(),
+            body: JSON.stringify({message: message})
         };
 
         return self.requestJson(url, requestOptions, callback);
@@ -276,7 +299,7 @@ export default class TwitchAPIProvider {
 
             if (requestOptions.headers.Authorization !== null && requestOptions.headers.Authorization !== undefined) {
 
-                FileRepository.log("request json" + url + " " + requestOptions);
+                FileRepository.log("request json " + url + " " + JSON.stringify(requestOptions));
                 return fetch(url, requestOptions)
                 .then((res) => {
                     return res.json();
@@ -284,7 +307,7 @@ export default class TwitchAPIProvider {
                 .then((res) => {
                     // FileRepository.log("requestJson res", res);
                     if (res.data) {
-                        FileRepository.log("requestJson response" + res.data);
+                        FileRepository.log("requestJson response " + JSON.stringify(res.data));
                         self.user = res.data;
                     }
                     return Promise.resolve(res.data);
@@ -296,10 +319,12 @@ export default class TwitchAPIProvider {
                     return Promise.resolve(null);
                 })
                 .catch(function (e) {
-                    FileRepository.log("requestJson response error" + e);
+                    FileRepository.log("requestJson response error " + e);
+					return Promise.reject();
                 });
             } else {
                 FileRepository.log("could not get OAuth token" + requestOptions);
+				return Promise.reject();
             }
         })
         .catch(function (e) {

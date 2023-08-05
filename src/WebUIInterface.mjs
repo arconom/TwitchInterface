@@ -2,6 +2,11 @@ import {
     WebSocketServer
 }
 from "ws";
+import {
+    FileRepository
+}
+from "./FileRepository.mjs";
+
 import HandlerMap from "./HandlerMap.mjs";
 // import WebSocketMessage from "./WebSocketMessage.mjs";
 // import WebSocketMessageList from "./WebSocketMessageList.mjs";
@@ -51,6 +56,8 @@ export default class WebUIInterface extends HandlerMap {
     }
 
     send(message) {
+		//message: string
+		FileRepository.log("WebUIInterface.send " + message + " to " + this.port);
         this.server.clients.forEach(x => x.send(message));
     }
 

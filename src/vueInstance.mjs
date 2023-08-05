@@ -9,6 +9,7 @@ import {
     Constants
 }
 from "./Constants.mjs";
+import RepeatingMessage from "./RepeatingMessage.mjs";
 
 export const vueInstance = {
     data() {
@@ -35,8 +36,12 @@ export const vueInstance = {
             oscMappings: new Map(),
             pluginConfig: new Map(),
             pubsubSubscriptions: [],
+            repeatingMessages: new Map(),
+            newRepeatingMessage: new RepeatingMessage(),
             savedChannels: new Set(),
+            searchChatCommandState: "",
             searchChatCommandConfig: "",
+            searchRepeatingMessages: "",
             searchApiScopes: "",
             searchConfig: "",
             searchEvents: "",
@@ -56,6 +61,19 @@ export const vueInstance = {
         }
     },
     methods: {
+
+        toggleRepeatingMessage: function (id) {
+            var self = this;
+            let rm = self.repeatingMessages.get(id);
+            rm.enabled = !rm.enabled;
+
+            dataAccess.toggleRepeatingMessage(id, rm);
+        },
+        isRepeatingMessageValid: function (repeatingMessage) {
+            return repeatingMessage.channel.length > 0 &&
+            repeatingMessage.message.length > 0 &&
+            repeatingMessage.intervalSeconds > 60;
+        },
         authenticate: function () {
             dataAccess.putOauth();
         },
@@ -106,8 +124,14 @@ export const vueInstance = {
             event.preventDefault();
             this.saveChatCommandConfig();
         },
+        toggleChatCommandConfig: function (key) {
+            // console.log("updateChatCommandConfig", key);
+            var item = this.chatCommandConfig.get(key);
+            item.enabled = !item.enabled;
+            this.chatCommandConfig.set(key, item);
+        },
         updateChatCommandConfig: function (key, value) {
-            console.log("updateChatCommandConfig", key, value);
+            // console.log("updateChatCommandConfig", key, value);
             this.chatCommandConfig.set(key, value);
         },
         getChatCommandState: function () {
@@ -143,6 +167,7 @@ export const vueInstance = {
                 var temp = self.chatCommandConfig;
                 if (data?.length > 0) {
                     data.forEach(function (x) {
+						console.log("chatCommandConfig", x);
                         // this needs to be a number, so the v-select displays the string
                         x[1].role = parseInt(x[1].role);
                         temp.set(x[0], x[1]);
@@ -333,6 +358,7 @@ export const vueInstance = {
 
             self.webSocket = new WebSocket("ws://localhost:8080");
             self.webSocket.addEventListener('message', (event) => {
+                console.log("websocket message", event);
 
                 var message;
 
@@ -340,17 +366,26 @@ export const vueInstance = {
                     message = JSON.parse(event.data);
                 } catch (e) {}
 
-                if (message && message.target) {
+                if (message) {
+                    if (message.target) {
+                        console.log("websocket chat message");
 
-                    var temp = new Map(self.channelMessages);
-                    var msgs = temp.get(message.target.substr(1));
-                    if (!msgs) {
-                        msgs = [];
+                        var temp = new Map(self.channelMessages);
+                        var msgs = temp.get(message.target.substr(1));
+                        if (!msgs) {
+                            msgs = [];
+                        }
+                        msgs.unshift(message);
+                        temp.set(message.target.substr(1), msgs);
+
+                        self.channelMessages = temp;
+                    } else if (message.command === "repeatingMessageTerminate") {
+                        console.log("websocket repeating message");
+                        self.repeatingMessages.get(message.arguments.id).enabled = false;
+                    } else {
+                        console.log("websocket unknown message", message);
+
                     }
-                    msgs.unshift(message);
-                    temp.set(message.target.substr(1), msgs);
-
-                    self.channelMessages = temp;
                 }
             });
         },
@@ -362,6 +397,18 @@ export const vueInstance = {
                 self.snackbarText = "OSC settings saved";
                 self.snackbar = true;
             });
+        },
+        saveRepeatingMessages: function (e) {
+            var arr = Array.from(this.repeatingMessages.entries());
+            e.preventDefault();
+            e.stopPropagation();
+
+            return dataAccess.putRepeatingMessages(arr)
+            .then(function () {
+                self.snackbarText = "Repeating Messages saved";
+                self.snackbar = true;
+            });
+
         },
         saveEventSubscriptions: function () {
             return dataAccess.updateSubscriptions(Array.from(this.eventSubscriptions.entries()))
@@ -467,10 +514,27 @@ export const vueInstance = {
             roleMap.set(4, "broadcaster");
 
             return roleMap.get(role.toLowerCase());
-        }
 
+        },
+        deleteRepeatingMessage: function (id) {
+            dataAccess.deleteRepeatingMessage(id);
+        },
+        addRepeatingMessage: function (e) {
+            var self = this;
+            this.repeatingMessages.set(new Date().getTime(), self.newRepeatingMessage);
+            e.preventDefault();
+            e.stopPropagation();
+        }
     },
     computed: {
+        areRepeatingMessagesValid: function () {
+            for (let rm of this.repeatingMessages) {
+                if (!this.isRepeatingMessageValid(rm[1])) {
+                    return false;
+                }
+            }
+            return true;
+        },
         isAuthenticateButtonDisabled: function () {
             for (let i = 0; i < this.secrets.length; i++) {
                 let item = this.secrets[i];
@@ -546,6 +610,18 @@ export const vueInstance = {
             };
         },
 
+        repeatingMessagesDisplay: function () {
+            return Array.from(this.repeatingMessages)
+            .map(function (x) {
+                var obj = x[1];
+                obj.id = x[0];
+                return obj;
+            })
+            .filter((x) =>
+                Object.values(x).some((v) => typeof v === "string" &&
+                    v.indexOf(this.searchChatCommandState) > -1));
+        },
+
         selectedEventSubscriptionType: function () {
             return this.eventSubscriptionTypes.get(this.selectedEventSubscriptionKey) ?? {
                 args: []
@@ -579,7 +655,16 @@ export const vueInstance = {
             });
         },
         chatCommandStateDisplay: function () {
-            return Array.from(this.chatCommandState);
+            return Array.from(this.chatCommandState)
+            .map(function (x) {
+                return {
+                    name: x[0],
+                    description: JSON.stringify(x[1])
+                };
+            })
+            .filter((x) =>
+                Object.values(x).some((v) => typeof v === "string" &&
+                    v.indexOf(this.searchChatCommandState) > -1));
         },
         chatCommandConfigDisplay: function () {
             var self = this;
@@ -591,6 +676,8 @@ export const vueInstance = {
                 }).filter((x) =>
                     Object.values(x).some((v) => typeof v === "string" &&
                         v.indexOf(this.searchChatCommandConfig) > -1));
+
+console.log("chatCommandConfigDisplay", JSON.stringify(ret));
 
             return ret;
         },
@@ -810,10 +897,25 @@ export const vueInstance = {
 
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    temp.set(x[0], x[1]);
+                    var v = temp.get(x);
+                    v.value = true;
+                    temp.set(x, v);
                 });
             }
             self.apiScopes = temp;
+        })
+        .catch(function (err) {
+            console.log(err);
+        });
+
+        dataAccess.getRepeatingMessages()
+        .then(function (data) {
+            console.log("getRepeatingMessages", data);
+            if (data?.length > 0) {
+                data.forEach(function (x) {
+                    self.repeatingMessages.set(x[0], x[1]);
+                });
+            }
         })
         .catch(function (err) {
             console.log(err);
