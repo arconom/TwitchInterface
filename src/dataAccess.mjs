@@ -495,7 +495,7 @@ export default class dataAccess {
             body: JSON.stringify(args) // body data type must match "Content-Type" header
         })
         .then(function (res) {
-            return res.json();
+			return res.json();
         })
         .catch(function (e) {
             console.log(e);

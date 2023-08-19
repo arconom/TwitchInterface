@@ -48,7 +48,7 @@ export default class ChatCommandManager {
 
         FileRepository.readCommandState().then(function (data) {
             try {
-                var arr = JSON.parse(data);
+                var arr = JSON.parse(data, Constants.reviver);
                 for (let i = 0; i < arr.length; i++) {
                     self.commandState.set(arr[i][0], arr[i][1]);
                 }

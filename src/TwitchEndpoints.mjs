@@ -89,11 +89,11 @@ TwitchEndpoints.set(
     name: "Create Poll",
     args: {
         "broadcaster_id": "",
-        "title": "",
-        "choices": "",
-        "duration": "",
-        "channel_points_voting_enabled": "",
-        "channel_points_per_vote": ""
+        "title": "poll title",
+        "choices": `[{"title": "a"},{"title": "b"}]`,
+        "durationSeconds": "",
+        "channel_points_voting_enabled": "false",
+        "channel_points_per_vote": "0"
     }
 });
 

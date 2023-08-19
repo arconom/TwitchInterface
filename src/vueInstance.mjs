@@ -9,6 +9,7 @@ import {
     Constants
 }
 from "./Constants.mjs";
+import User from "./User.mjs";
 import RepeatingMessage from "./RepeatingMessage.mjs";
 
 export const vueInstance = {
@@ -243,14 +244,16 @@ export const vueInstance = {
         },
         submitApiRequest: function () {
             var self = this;
-
             self.selectedEndpoint.key = this.selectedEndpointKey;
+			self.selectedEndpoint.args.choices = self.selectedEndpoint.args.choices.replace('\"', '"');
 
             dataAccess.useEndpoint(self.selectedEndpoint)
             .then(function (data) {
                 if (self.selectedEndpoint.key === "getUserInfo") {
-                    self.users.set(data[0].id, data[0]);
+                    self.users.set(data[0].id, new User(data[0]));
                 }
+				self.snackbar = true;
+				self.snackbarText = "API result: " + JSON.stringify(data); 
             });
         },
         deleteConfig: function (index) {
@@ -676,8 +679,6 @@ export const vueInstance = {
                 }).filter((x) =>
                     Object.values(x).some((v) => typeof v === "string" &&
                         v.indexOf(this.searchChatCommandConfig) > -1));
-
-console.log("chatCommandConfigDisplay", JSON.stringify(ret));
 
             return ret;
         },

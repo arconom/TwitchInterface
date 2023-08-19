@@ -9,6 +9,10 @@
 	position: relative;
 }
 
+.hidden{
+	display: none;
+}
+
 .tilt-text{
 	text-align: center;
 }
@@ -72,7 +76,7 @@ iframe
 
 	</head>
 <body>
-	<div id="tiltContainer">
+	<div id="tiltContainer" class="hidden">
 		<div class="tilt-text">Tilt</div>
 		<div class="tilt-progress">
 			<div class="tilt-gauge-color"></div>
@@ -96,7 +100,7 @@ iframe
 	
 		const tiltGaugeColor = document.querySelector(".tilt-gauge-color");
 		const tiltGaugeHeight = document.querySelector(".tilt-gauge-empty");
-	
+	const tiltContainer = document.querySelector("#tiltContainer");
 	
 	
 	createWebSocket();
@@ -104,16 +108,31 @@ iframe
 	function createWebSocket() {
 	    var webSocket = new WebSocket("ws://127.0.0.1:8081");
 	    webSocket.addEventListener('message', (event) => {
-	        console.log('message', event);
-	        var message;
+	        console.log('event', event);
+	        let message;
 
 	        try {
-	            message = JSON.parse(event.data);
-	        } catch (e) {}
+	            message = JSON.parse(event.data.replace('\"','"').replace('\\\\','\\'));
+	        } catch (e) {
+				console.log("couldn't parse message data");
+				console.log(e);
+			}
 
 	        if (message) {
-	            //message.type
-	            document.querySelector("#messageDiv").textContent = message.text;
+			
+				console.log(message.text);
+
+				let messageList = message.text.split("\r\n");
+	            let messageDiv = document.querySelector("#messageDiv");
+				messageDiv.innerHTML = "";
+
+				messageList.forEach(function(m){
+					let div = document.createElement("div");
+					div.textContent = m;
+					messageDiv.insertAdjacentElement("beforeend", div)
+				});
+
+
 
 	            message.sounds.forEach(function (x) {
 	                playSound(x);
@@ -132,6 +151,7 @@ iframe
 	                state.tiltValue = 0;
 	            }
 
+				tiltContainer.setAttribute("class", "");
 	            tiltGaugeColor.style.backgroundColor = getTiltColour(state.tiltValue);
 	            tiltGaugeHeight.style.height = ((1 - state.tiltValue) * 100) + "%";
 	        }

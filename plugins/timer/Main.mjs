@@ -20,84 +20,86 @@ var plugin = {
         var FileRepository = globalState.get("filerepository");
         var Constants = globalState.get("constants");
         const stateKey = "timer"
+            let intervalMap = new Map();
 
-            FileRepository.log("timer.load");
+        FileRepository.log("timer.load");
 
         // this function will be called by Main.js in the app
         //load whatever dependencies you need in here and do setup
 
         plugin.commands.set("prtimer", {
-            description: "Set a timer, with a name and an option to repeat.  !prtimer name seconds repeat @notifyUser",
+            description: "Set a timer, with a name and an option to repeat.  !prtimer @notifyUser name seconds repeat iterations",
             handler: function (obj) {
-                var name = obj.args[0];
-                var seconds = parseInt(obj.args[1]);
-                var repeat = obj.args[2] == "repeat" ? true : false;
-                var notifyUser = obj.args[3];
-                var interval = null;
-                var key = obj.target + stateKey;
+                const notifyUser = obj.args[0];
+                const seconds = parseInt(obj.args[2]) ?? 60;
+                const repeat = obj.args[3] == "repeat" ? true : false;
+                const maxIterations = parseInt(obj.args[4]) ?? 1;
+                const name = obj.args[1] ?? "noname";
+                const key = obj.target + stateKey;
+                let iterations = 0;
 
-                if (!name) {
-                    name = "timer";
-                }
-				
-                if (!seconds) {
-                    seconds = 60;
-                }
+                obj.chatBot.chatCommandManager.setCommandState(key + name, {
+                    seconds: seconds,
+                    repeat: repeat,
+                    notifyUser: notifyUser,
+                    name: name,
+                    iterations: iterations,
+                    maxIterations: maxIterations,
+                });
 
                 if (repeat) {
+                    return function (handler /* the caller passes a handler function into the call, usually it just looks for a string to post to the IRC channel */) {
+                        let state = obj.chatBot.chatCommandManager.getCommandState(key + name);
+                        let interval = setInterval(function () {
 
-                    obj.chatBot.chatCommandManager.setCommandState(key, {
-                        seconds: seconds,
-                        repeat: repeat,
-                        notifyUser: notifyUser,
-                        name: name,
-                        interval: interval
-                    });
+                            let state = obj.chatBot.chatCommandManager.getCommandState(key + name);
 
-                    return function (handler) {
-                        interval = setInterval(function () {
-                            handler(`Timer ${name} tick ${notifyUser}`);
+                            if (state.iterations < state.maxIterations) {
+                                state.iterations++;
+                                obj.chatBot.chatCommandManager.setCommandState(key + name, state);
+                                handler(`Timer ${name} tick ${notifyUser}`);
+                            } else {
+                                clearInterval(interval);
+                                obj.chatBot.chatCommandManager.deleteCommandState(key + name);
+                                handler(`Timer ${name} has expired ${notifyUser}`);
+                            }
                         }, seconds * 1000);
-                    };
 
+                        if (intervalMap.has(key + name)) {
+                            clearInterval(intervalMap.get(key + name));
+                        }
+
+                        intervalMap.set(key + name, interval);
+
+                        obj.chatBot.chatCommandManager.setCommandState(key + name, state);
+                    };
                 } else {
-                    obj.chatBot.chatCommandManager.setCommandState(key, {
-                        seconds: seconds,
-                        repeat: repeat,
-                        notifyUser: notifyUser,
-                        name: name,
-                        interval: interval
-                    });
                     return new Promise(function (resolve, reject) {
                         setTimeout(function () {
+                            obj.chatBot.chatCommandManager.deleteCommandState(key + name);
+
                             resolve(`Timer ${name} has expired ${notifyUser}`);
                         }, seconds * 1000);
                     });
                 }
-
             }
         });
 
         plugin.commands.set("prkilltimer", {
             description: "stop a timer by name",
             handler: function (obj) {
-                var name = obj.args[0];
-                var key = obj.target + stateKey;
-                var length = 0;
-                var maxAttempts = 0;
+                const name = obj.args[0];
+                const key = obj.target + stateKey;
 
-                if (obj.args) {
-                    length = parseInt(obj.args);
+                if (intervalMap.has(key + name)) {
+                    clearInterval(intervalMap.get(key + name));
                 }
 
-                var wordle = new Wordle(wordGenerator.getCommonWord(length), maxAttempts, wordGenerator);
-                obj.chatBot.chatCommandManager.setCommandState(key, wordle.getState());
-                return wordle.status();
+                obj.chatBot.chatCommandManager.deleteCommandState(key + name);
             }
         });
 
         return Promise.resolve();
-
     }
 };
 

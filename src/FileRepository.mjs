@@ -4,6 +4,8 @@ import {
     readdir
 }
 from 'node:fs/promises';
+
+import {Constants} from "./Constants.mjs";
 import LineByLineReader from 'line-by-line';
 
 export const FileRepository = {
@@ -67,9 +69,9 @@ export const FileRepository = {
         return this.readFileAsync("./data/pluginConfig.json")
         .then((data) => {
             return JSON.parse(data);
-        }).catch(function(err){
-			FileRepository.log("no plugin data");
-		});
+        }).catch(function (err) {
+            FileRepository.log("no plugin data");
+        });
     },
 
     saveBookmarkedChannels: function (state) {
@@ -255,14 +257,19 @@ export const FileRepository = {
         }
         return new Promise(function (resolve, reject) {
             // this.log("FileRepository.writeFileAsync going to write");
-            fs.writeFile(filename, JSON.stringify(data), function (err, data) {
-                // this.log("FileRepository.writeFileAsync written");
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(data);
-                }
-            });
+
+            try {
+                fs.writeFile(filename, JSON.stringify(data, Constants.replacer), function (err, data) {
+                    // this.log("FileRepository.writeFileAsync written");
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(data);
+                    }
+                });
+            } catch (e) {
+                FileRepository.log("Error writing to fiile:  \r\n" + e)
+            }
         });
     },
 
@@ -321,5 +328,6 @@ export const FileRepository = {
             console.error(err);
         }
     }
+
 
 }

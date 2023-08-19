@@ -41,7 +41,7 @@ var plugin = {
         // this function will be called by Main.js in the app
         //load whatever dependencies you need in here and do setup
 
-        plugin.commands.set("twss", {
+        plugin.commands.set("prtwss", {
             description: "trigger the audio file in the overlay",
             handler: function (obj) {
                 FileRepository.log("twss command handler");
@@ -57,6 +57,15 @@ var plugin = {
                 ?.catch (function (e) {
                     FileRepository.log(e);
                 });
+            }
+        });
+
+        plugin.commands.set("prnff", {
+            description: "no free feet",
+            handler: function (obj) {
+                FileRepository.log("twss command handler");
+
+				return "NO FREE FEET";
             }
         });
 

@@ -197,14 +197,14 @@ export default class TwitchAPIProvider {
     }
 
     createPoll(args, callback) {
-        FileRepository.log("TwitchAPIProvider.createStreamMarker");
+        FileRepository.log("TwitchAPIProvider.createPoll");
         var self = this;
         var url = this.baseUri + `polls`;
 
         var requestOptions = {
             method: 'POST', // *GET, POST, PUT, DELETE, etc.
             headers: self.getHeaders(),
-            body: JSON.stringify(args)
+            body: JSON.stringify(args).replace('\"','"')
         };
 
         return self.requestJson(url, requestOptions, callback);

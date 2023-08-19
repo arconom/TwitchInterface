@@ -117,7 +117,12 @@ class App {
             FileRepository.readCommandState()
             .then(function (result) {
                 // console.log(result);
-                App.chatBot.chatCommandManager.commandState = new Map(JSON.parse(result));
+				try{
+					App.chatBot.chatCommandManager.commandState = new Map(JSON.parse(result, Constants.reviver));
+				}
+				catch(e){
+					FileRepository.log("Error loading command state: \r\n" + e);
+				}
                 // console.log(App.chatBot.chatCommandManager.commandState);
             });
         })
@@ -1065,6 +1070,7 @@ class App {
             FileRepository.saveChatMessage(chatMessage);
         }, true);
 
+		//add any chat handlers in the plugins and flag them as persistent, so they aren't removed after 1 execution
         App.pluginChatHandlers.forEach(function (handler) {
             App.chatBot.AddHandler("message", handler, true);
         });

@@ -246,6 +246,7 @@
 							<div v-if="users.length === 0">
 								No users saved.  Use the Get User Info API end point to save a user.
 							</div>
+
 							<v-row>
 								<v-col cols="3" sm="3">Name</v-col>
 								<v-col cols="2" sm="2">Id</v-col>
@@ -255,24 +256,23 @@
 							
 							<v-row v-for="(item, i) in usersDisplay">
 								<v-col cols="3" sm="3">
-									<img src="item.profile_image_url"></img>
-									{{item.display_name}}
+									<img src="item.profileImageUrl"></img>
+									{{item.username}}
 								</v-col>
 								<v-col cols="2" sm="2">
 									{{item.id}}
 								</v-col>
 								<v-col cols="3" sm="3">
-									{{item.created_at}}
+									{{item.createdAt}}
 								</v-col>
-
 								<v-col cols="1" sm="1">
 										<v-btn @click="deleteUser(item.id)" color="error"><v-icon icon="mdi-delete" /></v-btn>
 								</v-col>
 								<v-col cols="1" sm="1">
 										<v-btn @click="copyUser(item.id)" color="primary"><v-icon icon="mdi-content-copy" /></v-btn>
 								</v-col>
-
 							</v-row>
+
 							<div>Entries here are saved to "./data/users.json"</div>
 						</v-card-text>
 						</v-card>

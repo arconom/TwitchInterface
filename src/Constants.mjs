@@ -24,10 +24,30 @@ export const Constants = {
     },
 
     //match \code=word
-	codeRegex: /\?code=(\w+)/,
-	//match !command arg1 arg2
+    codeRegex: /\?code=(\w+)/,
+    //match !command arg1 arg2
     commandRegex: /!(\w+)\s*(.+)?/,
     //match 6d6+5 k4l e
-    dieRollRegex: /(\d+)d(\d+)(\+|-)?(\d+)?\s?(?:k(\d+)(h|l))?\s?(e)?/
-	
+    dieRollRegex: /(\d+)d(\d+)(\+|-)?(\d+)?\s?(?:k(\d+)(h|l))?\s?(e)?/,
+
+    replacer: function (key, value) {
+        if (value instanceof Map) {
+            return {
+                dataType: 'Map',
+                value: Array.from(value.entries()), // or with spread: value: [...value]
+            };
+        } else {
+            return value;
+        }
+    },
+
+    reviver: function (key, value) {
+        if (typeof value === 'object' && value !== null) {
+            if (value.dataType === 'Map') {
+                return new Map(value.value);
+            }
+        }
+        return value;
+    }
+
 };
