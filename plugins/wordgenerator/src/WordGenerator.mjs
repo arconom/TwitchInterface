@@ -15,6 +15,7 @@ var bannedTags = ["slang",
     "colloquial",
     "pejorative",
     "idiomatic"];
+	
 var bannedDefs = ["past of",
     "plural of",
     "singular of",
@@ -40,6 +41,8 @@ var bannedWords = [
     "sexual",
     "shit",
     "vagina",
+	"goddam",
+	"damn",
 ];
 
 var EnglishDefinitions;

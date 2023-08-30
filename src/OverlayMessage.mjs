@@ -3,8 +3,9 @@ export default class OverlayMessage {
     constructor(data) {
         this.text = data.text ?? "";
         this.type = data.type ?? "";
-        this.images = data.images ?? "";
-        this.sounds = data.sounds ?? "";
+        this.images = data.images ?? [];
+        this.sounds = data.sounds ?? [];
+		this.duration = data.duration ?? 0;
     }
 
 }

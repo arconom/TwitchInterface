@@ -24,6 +24,7 @@ import {
     ChatRoles
 }
 from './ChatRoles.mjs';
+import Currency from './Currency.mjs';
 
 export default class ChatCommandManager {
 
@@ -33,18 +34,19 @@ export default class ChatCommandManager {
     //this means that if you want a command to do two things,
     //just put those things in one function and then set it
 
-    constructor(config, oscManager) {
+    constructor(app) {
         // config = Object<Config>
         // oscManager = Object<OscManager>
         // chatBot = Object<ChatBot>
         var self = this;
-        this.chatBot;
-        this.config = config;
-        this.oscManager = oscManager;
-        this.commands = new Map();
-        this.pluginState = new Map();
-        this.commandState = new Map();
-        this.commandConfig = new Map();
+        self.chatBot;
+        self.app = app;
+        self.config = app.config;
+        self.oscManager = app.oscManager;
+        self.commands = new Map();
+        self.pluginState = new Map();
+        self.commandState = new Map();
+        self.commandConfig = new Map();
 
         FileRepository.readCommandState().then(function (data) {
             try {
@@ -64,8 +66,8 @@ export default class ChatCommandManager {
 
                 if (commandConfigArray.length > 0) {
                     commandConfigArray.forEach(function (chatCommandConfigItem) {
-						// FileRepository.log("ChatCommandManager.constructor chatCommandConfigItem " + JSON.stringify(chatCommandConfigItem[1]));
-						
+                        // FileRepository.log("ChatCommandManager.constructor chatCommandConfigItem " + JSON.stringify(chatCommandConfigItem[1]));
+
                         self.setCommandConfig(chatCommandConfigItem[0], chatCommandConfigItem[1]);
                     });
                 }
@@ -98,6 +100,10 @@ export default class ChatCommandManager {
         this.pluginState.delete(key);
     }
 
+    hasCommandState(id) {
+        return this.commandState.has(id);
+    }
+
     getCommandState(id) {
         return this.commandState.get(id);
     }
@@ -115,7 +121,6 @@ export default class ChatCommandManager {
     getCommandResult(obj) {
         //FileRepository.log("getCommandResult " + obj.msg);
 
-
         //obj = {
         // target: String,
         // msg: String,
@@ -128,7 +133,7 @@ export default class ChatCommandManager {
         // Remove whitespace from chat message
         const commandName = obj.msg.trim();
         var match = commandName.match(Constants.commandRegex);
-            FileRepository.log("getCommandResult:  " + commandName);
+        FileRepository.log("getCommandResult:  " + commandName);
 
         if (match?.index === 0 && match[1]?.length > 0) {
             FileRepository.log("getCommandResult match found");
@@ -144,9 +149,27 @@ export default class ChatCommandManager {
             // ],
 
             if (!chatCommand || !commandConfig.enabled) {
-                FileRepository.log("getCommandResult command disabled");
+                FileRepository.log("ChatCommandManager.getCommandResult command disabled " + commandName);
                 return "";
             }
+
+            if (commandConfig.currencyType !== "" && commandConfig.cost > 0) {
+                let wallet = self.app.getWallet(obj.context.userId, obj.target);
+
+                let cur = new Currency({
+                    name: commandConfig.currencyType,
+                    value: commandConfig.cost
+                });
+
+                if (wallet.hasCurrency(cur)) {
+					wallet.subtractCurrency(cur);
+				}
+				else{
+					//not enough cash
+					return "not enough " + commandConfig.currencyType;
+				}
+            }
+
             const key = obj.target + match[1];
             let commandState = self.getCommandState(key);
 

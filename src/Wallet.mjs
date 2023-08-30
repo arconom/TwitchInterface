@@ -77,6 +77,19 @@ export default class Wallet extends HandlerMap {
         });
     }
 
+
+    hasCurrency(/*currency*/ value) {
+        var self = this;
+
+        if (self.currencies.has(value.name)) {
+            var currency = self.currencies.get(value.name);
+            return currency.value >= value.value;
+            // self.currencies.set(value.name, currency);
+        }
+
+		return false;
+    }
+
     getCurrency(/*string */ type) {
         var self = this;
         FileRepository.log("getCurrency " + type);

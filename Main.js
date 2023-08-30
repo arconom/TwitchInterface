@@ -96,7 +96,6 @@ class App {
     // VRChatInterface.setEvent("/input/Jump", true);
 
 
-
     static init() {
 
         App.globalState.set("app", App);
@@ -111,18 +110,17 @@ class App {
             App.initOscManager();
             App.initOAuthProvider();
             App.initTwitchAPIProvider();
-            App.chatBot = new ChatBot(App.config, App.secrets, App.oscManager);
+            App.chatBot = new ChatBot(App);
         })
         .then(function () {
             FileRepository.readCommandState()
             .then(function (result) {
                 // console.log(result);
-				try{
-					App.chatBot.chatCommandManager.commandState = new Map(JSON.parse(result, Constants.reviver));
-				}
-				catch(e){
-					FileRepository.log("Error loading command state: \r\n" + e);
-				}
+                try {
+                    App.chatBot.chatCommandManager.commandState = new Map(JSON.parse(result, Constants.reviver));
+                } catch (e) {
+                    FileRepository.log("Error loading command state: \r\n" + e);
+                }
                 // console.log(App.chatBot.chatCommandManager.commandState);
             });
         })
@@ -155,12 +153,12 @@ class App {
         // });
         // })
         .then(function () {
-                App.twitchAPIProvider
-                .getUserInfo(App.config.botName,
-                    function (data) {
-                    App.botUserInfo = App.twitchAPIProvider.user[0];
-                    FileRepository.log("App.botUserInfo " + JSON.stringify(App.botUserInfo));
-                });
+            App.twitchAPIProvider
+            .getUserInfo(App.config.botName,
+                function (res) {
+                App.botUserInfo = res.data[0];
+                FileRepository.log("App.botUserInfo " + JSON.stringify(App.botUserInfo));
+            });
 
             FileRepository.readUsers()
             .then(function (data) {
@@ -173,16 +171,15 @@ class App {
 
             FileRepository.readWallets()
             .then(function (data) {
-				try{
-					
-					data.foreach(function(x){
-						const w = new Wallet(JSON.parse(x));
-						App.wallets.set(w.userId, w);
-					});
-				}
-				catch(e){
-					App.wallets = new Map();
-				}
+                try {
+
+                    data.foreach(function (x) {
+                        const w = new Wallet(JSON.parse(x));
+                        App.wallets.set(w.userId, w);
+                    });
+                } catch (e) {
+                    App.wallets = new Map();
+                }
             })
             .catch(function () {
                 //no file
@@ -238,11 +235,11 @@ class App {
 
     //todo figure out a way to fix the maxlisteners error
 
-	static startWalletSaveInterval(){
-		let interval = setInterval(function(){
-			FileRepository.saveWallets(Array.from(App.wallets.entries()));
-		}, 5*60*1000);
-	}
+    static startWalletSaveInterval() {
+        let interval = setInterval(function () {
+            FileRepository.saveWallets(Array.from(App.wallets.entries()));
+        }, 5 * 60 * 1000);
+    }
 
     static loadEventSubscriptions() {
 
@@ -523,17 +520,16 @@ class App {
                 throw "method not allowed";
             },
             "PUT": function (args) {
-				if(App.chatBot){
-					let map = new Map(Array.from(args));
-					App.chatBot.repeatingMessages = map;
-					return FileRepository.saveRepeatingMessages(
-						JSON.stringify(
-							Array.from(
-								App.chatBot?.repeatingMessages.entries())));
-				}
-				else{
+                if (App.chatBot) {
+                    let map = new Map(Array.from(args));
+                    App.chatBot.repeatingMessages = map;
+                    return FileRepository.saveRepeatingMessages(
+                        JSON.stringify(
+                            Array.from(
+                                App.chatBot?.repeatingMessages.entries())));
+                } else {
                     return 400;
-				}
+                }
             },
             "DELETE": function (id) {
                 //remove a repeating message
@@ -1005,14 +1001,14 @@ class App {
         }
 
         App.chatBot.AddHandler("repeatingMessageTerminate", function (x) {
-			FileRepository.log("repeatingMessageTerminate", x);
+            FileRepository.log("repeatingMessageTerminate", x);
             App.webUIInterface.send(JSON.stringify({
-				"command": "repeatingMessageTerminate",
-				"arguments": {
-					"id": x.id
-				}
-			}));
-		});
+                    "command": "repeatingMessageTerminate",
+                    "arguments": {
+                        "id": x.id
+                    }
+                }));
+        });
 
         App.chatBot.AddHandler("message", function (x) {
             // console.log("chatbot message", x);
@@ -1070,7 +1066,7 @@ class App {
             FileRepository.saveChatMessage(chatMessage);
         }, true);
 
-		//add any chat handlers in the plugins and flag them as persistent, so they aren't removed after 1 execution
+        //add any chat handlers in the plugins and flag them as persistent, so they aren't removed after 1 execution
         App.pluginChatHandlers.forEach(function (handler) {
             App.chatBot.AddHandler("message", handler, true);
         });
@@ -1225,14 +1221,29 @@ class App {
         App.twitchAPIProvider = new TwitchAPIProvider(App.oAuthProvider);
     }
 
-    static getWallet(userId, username, channel) {
-		const key = userId + ":" + channel;
+    // static giveCurrencyToAllChatters(channelId, currency) {
+
+        // let chatters = App.chatBot.channels.get(channelId).chatters;
+
+        // chatters.forEach(function (chatter) {
+            // add currency to each chatter's wallet
+
+            // let currency = rpgCurrency();
+            // currency.add(1);
+
+            // let wallet = App.getWallet(chatter.id, chatter.username, obj.target);
+            // wallet.addCurrency(currency);
+        // });
+
+    // }
+
+    static getWallet(userId, channel) {
+        const key = userId + ":" + channel;
         if (!App.wallets.has(key)) {
             App.wallets.set(key, new Wallet({
-				userId: userId,
-				username: username,
-				channel: channel
-			}));
+                    userId: userId,
+                    channel: channel
+                }));
         }
 
         return App.wallets.get(key);

@@ -13,8 +13,16 @@ export const FileRepository = {
     //one file per day
     suffix: Math.floor(Date.now() / (1000 * 60 * 60 * 24)),
 
+    saveOBSTextSource: function (data) {
+        return this.writeTextFileAsync("./public/OBSTextSource.txt", data);
+    },
+
+    readOBSTextSource: function () {
+        return this.readFileAsync("./public/OBSTextSource.txt");
+    },
+
     saveUsers: function (data) {
-        return this.writeFileAsync("./data/Users.json", data);
+        return this.writeJsonFileAsync("./data/Users.json", data);
     },
 
     readUsers: function () {
@@ -22,7 +30,7 @@ export const FileRepository = {
     },
 
     saveWallets: function (data) {
-        return this.writeFileAsync("./data/Wallets.json", data);
+        return this.writeJsonFileAsync("./data/Wallets.json", data);
     },
 
     readWallets: function () {
@@ -30,7 +38,7 @@ export const FileRepository = {
     },
 
     saveHotkeyList: function (data) {
-        return this.writeFileAsync("./data/HotkeyList.json", data);
+        return this.writeJsonFileAsync("./data/HotkeyList.json", data);
     },
 
     readHotkeyList: function () {
@@ -38,7 +46,7 @@ export const FileRepository = {
     },
 
     saveRepeatingMessages: function (data) {
-        return this.writeFileAsync("./data/repeatingMessages.json", data);
+        return this.writeJsonFileAsync("./data/repeatingMessages.json", data);
     },
 
     readRepeatingMessages: function () {
@@ -46,7 +54,7 @@ export const FileRepository = {
     },
 
     saveCommandState: function (state) {
-        return this.writeFileAsync("./data/commandState.json", state);
+        return this.writeJsonFileAsync("./data/commandState.json", state);
     },
 
     readCommandState: function () {
@@ -54,7 +62,7 @@ export const FileRepository = {
     },
 
     saveChatCommandConfig: function (state) {
-        return this.writeFileAsync("./data/commandConfig.json", state);
+        return this.writeJsonFileAsync("./data/commandConfig.json", state);
     },
 
     readChatCommandConfig: function () {
@@ -62,7 +70,7 @@ export const FileRepository = {
     },
 
     savePluginConfig: function (state) {
-        return this.writeFileAsync("./data/pluginConfig.json", state);
+        return this.writeJsonFileAsync("./data/pluginConfig.json", state);
     },
 
     readPluginConfig: function () {
@@ -75,7 +83,7 @@ export const FileRepository = {
     },
 
     saveBookmarkedChannels: function (state) {
-        return this.writeFileAsync("./data/savedChannels.json", state);
+        return this.writeJsonFileAsync("./data/savedChannels.json", state);
     },
 
     readBookmarkedChannels: function () {
@@ -122,7 +130,7 @@ export const FileRepository = {
     },
 
     log: function (message) {
-        return this.appendFileAsync("./data/log" + this.suffix + ".txt", new Date(Date.now()).toISOString() + ": " + message + "\r\n");
+        return this.appendFileAsync("./logs/log" + this.suffix + ".txt", new Date(Date.now()).toISOString() + ": " + message + "\r\n");
     },
 
     saveChatMessages: function (data) {
@@ -170,7 +178,7 @@ export const FileRepository = {
 
     saveEventSubscriptions: function (data) {
         FileRepository.log("saveEventSubscriptions", data);
-        return this.writeFileAsync("./data/EventSubscriptions.json", data);
+        return this.writeJsonFileAsync("./data/EventSubscriptions.json", data);
     },
 
     loadOscMappings: function () {
@@ -180,7 +188,7 @@ export const FileRepository = {
 
     saveOscMappings: function (data) {
         // FileRepository.log("saveOscMappings", data);
-        return this.writeFileAsync("./data/OscMappings.json", data)
+        return this.writeJsonFileAsync("./data/OscMappings.json", data)
     },
 
     loadSecrets: function () {
@@ -190,7 +198,7 @@ export const FileRepository = {
 
     saveSecrets: function (data) {
         // FileRepository.log("saveSecrets", JSON.stringify(data));
-        return this.writeFileAsync("./data/secrets.json", data)
+        return this.writeJsonFileAsync("./data/secrets.json", data)
     },
 
     loadConfig: function () {
@@ -200,7 +208,7 @@ export const FileRepository = {
 
     saveConfig: function (data) {
         // FileRepository.log("saveConfig", JSON.stringify(data));
-        return this.writeFileAsync("./data/config.json", data)
+        return this.writeJsonFileAsync("./data/config.json", data)
     },
 
     loadApiScopes: function () {
@@ -210,7 +218,7 @@ export const FileRepository = {
 
     saveApiScopes: function (data) {
         // FileRepository.log("saveApiScopes", JSON.stringify(data));
-        return this.writeFileAsync("./data/apiScopes.json", data)
+        return this.writeJsonFileAsync("./data/apiScopes.json", data)
     },
 
     loadChatScopes: function () {
@@ -220,7 +228,7 @@ export const FileRepository = {
 
     saveChatScopes: function (data) {
         // FileRepository.log("saveChatScopes", JSON.stringify(data));
-        return this.writeFileAsync("./data/chatScopes.json", data)
+        return this.writeJsonFileAsync("./data/chatScopes.json", data)
     },
 
     readFileAsync: function (filename) {
@@ -250,16 +258,29 @@ export const FileRepository = {
         }
     },
 
-    writeFileAsync: function (filename, data) {
+    writeJsonFileAsync: function (filename, data) {
+		return this.writeFileAsync(filename, data, true);
+    },
+
+    writeTextFileAsync: function (filename, data) {
+		return this.writeFileAsync(filename, data, false);
+    },
+
+    writeFileAsync: function (filename, data, isJson) {
         this.log("FileRepository.writeFileAsync " + filename + "\r\n" + data);
         if (!data) {
             return;
         }
         return new Promise(function (resolve, reject) {
             // this.log("FileRepository.writeFileAsync going to write");
-
             try {
-                fs.writeFile(filename, JSON.stringify(data, Constants.replacer), function (err, data) {
+				let writeMe = data;
+				
+				if(isJson){
+					writeMe = JSON.stringify(data, Constants.replacer);
+				}
+				
+                fs.writeFile(filename, writeMe, function (err, data) {
                     // this.log("FileRepository.writeFileAsync written");
                     if (err) {
                         reject(err);

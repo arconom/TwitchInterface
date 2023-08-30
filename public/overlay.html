@@ -43,6 +43,10 @@
 	height: 100%;
 }
 
+#messageDiv{
+	width: 20em;
+}
+
 #imageDiv{
 	width: 25%;
 	height: 25%;
@@ -93,18 +97,30 @@ iframe
 	import OverlayMessage from "./src/OverlayMessage.mjs"
 
 	var state = {
-		images: new Map(),
-		sounds: new Map(),
-		tiltValue: 0
+	    images: new Map(),
+	    sounds: new Map(),
+	    tiltValue: 0
 	};
-	
-		const tiltGaugeColor = document.querySelector(".tilt-gauge-color");
-		const tiltGaugeHeight = document.querySelector(".tilt-gauge-empty");
+
+	const tiltGaugeColor = document.querySelector(".tilt-gauge-color");
+	const tiltGaugeHeight = document.querySelector(".tilt-gauge-empty");
 	const tiltContainer = document.querySelector("#tiltContainer");
-	
-	
+	const messageTypeHandlers = new Map();
+
+	messageTypeHandlers.set("setTilt", handleSetTiltCommand);
+	messageTypeHandlers.set("tilt", handleTiltCommand);
 	createWebSocket();
-	
+
+	// example message
+	//                OverlayWebSocket.send(JSON.stringify({
+	//                        text: returnMe,
+	//                        data: {},
+	//                        type: "pollEnd",
+	//                        images: [],
+	//                        sounds: []
+	//                    }));
+
+
 	function createWebSocket() {
 	    var webSocket = new WebSocket("ws://127.0.0.1:8081");
 	    webSocket.addEventListener('message', (event) => {
@@ -112,82 +128,89 @@ iframe
 	        let message;
 
 	        try {
-	            message = JSON.parse(event.data.replace('\"','"').replace('\\\\','\\'));
+	            message = JSON.parse(event.data.replace('\"', '"').replace('\\\\', '\\'));
 	        } catch (e) {
-				console.log("couldn't parse message data");
-				console.log(e);
-			}
+	            console.log("couldn't parse message data");
+	            console.log(e);
+	        }
 
 	        if (message) {
-			
-				console.log(message.text);
 
-				let messageList = message.text.split("\r\n");
-	            let messageDiv = document.querySelector("#messageDiv");
-				messageDiv.innerHTML = "";
-
-				messageList.forEach(function(m){
-					let div = document.createElement("div");
-					div.textContent = m;
-					messageDiv.insertAdjacentElement("beforeend", div)
-				});
-
-
+	            displayMessageText(message);
 
 	            message.sounds.forEach(function (x) {
 	                playSound(x);
 	            });
 
+				//todo add the images to a grid, or something
 	            message.images.forEach(function (x) {
 	                showImage(x);
-					setTimeout(function () {
-						clearImage();
-					}, 2000);
+	                setTimeout(function () {
+	                    clearImage();
+	                }, message.duration);
 	            });
-	 
-				if (message.type === "setTilt") {
-	                state.tiltValue = parseFloat(message.data.value);
-	            } else if (message.type === "tilt") {
-	                state.tiltValue = 0;
-	            }
 
-				tiltContainer.setAttribute("class", "");
-	            tiltGaugeColor.style.backgroundColor = getTiltColour(state.tiltValue);
-	            tiltGaugeHeight.style.height = ((1 - state.tiltValue) * 100) + "%";
+	            messageTypeHandlers.get(message.type)(message);
+
 	        }
 	    });
 	}
-	function getTiltColour(value){
-		if(value < 0.25){
-			return "green";
-		}
-		else if(value > 0.25 && value <= 0.50){
-			return "yellow";
-		}
-		else if(value > 0.5){
-			return "red";
-		}
+
+	function displayMessageText(message) {
+	    let messageList = message.text.split("\r\n");
+	    let messageDiv = document.querySelector("#messageDiv");
+	    messageDiv.innerHTML = "";
+
+	    messageList.forEach(function (m) {
+	        let div = document.createElement("div");
+	        div.textContent = m;
+	        messageDiv.insertAdjacentElement("beforeend", div)
+	    });
 	}
-	
-	function addSound(path){
-		state.sounds.set(path, path);
+
+	function handleTiltCommand(message) {
+	    displayTiltGauge(0);
 	}
-	
-	function addImage(path){
-		state.images.set(path, path);
+
+	function handleSetTiltCommand(message) {
+	    displayTiltGauge(parseFloat(message.data.value));
+	}
+
+	function displayTiltGauge(tiltValue) {
+	    tiltContainer.setAttribute("class", "");
+	    tiltGaugeColor.style.backgroundColor = getTiltColour(tiltValue);
+	    tiltGaugeHeight.style.height = ((1 - tiltValue) * 100) + "%";
+	}
+
+	function getTiltColour(value) {
+	    if (value < 0.25) {
+	        return "green";
+	    } else if (value > 0.25 && value <= 0.50) {
+	        return "yellow";
+	    } else if (value > 0.5) {
+	        return "red";
+	    }
+	}
+
+	function addSound(path) {
+	    state.sounds.set(path, path);
+	}
+
+	function addImage(path) {
+	    state.images.set(path, path);
 	}
 
 	function playSound(path) {
 	    console.log("URL", path);
 
-		var audio = new Audio(path);
-		//audio.play();
+	    var audio = new Audio(path);
+	    //audio.play();
 
 	    //var source = document.getElementById("source");
 	    //var audio = document.getElementById("audio");
 	    //audio.src = path;
-		//audio.load();
-		
+	    //audio.load();
+
 	    var playPromise = audio.play();
 
 	    // In browsers that don’t yet support this functionality,
@@ -195,31 +218,29 @@ iframe
 	    if (playPromise !== undefined) {
 	        playPromise.then(function () {
 	            // Automatic playback started!
-				console.log("playback started");
+	            console.log("playback started");
 	        }).catch(function (error) {
 	            // Automatic playback failed.
 	            // Show a UI element to let the user manually start playback.
-				console.log(error);
+	            console.log(error);
 	        });
 	    }
 	}
-	
-	function showImage(path){
-		var img = document.querySelector("img");
-		img.src = path;
-		img.style.display = "block";
-	}
-	
-	function clearImage(){
-		var img = document.querySelector("img");
-		img.src = "";
-		img.style.display = "none";
-	}
-	
-	function setTiltValue(newValue){
-		state.tiltValue = newValue;
+
+	function showImage(path) {
+	    var img = document.querySelector("img");
+	    img.src = path;
+	    img.style.display = "block";
 	}
 
-	
+	function clearImage() {
+	    var img = document.querySelector("img");
+	    img.src = "";
+	    img.style.display = "none";
+	}
+
+	function setTiltValue(newValue) {
+	    state.tiltValue = newValue;
+	}
 	</script>
 </html>

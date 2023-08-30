@@ -25,31 +25,29 @@ import {
     ChatCommands
 }
 from "./ChatCommands.mjs";
+import User from "./User.mjs";
 import RepeatingMessage from "./RepeatingMessage.mjs";
 import ChatCommandManager from "./ChatCommandManager.mjs";
 
 export default class ChatBot extends HandlerMap {
-    constructor(config, secrets, oscManager) {
+    constructor(app) {
         super();
         var self = this;
-        self.config = config;
-        self.oscManager = oscManager;
-        self.username = config.botName;
-        secrets = new Secrets(secrets);
+        self.app = app;
+        self.twitchAPIProvider = app.twitchAPIProvider;
+        self.config = app.config;
+        self.oscManager = app.oscManager;
+        self.username = app.config.botName;
         // Define configuration options
         self.tmiOptions = {
             identity: {
-                username: config.botName,
-                password: secrets.tmi
+                username: app.config.botName,
+                password: app.secrets.tmi
             }
         };
 
-        self.commandState = new Map();
-        self.channels = new Set();
-        self.chatCommandManager = new ChatCommandManager({
-            config: self.config,
-            oscManager: self.oscManager
-        });
+        self.channels = new Map();
+        self.chatCommandManager = new ChatCommandManager(self.app);
 
         self.repeatingMessages = new Map();
         self.repeatingMessageIntervals = new Map();
@@ -100,7 +98,7 @@ export default class ChatBot extends HandlerMap {
                         // console.log("promise message: ", commandMessage);
                         commandMessage.then(function (message) {
                             if (message) {
-                                console.log(message);
+                                //console.log(message);
                                 self.sendMessage(x.target.substr(1), message);
                             }
                         });
@@ -125,8 +123,19 @@ export default class ChatBot extends HandlerMap {
     }
 
     joinChannel(name) {
-        this.channels.add(name);
-        return this.client.join(name);
+        let self = this;
+
+        return self.app.twitchAPIProvider.getUserInfo({
+            login: name
+        }, function (res) {
+            let user = new User(res.data[0]);
+            self.channels.set(name, {
+                broadcasterId: user.id
+            });
+        })
+        .then(function () {
+            self.client.join(name);
+        })
     }
 
     leaveChannel(name) {
@@ -216,7 +225,7 @@ export default class ChatBot extends HandlerMap {
     }
 
     sendMessage(channel, text) {
-		        FileRepository.log(`sendMessage ` + channel + " " + text);
+        FileRepository.log(`sendMessage ` + channel + " " + text);
         if (!this.client) {
             this.connect();
         }
@@ -236,8 +245,8 @@ export default class ChatBot extends HandlerMap {
 
     sendMessages(channel, messages) {
         var self = this;
-        if (messages?.length > 0) {
 
+        if (messages?.length > 0) {
             return messages.reduce(function (a, c, i, arr) {
                 return a.then(function () {
                     return self.sendMessage(channel, c);
@@ -258,13 +267,68 @@ export default class ChatBot extends HandlerMap {
     // Called every time the bot connects to Twitch chat
     onConnectedHandler(addr, port) {
         FileRepository.log(`* Connected to ${addr}:${port}`);
+        let self = this;
+
+        setInterval(function () {
+            self.getChatters();
+        }, 5 * 60 * 1000);
+    }
+
+    getChannelChatters(channel) {
+        let self = this;
+        let channelState = self.channels.get(channel);
+
+        if (!channelState?.chatters) {
+            return self.getChatters().then(function(){
+				return Promise.resolve(self.channels.get(channel).chatters);
+			});
+        } else {
+            return Promise.resolve(channelState.chatters);
+        }
+    }
+
+    getChatters() {
+        FileRepository.log("ChatBot.getChatters ");
+        let self = this;
+        let promises = [];
+
+        for (let channelkvp of self.channels) {
+            FileRepository.log("ChatBot.getChatters channel " + channelkvp[0] + " " + JSON.stringify(channelkvp[1]));
+
+            let channel = channelkvp[0];
+            let channelState = channelkvp[1];
+
+            if (channelState.broadcasterId) {
+                FileRepository.log("ChatBot.getChatters push " + JSON.stringify(self.app.botUserInfo));
+                promises.push(self.app.twitchAPIProvider.getChatters({
+                        "broadcaster_id": channelState.broadcasterId,
+                        "moderator_id": self.app.botUserInfo.id
+                    }, function (result) {
+                        FileRepository.log("ChatBot.getChatters result " + result);
+                        const chatters = result;
+                        channelState.chatters = chatters;
+
+                        chatters.forEach(function (chatter) {
+                            self.app.users.set(chatter.id, chatter);
+                        });
+
+                        FileRepository.saveUsers(Array.from(self.app.users.entries()));
+                    }));
+            } else {
+                throw "channel has no broadcasterId";
+            }
+        }
+
+        return Promise.all(promises).then(function () {
+            return Promise.resolve(self.channels);
+        });
     }
 
     toggleRepeatingMessage(key) {
-		var self = this;
+        var self = this;
         let rm = self.repeatingMessages.get(key);
         rm.enabled = !rm.enabled;
-		rm.iterations = 0;
+        rm.iterations = 0;
 
         if (rm.enabled) {
             let interval = setInterval(function () {
@@ -272,13 +336,13 @@ export default class ChatBot extends HandlerMap {
                 rm.iterations++;
 
                 if (rm.iterations >= rm.maxIterations) {
-					rm.enabled = false;
+                    rm.enabled = false;
                     clearInterval(interval);
-					//tell the UI to uncheck the message
-					
-					self.ExecuteHandlers("repeatingMessageTerminate", {
-						id: key
-					});
+                    //tell the UI to uncheck the message
+
+                    self.ExecuteHandlers("repeatingMessageTerminate", {
+                        id: key
+                    });
                 }
 
                 self.repeatingMessageIntervals.set(key, interval);
@@ -290,9 +354,9 @@ export default class ChatBot extends HandlerMap {
         }
     }
 
-	clearRepeatingMessages(){
+    clearRepeatingMessages() {
         self.repeatingMessages = new Map();
-	}
+    }
 
     addRepeatingMessage(data) {
 

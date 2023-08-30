@@ -21,7 +21,7 @@ from "./FileRepository.mjs";
 
 export default class TwitchAPIProvider {
 
-//args are in TwitchEndpoints.mjs
+    //args are in TwitchEndpoints.mjs
 
 
     constructor(OAuthProvider) {
@@ -31,7 +31,6 @@ export default class TwitchAPIProvider {
         this.oAuthProvider = OAuthProvider;
         this.retries = 0;
         this.maxRetries = 3;
-        this.user = {};
         this.forceVerify = "";
         this.state = null;
 
@@ -204,7 +203,7 @@ export default class TwitchAPIProvider {
         var requestOptions = {
             method: 'POST', // *GET, POST, PUT, DELETE, etc.
             headers: self.getHeaders(),
-            body: JSON.stringify(args).replace('\"','"')
+            body: JSON.stringify(args).replace('\"', '"')
         };
 
         return self.requestJson(url, requestOptions, callback);
@@ -223,7 +222,7 @@ export default class TwitchAPIProvider {
     }
 
     getChatters(args, callback) {
-        FileRepository.log("getChatters");
+        FileRepository.log("TwitchAPIProvider.getChatters " + JSON.stringify(args));
         var self = this;
 
         // self.state = self.oAuthProvider.getState();
@@ -235,13 +234,17 @@ export default class TwitchAPIProvider {
             headers: self.getHeaders()
         };
 
-        return self.requestJson(url, requestOptions, function(chatters){
-			let users = chatters.map(function(x){
-				return new User(x);
-			});
-			
-			callback(users);
-		});
+        return self.requestJson(url, requestOptions, function (res) {
+			let chatters = res.data;
+			FileRepository.log("TwitchAPIProvider.getChatters result " + JSON.stringify(chatters));
+            if (chatters && chatters.length > 0) {
+                let users = chatters.map(function (x) {
+                    return new User(x);
+                });
+
+                callback(users);
+            }
+        });
     }
 
     sendWhisper(args, callback) {
@@ -259,7 +262,9 @@ export default class TwitchAPIProvider {
         var requestOptions = {
             method: 'POST', // *GET, POST, PUT, DELETE, etc.
             headers: self.getHeaders(),
-            body: JSON.stringify({message: message})
+            body: JSON.stringify({
+                message: message
+            })
         };
 
         return self.requestJson(url, requestOptions, callback);
@@ -291,7 +296,7 @@ export default class TwitchAPIProvider {
         //we're using callbacks here because we might generate some auth requests
         //and that requires a listener, which is not thenable
         return self.oAuthProvider.validateAccess(function () {
-            FileRepository.log("request json after validate");
+            FileRepository.log("TwitchAPIProvider.request json after validate");
             self.state = self.oAuthProvider.getState();
 
             requestOptions.headers.Authorization = self.oAuthProvider.getAuthorizationHeader();
@@ -299,32 +304,33 @@ export default class TwitchAPIProvider {
 
             if (requestOptions.headers.Authorization !== null && requestOptions.headers.Authorization !== undefined) {
 
-                FileRepository.log("request json " + url + " " + JSON.stringify(requestOptions));
+                FileRepository.log("TwitchAPIProvider.request json " + url + " " + JSON.stringify(requestOptions));
                 return fetch(url, requestOptions)
                 .then((res) => {
                     return res.json();
                 })
-                .then((res) => {
-                    // FileRepository.log("requestJson res", res);
-                    if (res.data) {
-                        FileRepository.log("requestJson response " + JSON.stringify(res.data));
-                        self.user = res.data;
-                    }
-                    return Promise.resolve(res.data);
+                /*                 .then((res) => {
+                // FileRepository.log("requestJson res", res);
+                if (res.data) {
+                FileRepository.log("TwitchAPIProvider.requestJson response " + JSON.stringify(res.data));
+                self.user = res.data;
+                }
+                return Promise.resolve(res.data);
                 })
-                .then(function (data) {
+                 */
+                .then(function (res) {
                     if (typeof callback === "function") {
-                        return callback(data);
+                        return callback(res);
                     }
                     return Promise.resolve(null);
                 })
                 .catch(function (e) {
-                    FileRepository.log("requestJson response error " + e);
-					return Promise.reject();
+                    FileRepository.log("TwitchAPIProvider.requestJson response error " + e);
+                    return Promise.reject();
                 });
             } else {
-                FileRepository.log("could not get OAuth token" + requestOptions);
-				return Promise.reject();
+                FileRepository.log("TwitchAPIProvider.requestJson could not get OAuth token" + requestOptions);
+                return Promise.reject();
             }
         })
         .catch(function (e) {

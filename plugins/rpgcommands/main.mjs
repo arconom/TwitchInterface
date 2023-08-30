@@ -241,7 +241,7 @@ var plugin = {
                 let chatterCount = obj.chatBot.chatCommandManager.getCommandState(key + "chatterCount") ?? 5;
 
                 FileRepository.log("prtilt userId " + obj.context.userId);
-                let wallet = App.getWallet(obj.context.userId, obj.context.username, obj.target);
+                let wallet = App.getWallet(obj.context.userId, obj.target);
 
                 const currency = wallet.getCurrency(currencyType);
                 if (currency && currency.value > 0) {
@@ -249,15 +249,13 @@ var plugin = {
                     currency.value = 0;
                     FileRepository.log("prtilt currency " + currencyType + " " + currencyValue);
 
-                    // App.wallets.set(obj.target + obj.context.userId, wallet);
-
                     const newValue = tiltValue + currencyValue;
                     obj.chatBot.chatCommandManager.setCommandState(key + "tilt", newValue);
 
                     if (checkTilt(tiltThreshold, chatterCount, newValue)) {
                         OverlayWebSocket.send(JSON.stringify({
                                 text: "Tilt",
-								data: {},
+                                data: {},
                                 type: "tilt",
                                 images: [],
                                 sounds: [errorAudioEncoded]
@@ -266,7 +264,9 @@ var plugin = {
                         setTimeout(function () {
                             OverlayWebSocket.send(JSON.stringify({
                                     text: "",
-									data: {value: 0},
+                                    data: {
+                                        value: 0
+                                    },
                                     type: "setTilt",
                                     images: [],
                                     sounds: []
@@ -277,7 +277,9 @@ var plugin = {
                     } else {
                         OverlayWebSocket.send(JSON.stringify({
                                 text: "",
-								data: {value: tiltRatio(chatterCount, newValue)},
+                                data: {
+                                    value: tiltRatio(chatterCount, newValue)
+                                },
                                 type: "setTilt",
                                 images: [],
                                 sounds: []
@@ -295,22 +297,22 @@ var plugin = {
             handler: function (obj) {
                 const key = obj.target + stateKey;
                 let chatterCount = obj.chatBot.chatCommandManager.getCommandState(key + "chatterCount") ?? 5;
-                let wallet = App.getWallet(obj.context.userId, obj.context.username, obj.target);
+                let wallet = App.getWallet(obj.context.userId, obj.target);
                 const currency = wallet.getCurrency(currencyType);
 
                 if (currency && currency.value > 0) {
                     const currencyValue = currency.value;
                     currency.value -= 1;
 
-					let text = obj.context.username + " wants to spotlight " + obj.args.join(" ");
+                    let text = obj.context.username + " wants to spotlight " + obj.args.join(" ");
 
-                        OverlayWebSocket.send(JSON.stringify({
-                                text: text,
-								data: {},
-                                type: "spotlight",
-                                images: [],
-                                sounds: [spotlightAudioEncoded]
-                            }));
+                    OverlayWebSocket.send(JSON.stringify({
+                            text: text,
+                            data: {},
+                            type: "spotlight",
+                            images: [],
+                            sounds: [spotlightAudioEncoded]
+                        }));
 
                     return "";
                 }
@@ -319,36 +321,37 @@ var plugin = {
         plugin.commands.set("prscene", {
             description: "Show the scenebuilding message and increment viewer currencies.",
             handler: function (obj) {
+                //const key = obj.target + stateKey;
 
-                const key = obj.target + stateKey;
+                let channel = obj.target.trim().substr(1);
+                // let channelState = App.chatBot.channels.get(channel);
 
-                App.twitchAPIProvider.getChatters({
-                    "broadcaster_id": obj.context.roomId,
-                    "moderator_id": App.botUserInfo.id
-                }, function (result) {
-                    const chatters = result;
+                // if (!channelState.chatters) {
+                // App.chatBot.getChatters().then(function () {
+                // process();
+                // });
+                // } else {
+                // process();
+                // }
+
+                App.chatBot.getChannelChatters(channel)
+                .then(function (chatters) {
+
+                    // let channel = obj.target.trim().substr(1);
+                    // let chatters = App.chatBot.channels.get(channel).chatters;
                     let chatterCount = chatters.length;
-                    obj.chatBot.chatCommandManager.setCommandState(key + "chatterCount", chatterCount);
 
                     chatters.forEach(function (chatter) {
                         // add currency to each chatter's wallet
-                        FileRepository.log("rpgcommands.prscene chatter " + JSON.stringify(chatter));
-
                         let currency = rpgCurrency();
                         currency.add(1);
 
-                        let wallet = App.getWallet(chatter.id, chatter.username, obj.target);
+                        let wallet = App.getWallet(chatter.id, obj.target);
                         wallet.addCurrency(currency);
 
-                        // App.wallets.set(obj.target + chatter.userId, wallet);
-                        FileRepository.log("rpgcommands.prscene wallet " + JSON.stringify(wallet));
-
-                        App.users.set(chatter.id, chatter);
                     });
-
-                    FileRepository.saveUsers(Array.from(App.users.entries()));
                 });
-
+				
                 return "We are making a Scene.  A Scene has 5 components: Setting, Cast, Action, Mood, and Weird.  While the players are discussing the Scene setup, you can select and describe one of the components.  You can also use !prtilt to attempt to tilt the scene and !prspotlight to focus the narrative on an aspect of the scene.";
             }
         });
@@ -497,10 +500,6 @@ var plugin = {
         function tiltRatio(chatterCount, tiltValue) {
             return tiltValue / chatterCount / averageScenesPerTilt;
         }
-
-function getCommandStateObject(){
-	
-}
 
         return Promise.resolve();
 

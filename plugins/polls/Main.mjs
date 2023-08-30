@@ -24,29 +24,64 @@ var plugin = {
 
         var Constants = globalState.get("constants");
 
+        plugin.commands.set("prsuggestoption", {
+            description: "suggest an option for a poll",
+            handler: function (obj) {
+                const key = obj.target + ":" + stateKey;
+                let option;
+
+                if (obj.args) {
+                    option = obj.args.join(" ");
+                }
+
+                let optionsMap = obj.chatBot.chatCommandManager.getCommandState(key + "suggestedoptions") ?? new Map();
+                optionsMap.set(optionsMap.size, option);
+
+                FileRepository.log(`prsuggestoption option ` + option);
+
+                obj.chatBot.chatCommandManager.setCommandState(key + ":suggestedoptions", optionsMap);
+            }
+        });
+
         plugin.commands.set("prpoll", {
             description: "start a poll, given a pipe delimited list of options",
             handler: function (obj) {
-                const key = obj.target + stateKey;
+                const key = obj.target + ":" + stateKey;
                 let list;
-
-                if (obj.args) {
-                    list = obj.args.join(" ").split("|");
-                }
-
                 let optionsMap = new Map();
                 let votesMap = new Map();
 
-                list.forEach((x, i) => {
-                    optionsMap.set(i, x);
-                });
+                if (obj.args && obj.args.length > 0) {
+                    FileRepository.log(`prpoll args ` + obj.args);
+                    list = obj.args.join(" ").split("|");
+                    list.forEach((x, i) => {
+                        optionsMap.set(i, x);
+                    });
+                } else {
 
-                obj.chatBot.chatCommandManager.setCommandState(key + "options", optionsMap);
-                obj.chatBot.chatCommandManager.setCommandState(key + "votes", votesMap);
+                    if (obj.chatBot.chatCommandManager.hasCommandState(key + ":suggestedoptions")) {
+
+                        optionsMap = obj.chatBot.chatCommandManager
+                            .getCommandState(key + ":suggestedoptions");
+
+                        obj.chatBot.chatCommandManager
+                        .deleteCommandState(key + ":suggestedoptions");
+                    }
+                }
+
+                obj.chatBot.chatCommandManager
+                .setCommandState(key + ":options", optionsMap);
+
+                obj.chatBot.chatCommandManager
+                .setCommandState(key + ":votes", votesMap);
+
+                let message = getPollMessage(optionsMap, votesMap);
+
+                FileRepository.saveOBSTextSource(message);
 
                 //use the overlay to display the options
                 OverlayWebSocket.send(JSON.stringify({
-                        text: getPollMessage(optionsMap, votesMap),
+                        text: message,
                         data: {},
                         type: "poll",
                         images: [],
@@ -58,9 +93,9 @@ var plugin = {
         plugin.commands.set("prendpoll", {
             description: "end the current poll",
             handler: function (obj) {
-                const key = obj.target + stateKey;
-                let options = obj.chatBot.chatCommandManager.getCommandState(key + "options");
-                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + "votes");
+                const key = obj.target + ":" + stateKey;
+                let options = obj.chatBot.chatCommandManager.getCommandState(key + ":options");
+                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + ":votes");
                 let totals = new Map();
 
                 for (let vote of votesMap) {
@@ -84,9 +119,10 @@ var plugin = {
 
                 let returnMe = options.get(highestVote) + " was selected.";
 
-                obj.chatBot.chatCommandManager.deleteCommandState(key + "options");
-                obj.chatBot.chatCommandManager.deleteCommandState(key + "votes");
+                obj.chatBot.chatCommandManager.deleteCommandState(key + ":options");
+                obj.chatBot.chatCommandManager.deleteCommandState(key + ":votes");
 
+                FileRepository.saveOBSTextSource(returnMe);
 
                 //use the overlay to display the options
                 OverlayWebSocket.send(JSON.stringify({
@@ -96,7 +132,7 @@ var plugin = {
                         images: [],
                         sounds: []
                     }));
-					
+
                 return returnMe;
             }
         });
@@ -104,25 +140,28 @@ var plugin = {
         plugin.commands.set("prvote", {
             description: "vote on a specified poll option, !prvote #",
             handler: function (obj) {
-                const key = obj.target + stateKey;
+                const key = obj.target + ":" + stateKey;
                 let choice;
 
                 if (obj.args) {
                     choice = parseInt(obj.args);
                 }
 
-                let optionsMap = obj.chatBot.chatCommandManager.getCommandState(key + "options");
-                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + "votes");
-
+                let optionsMap = obj.chatBot.chatCommandManager.getCommandState(key + ":options");
+                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + ":votes");
 
                 if (optionsMap.has(choice)) {
                     votesMap.set(obj.context.username, choice);
-                    obj.chatBot.chatCommandManager.setCommandState(key + "votes", votesMap);
+                    obj.chatBot.chatCommandManager.setCommandState(key + ":votes", votesMap);
                 }
+
+                let message = getPollMessage(optionsMap, votesMap)
+
+                    FileRepository.saveOBSTextSource(message);
 
                 //use the overlay to display the options
                 OverlayWebSocket.send(JSON.stringify({
-                        text: getPollMessage(optionsMap, votesMap),
+                        text: message,
                         data: {},
                         type: "pollvote",
                         images: [],

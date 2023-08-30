@@ -75,7 +75,7 @@
 								<v-expansion-panel>
 									<v-expansion-panel-title>
 													<v-btn style="margin-right: 2em;" color="primary" @click="saveRepeatingMessages" :disabled="areRepeatingMessagesValid">Save</v-btn>
-													<v-btn style="margin-right: 2em;" color="primary" @click="addRepeatingMessage">Add</v-btn>
+													<v-btn style="margin-right: 2em;" color="primary" @click="addRepeatingMessage">Add</v-btn>1
 												Repeating Messages
 												"./data/repeatingMessages.json"
 									</v-expansion-panel-title>
@@ -162,10 +162,20 @@
 										<v-col cols="1" sm="1">
 											<v-checkbox @click="toggleChatCommandConfig(item.key)" v-model="item.enabled"/>
 										</v-col>
-										<v-col cols="11" sm="11">
+										<v-col cols="4" sm="11">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="key" 
 											v-model="item.key"></v-text-field>
+										</v-col>
+										<v-col cols="6" sm="6">
+											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
+											label="Currency Type" 
+											v-model="item.currencyType"></v-text-field>
+										</v-col>
+										<v-col cols="6" sm="6">
+											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
+											label="Cost" 
+											v-model="item.cost"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
