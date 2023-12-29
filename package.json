@@ -26,6 +26,7 @@
         "osc"
     ],
     "dependencies": {
+        "crypto-js": ">=4.2.0",
         "fs": "^0.0.1-security",
         "http": "^0.0.1-security",
         "http-terminator": "^3.2.0",

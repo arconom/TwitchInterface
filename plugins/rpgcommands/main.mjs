@@ -174,9 +174,20 @@ var plugin = {
                 var messages = [
                     `I'm sure you meant to do that, ${name}.`, 
                     `How about you let me take care of that next time, ${name}.`, 
-`Need a paddle, ${name}?`,
+					`Need a paddle, ${name}?`,
                 ];
+
+                        OverlayWebSocket.send(JSON.stringify({
+                                text: "",
+                                data: {},
+                                type: "",
+                                images: [],
+                                sounds: [errorAudioEncoded]
+                            }));
+
+
                 var message = messages[Math.floor(Math.random() * messages.length)];
+
                 return message;
             }
         });

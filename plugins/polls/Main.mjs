@@ -87,6 +87,8 @@ var plugin = {
                         images: [],
                         sounds: []
                     }));
+                    
+                    return message;
             }
         });
 
@@ -167,6 +169,8 @@ var plugin = {
                         images: [],
                         sounds: []
                     }));
+
+                    return message;
             }
         });
 
@@ -185,7 +189,7 @@ var plugin = {
                     }
                 }
 
-                returnMe += "\r\n" + key + ": (" + voteCount + " votes) " + value;
+                returnMe += "\r\n __" + key + ": (" + voteCount + " votes) " + value;
 
             }
 

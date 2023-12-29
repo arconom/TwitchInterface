@@ -173,7 +173,7 @@ export default class WordGenerator {
 
         var index = Math.floor(Math.random() * list.length);
         this.lastWord = list[index];
-        this.usedWords.push(list[index]);
+        //this.usedWords.push(list[index]);
         return list[index];
     }
 

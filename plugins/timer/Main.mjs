@@ -31,10 +31,10 @@ var plugin = {
             description: "Set a timer, with a name and an option to repeat.  !prtimer @notifyUser name seconds repeat iterations",
             handler: function (obj) {
                 const notifyUser = obj.args[0];
+                const name = obj.args[1] ?? "noname";
                 const seconds = parseInt(obj.args[2]) ?? 60;
                 const repeat = obj.args[3] == "repeat" ? true : false;
                 const maxIterations = parseInt(obj.args[4]) ?? 1;
-                const name = obj.args[1] ?? "noname";
                 const key = obj.target + stateKey;
                 let iterations = 0;
 
