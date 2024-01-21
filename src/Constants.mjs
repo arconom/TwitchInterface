@@ -1,5 +1,6 @@
 export const Constants = {
-    eventSubWebSocketUrl: "wss://eventsub-beta.wss.twitch.tv/ws",
+    // eventSubWebSocketUrl: "wss://eventsub-beta.wss.twitch.tv/ws",
+    eventSubWebSocketUrl: "wss://eventsub.wss.twitch.tv/ws",
     eventSubUrl: `https://api.twitch.tv/helix/eventsub/subscriptions`,
     pubSubWebSocketUrl: "wss://pubsub-edge.twitch.tv",
     // Notification request headers

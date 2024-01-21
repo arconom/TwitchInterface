@@ -136,6 +136,10 @@ export default class ChatBot extends HandlerMap {
         .then(function () {
             self.client.join(name);
         })
+        .catch(function(e)
+        {
+            FileRepository.log(e);
+        });
     }
 
     leaveChannel(name) {
@@ -304,7 +308,7 @@ export default class ChatBot extends HandlerMap {
                         "broadcaster_id": channelState.broadcasterId,
                         "moderator_id": self.app.botUserInfo.id
                     }, function (result) {
-                        FileRepository.log("ChatBot.getChatters result " + result);
+                        FileRepository.log("ChatBot.getChatters result " + JSON.stringify(result));
                         const chatters = result;
                         channelState.chatters = chatters;
 

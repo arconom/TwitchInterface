@@ -6,11 +6,11 @@ export default class HandlerMap {
         this.handlers = new Map();
 		
 		this.AddHandler("error", function(err){
-			FileRepository.log("HandlerMap.error", err.error);
+			FileRepository.log("HandlerMap.error " + err.error);
 		});
 		
 		this.AddHandler("close", function(err){
-			FileRepository.log("HandlerMap.close", err.reason);
+			FileRepository.log("HandlerMap.close " + err.reason);
 		});
 		
     }

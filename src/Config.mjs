@@ -12,6 +12,8 @@ export class Config {
         this.preferredBrowser = data?.preferredBrowser ?? "chrome";
         this.redirectUri = data?.redirectUri ?? "http://localhost:";
         this.webServerPort = data?.webServerPort ?? 6969;
+        this.overlayWebSocketPort = 8081;
+        this.webUIInterfacePort = 8082;
     }
 };
 

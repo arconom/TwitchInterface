@@ -30,32 +30,32 @@ export default class EventSubListener extends WebSocketListener {
         this.maxCost = 0;
 
         this.AddHandler("open", function (event) {
-            if (event && event.data) {
-                var obj = JSON.parse(event.data);
-                FileRepository.log("EventSubListener open event " + JSON.stringify(obj));
-            }
+            FileRepository.log("EventSubListener open event " + event);
         }, true);
 
         this.AddHandler("close", function (event) {
             if (event.code >= 4000) {
                 FileRepository.log("close event error " + event.code + " " + event.reason);
             }
-            if (event && event.data) {
-                var obj = JSON.parse(event.data);
-                FileRepository.log("EventSubListener close event " + JSON.stringify(obj));
-                closeHandler(obj);
-            }
+            FileRepository.log("EventSubListener close event " + JSON.stringify(event));
+            self.closeHandler(event.data);
+        }, true);
+
+        this.AddHandler("error", function (event) {
+            FileRepository.log("EventSubListener error " + JSON.stringify(event));
         }, true);
 
         this.AddHandler("message", function (event) {
+            FileRepository.log("EventSubListener message event " + event.type + " " + event.data);
+            
             if (event && event.data) {
                 var obj = JSON.parse(event.data);
                 if (obj.metadata.message_type === "session_keepalive") {
                     return;
                 }
 
-                FileRepository.log("EventSubListener message event " + JSON.stringify(obj));
                 if (obj.metadata.message_type === "session_welcome") {
+                    FileRepository.log("EventSubListener session id " + obj.payload.session.id);
                     self.sessionId = obj.payload.session.id;
                 }
             }
@@ -63,19 +63,23 @@ export default class EventSubListener extends WebSocketListener {
     }
 
     close() {
-		this.socket.close();
+        this.socket.close();
         return Promise.resolve();
     }
 
     closeHandler(data) {
 
-        if (data.metadata.message_type === "session_reconnect") {
+        if (data?.metadata.message_type === "session_reconnect") {
             this.socket.close();
             this.websocketUri = data.payload.session.reconnect_url;
             return this.connect();
-        } else if (data.metadata.message_type === "revocation") {
+        } else if (data?.metadata.message_type === "revocation") {
             FileRepository.log("EventSubListener.closeHandler connection revoked");
             return this.socket.close();
+        }
+        else{
+            return this.socket.close();
+            
         }
 
     }
@@ -121,6 +125,7 @@ export default class EventSubListener extends WebSocketListener {
             };
 
             FileRepository.log("EventSubListener.subscribe subscribing " + Constants.eventSubUrl + " " + JSON.stringify(requestOptions));
+            
             return fetch(Constants.eventSubUrl, requestOptions)
             .then(self.checkResponse)
             .then(self.readJson)
@@ -130,7 +135,7 @@ export default class EventSubListener extends WebSocketListener {
                     "eventName: " + eventName + "\r\n" +
                     "condition: " + JSON.stringify(condition) + "\r\n" +
                     "requestOptions: " + JSON.stringify(requestOptions) + "\r\n");
-					return Promise.reject(e);
+                return Promise.reject(e);
             });
         })
         .catch(function (e) {
@@ -140,8 +145,8 @@ export default class EventSubListener extends WebSocketListener {
 
     getCostInfo(data) {
         FileRepository.log("EventSubListener.getCostInfo " + data.total_cost);
-        this.cost = data.total_cost;
-        this.maxCost = data.max_total_cost;
+        this.cost = data?.total_cost;
+        this.maxCost = data?.max_total_cost;
 
         return Promise.resolve(data);
     }
@@ -175,61 +180,61 @@ export default class EventSubListener extends WebSocketListener {
         });
     }
 
-/*     getEventSub() {
-        FileRepository.log("EventSubListener.getEventSub");
-        var url = `http://localhost:${port}/eventsub`;
+    /*     getEventSub() {
+    FileRepository.log("EventSubListener.getEventSub");
+    var url = `http://localhost:${port}/eventsub`;
 
-        var requestOptions = {
-            method: 'POST', // *GET, POST, PUT, DELETE, etc.
-            headers: {
-                'Content-Type': 'application/json'
-                // 'Content-Type': 'application/x-www-form-urlencoded',
-            },
-        };
+    var requestOptions = {
+    method: 'POST', // *GET, POST, PUT, DELETE, etc.
+    headers: {
+    'Content-Type': 'application/json'
+    // 'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    };
 
-        return fetch(url, requestOptions)
-        .catch(function (e) {
-            app.close();
-        })
-        .then(this.eventSubHandler);
+    return fetch(url, requestOptions)
+    .catch(function (e) {
+    app.close();
+    })
+    .then(this.eventSubHandler);
     }
 
     eventSubHandler(req, res) {
-        let secret = this.getSecret();
-        let message = this.getHmacMessage(req);
-        let hmac = Constants.hmac_prefix + this.getHmac(secret, message); // Signature to compare
+    let secret = this.getSecret();
+    let message = this.getHmacMessage(req);
+    let hmac = Constants.hmac_prefix + this.getHmac(secret, message); // Signature to compare
 
-        if (true === this.verifyMessage(hmac, req.headers[Constants.twitch_message_signature])) {
-            FileRepository.log("signatures match");
+    if (true === this.verifyMessage(hmac, req.headers[Constants.twitch_message_signature])) {
+    FileRepository.log("signatures match");
 
-            // Get JSON object from body, so you can process the message.
-            let notification = JSON.parse(req.body);
+    // Get JSON object from body, so you can process the message.
+    let notification = JSON.parse(req.body);
 
-            if (Constants.message_type_notification === req.headers[Constants.message_type]) {
-                // TODO: Do something with the event's data.
+    if (Constants.message_type_notification === req.headers[Constants.message_type]) {
+    // TODO: Do something with the event's data.
 
-                FileRepository.log(`Event type: ${notification.subscription.type}`);
-                FileRepository.log(JSON.stringify(notification.event, null, 4));
+    FileRepository.log(`Event type: ${notification.subscription.type}`);
+    FileRepository.log(JSON.stringify(notification.event, null, 4));
 
-                res.sendStatus(204);
-            } else if (Constants.message_type_verification === req.headers[Constants.message_type]) {
-                res.status(200).send(notification.challenge);
-            } else if (Constants.message_type_revocation === req.headers[Constants.message_type]) {
-                res.sendStatus(204);
+    res.sendStatus(204);
+    } else if (Constants.message_type_verification === req.headers[Constants.message_type]) {
+    res.status(200).send(notification.challenge);
+    } else if (Constants.message_type_revocation === req.headers[Constants.message_type]) {
+    res.sendStatus(204);
 
-                FileRepository.log(`${notification.subscription.type} notifications revoked!`);
-                FileRepository.log(`reason: ${notification.subscription.status}`);
-                FileRepository.log(`condition: ${JSON.stringify(notification.subscription.condition, null, 4)}`);
-            } else {
-                res.sendStatus(204);
-                FileRepository.log(`Unknown message type: ${req.headers[Constants.message_type]}`);
-            }
-        } else {
-            FileRepository.log('403'); // Signatures didn't match.
-            res.sendStatus(403);
-        }
+    FileRepository.log(`${notification.subscription.type} notifications revoked!`);
+    FileRepository.log(`reason: ${notification.subscription.status}`);
+    FileRepository.log(`condition: ${JSON.stringify(notification.subscription.condition, null, 4)}`);
+    } else {
+    res.sendStatus(204);
+    FileRepository.log(`Unknown message type: ${req.headers[Constants.message_type]}`);
     }
- */
+    } else {
+    FileRepository.log('403'); // Signatures didn't match.
+    res.sendStatus(403);
+    }
+    }
+     */
     getSecret() {
         // TODO: Get secret from secure storage. This is the secret you pass
         // when you subscribed to the event.
@@ -257,7 +262,7 @@ export default class EventSubListener extends WebSocketListener {
 
     checkResponse(res, req) {
         if (res.status >= 400) {
-			FileRepository.log("checkResponse " + JSON.stringify(res) + " " + res.statusText);
+            FileRepository.log("checkResponse " + JSON.stringify(res) + " " + res.statusText);
             throw res.statusText;
         }
         return res;

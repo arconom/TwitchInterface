@@ -44,6 +44,7 @@ export default class ChatCommandManager {
         self.config = app.config;
         self.oscManager = app.oscManager;
         self.commands = new Map();
+        self.commandsEnabledForViewers = true;
         self.pluginState = new Map();
         self.commandState = new Map();
         self.commandConfig = new Map();
@@ -73,6 +74,11 @@ export default class ChatCommandManager {
                 }
             }
         });
+    }
+
+    toggleCommands(){
+        const self = this;
+        self.commandsEnabledForViewers = !self.commandsEnabledForViewers;
     }
 
     getCommandConfig(key) {
@@ -177,7 +183,9 @@ export default class ChatCommandManager {
                 commandState = {};
             }
 
-            if (self.hasRole(obj.context, commandConfig?.role)) {
+            let roleToCheck = self.commandsEnabledForViewers ? commandConfig?.role : ChatRoles.get(Constants.chatRoles.broadcaster);
+
+            if (self.hasRole(obj.context, roleToCheck)) {
                 FileRepository.log("getCommandResult permission granted");
                 if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
                     FileRepository.log("getCommandResult executing command");

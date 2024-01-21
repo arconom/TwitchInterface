@@ -13,7 +13,8 @@ import HandlerMap from "./HandlerMap.mjs";
 
 export default class WebUIInterface extends HandlerMap {
 
-    constructor(port=8080) {
+    constructor(port) {
+        console.log("WebUIInterface.constructor", port);
         super();
 		var self = this;
         self.port = port;

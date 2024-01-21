@@ -17,14 +17,17 @@ export const vueInstance = {
         return {
             activeChannels: [],
             apiScopes: new Map(),
+            availableActions: [],
             botUserInfo: {},
             channel: "",
             channelMessages: new Map(),
             chatConnected: false,
             chatScopes: new Map(),
             chatCommandConfig: new Map(),
+            chatCommandConfigVersion: 1,
             chatCommandState: new Map(),
             chatCommands: new Map(),
+            chatCommandsEnabled: true, 
             config: [],
             cost: 0,
             maxCost: 0,
@@ -62,7 +65,36 @@ export const vueInstance = {
         }
     },
     methods: {
-
+        addActionToEventSubscription: function(name, key){
+            let subs = this.eventSubscriptions.get(name);
+            
+            let target = subs.find(function(sub){
+                return JSON.stringify(sub.condition) === key;
+            });
+            
+            
+            if(!target.actions){
+                target.actions = [];
+            }
+            
+            target.actions.push({
+                name: ""
+            });
+        },
+        removeActionFromEventSubscription: function(name, index){
+            let sub = this.eventSubscriptions.get(name);
+            
+            if(!sub.actions){
+                return;
+            }
+            
+            sub.actions.splice(index);
+        },
+        toggleCommands: function(){
+            var self = this;
+            self.chatCommandsEnabled = !self.chatCommandsEnabled;
+            dataAccess.toggleChatCommands();
+        },
         toggleRepeatingMessage: function (id) {
             var self = this;
             let rm = self.repeatingMessages.get(id);
@@ -111,8 +143,6 @@ export const vueInstance = {
             this.savePluginConfig();
         },
         saveEventSubscriptionsClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
             this.saveEventSubscriptions();
         },
         saveOscMappingsClickHandler: function (event) {
@@ -132,8 +162,9 @@ export const vueInstance = {
             this.chatCommandConfig.set(key, item);
         },
         updateChatCommandConfig: function (key, value) {
-            // console.log("updateChatCommandConfig", key, value);
+            console.log("updateChatCommandConfig", key, value);
             this.chatCommandConfig.set(key, value);
+            this.chatCommandConfigVersion++;
         },
         getChatCommandState: function () {
             var self = this;
@@ -168,7 +199,7 @@ export const vueInstance = {
                 var temp = self.chatCommandConfig;
                 if (data?.length > 0) {
                     data.forEach(function (x) {
-						console.log("chatCommandConfig", x);
+						//console.log("chatCommandConfig", x);
                         // this needs to be a number, so the v-select displays the string
                         x[1].role = parseInt(x[1].role);
                         temp.set(x[0], x[1]);
@@ -194,8 +225,8 @@ export const vueInstance = {
         getEventSubCost: function () {
             var self = this;
             dataAccess.getEventSubCost().then(function (data) {
-                self.cost = data.cost;
-                self.maxCost = data.maxCost;
+                self.cost = data?.cost;
+                self.maxCost = data?.maxCost;
             });
         },
         deleteUser: function (key) {
@@ -245,7 +276,10 @@ export const vueInstance = {
         submitApiRequest: function () {
             var self = this;
             self.selectedEndpoint.key = this.selectedEndpointKey;
-			self.selectedEndpoint.args.choices = self.selectedEndpoint.args.choices.replace('\"', '"');
+            
+            if(self.selectedEndpoint.args.choices){
+                self.selectedEndpoint.args.choices = self.selectedEndpoint.args.choices.replace('\"', '"');
+            }
 
             dataAccess.useEndpoint(self.selectedEndpoint)
             .then(function (data) {
@@ -361,7 +395,7 @@ export const vueInstance = {
 
             self.webSocket = new WebSocket("ws://localhost:8080");
             self.webSocket.addEventListener('message', (event) => {
-                console.log("websocket message", event);
+                //console.log("websocket message", event);
 
                 var message;
 
@@ -371,7 +405,7 @@ export const vueInstance = {
 
                 if (message) {
                     if (message.target) {
-                        console.log("websocket chat message");
+                        //console.log("websocket chat message");
 
                         var temp = new Map(self.channelMessages);
                         var msgs = temp.get(message.target.substr(1));
@@ -383,10 +417,10 @@ export const vueInstance = {
 
                         self.channelMessages = temp;
                     } else if (message.command === "repeatingMessageTerminate") {
-                        console.log("websocket repeating message");
+                        //console.log("websocket repeating message");
                         self.repeatingMessages.get(message.arguments.id).enabled = false;
                     } else {
-                        console.log("websocket unknown message", message);
+                        //console.log("websocket unknown message", message);
 
                     }
                 }
@@ -672,15 +706,39 @@ export const vueInstance = {
         chatCommandConfigDisplay: function () {
             var self = this;
 
-            var ret = Array.from(self.chatCommands.entries())
-                .map(function (command, index, array) {
-                    return Object.assign(command[1],
-                        self.chatCommandConfig.get(command[0]));
-                }).filter((x) =>
-                    Object.values(x).some((v) => typeof v === "string" &&
-                        v.indexOf(this.searchChatCommandConfig) > -1));
+            if (this.chatCommandConfigVersion) {
+                var ret = Array.from(self.chatCommands.entries())
+                    .map(function (command, index, array) {
+                        return Object.assign(command[1],
+                            self.chatCommandConfig.get(command[0]));
+                    }).filter((x) =>
+                        Object.values(x).some((v) => typeof v === "string" &&
+                            v.indexOf(this.searchChatCommandConfig) > -1))
+                    .sort((a, b) => {
+                        if(a.key < b.key){
+                            return -1;
+                        }
+                        else if(a.key > b.key){
+                            return 1;
+                        }
+                        else if(a.key == b.key){
+                            return 0;
+                        }
+                    })
+                    .sort((a, b) => {
+                        if (a.enabled & !b.enabled) {
+                            return -1;
+                        }
+                        else if (!a.enabled & b.enabled) {
+                            return 1;
+                        }
+                        else if (a.enabled == b.enabled) {
+                            return 0;
+                        }
+                    });
 
-            return ret;
+                return ret;
+            }
         },
         apiScopesDisplay: function () {
             return Array.from(this.apiScopes)
@@ -738,7 +796,10 @@ export const vueInstance = {
 
                     var pushMe = {
                         name: eventName,
-                        value: subData[j].enabled
+                        displayName: eventName,
+                        subKey: JSON.stringify(subData[j].condition),
+                        value: subData[j].enabled,
+                        actions: subData[j].actions ?? []
                     };
 
                     var keys = Object.keys(subData[j].condition);
@@ -746,9 +807,9 @@ export const vueInstance = {
                     //put the condition keys into the name
                     for (let k = 0; k < keys.length; k++) {
                         var name = self.users.get(subData[j].condition[keys[k]])?.display_name;
-                        pushMe.name += " " + subData[j].condition[keys[k]];
+                        pushMe.displayName += " " + subData[j].condition[keys[k]];
                         if (name) {
-                            pushMe.name += " (" + name + ")";
+                            pushMe.displayName += " (" + name + ")";
                         }
                     }
 
@@ -832,7 +893,7 @@ export const vueInstance = {
         .then(function (data) {
             if (data?.length > 0) {
                 data.forEach(function (x) {
-                    self.activeChannels.push(x);
+                    self.activeChannels.push(x[0]);
                 });
                 self.startChat();
             }
@@ -904,6 +965,14 @@ export const vueInstance = {
                 });
             }
             self.apiScopes = temp;
+        })
+        .catch(function (err) {
+            console.log(err);
+        });
+
+        dataAccess.getAvailableActions()
+        .then(function (data) {
+            self.availableActions = data;
         })
         .catch(function (err) {
             console.log(err);

@@ -60,7 +60,6 @@ process.on('warning', (warning) => {
 });
 
 class App {
-
     static activeApiScopes = [];
     static activeChatScopes = [];
     static botUserInfo;
@@ -76,7 +75,7 @@ class App {
     static isWebServerRunning = false;
     static oAuthProvider;
     static oscManager;
-    static overlayWebSocket = new WebUIInterface(8081);
+    static overlayWebSocket;
     static pluginChatHandlers = [];
     static pluginConfig = new Map();
     static pluginList = [];
@@ -87,7 +86,7 @@ class App {
     static users = new Map();
     static wallets = new Map();
     static webServer;
-    static webUIInterface = new WebUIInterface(8080);
+    static webUIInterface;
 
     // var VRChatInterface = new OscManager("127.0.0.1", 9000, "127.0.0.1", 9001);
     // var VRChatInterface = new OscManager("127.0.0.1", 5656, "127.0.0.1", 5657);
@@ -107,6 +106,10 @@ class App {
         .then(App.loadConfig)
         .then(App.loadSecrets)
         .then(function () {
+            console.log("App.config.overlayWebSocketPort", App.config.overlayWebSocketPort);
+            App.overlayWebSocket = new WebUIInterface(App.config.overlayWebSocketPort);
+            App.webUIInterface = new WebUIInterface(App.config.webUIInterfacePort);
+            
             App.initOscManager();
             App.initOAuthProvider();
             App.initTwitchAPIProvider();
@@ -130,6 +133,7 @@ class App {
         .then(function () {
             return FileRepository.getPluginList()
             .then(function (list) {
+                console.log("plugins", list);
                 App.pluginList = list;
             }).then(function () {
                 return FileRepository.readPluginConfig()
@@ -205,7 +209,6 @@ class App {
                             plugin.default.load(App.globalState)
                             .then(function (loadedPlugin) {
                                 for (var command of plugin?.default .commands?.entries()) {
-                                        FileRepository.log("adding command " + command);
                                         App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
 
                                         if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
@@ -231,6 +234,18 @@ class App {
         .then(App.startWalletSaveInterval)
         .then(App.startWebServer)
         .then(App.startOverlay);
+    }
+
+    static getActions(){
+        let keys = App.globalState.keys();
+        let returnMe = [];
+        
+        for(let key of keys){
+            let actionKeys = App.globalState.get(key).actions?.keys();
+            returnMe = returnMe.concat(Array.from(actionKeys ?? []));
+        }
+        
+        return returnMe;
     }
 
     //todo figure out a way to fix the maxlisteners error
@@ -373,7 +388,12 @@ class App {
                 throw "method not allowed";
             },
             "POST": function (args) {
-                return App.chatBot.sendMessage(args.channel, args.message);
+                try{
+                    return App.chatBot.sendMessage(args.channel, args.message);
+                }
+                catch(e){
+                    FileRepository.log(e);
+                }
             },
             "PUT": function (args) {
                 throw "method not allowed";
@@ -502,6 +522,24 @@ class App {
             },
             "POST": function (args) {
                 throw "method not allowed";
+            },
+            "PUT": function (args) {
+                throw "method not allowed";
+            },
+            "DELETE": function (args) {
+                throw "method not allowed";
+            },
+
+        });
+
+        Controller.set("/chat/commands/toggle", {
+            "GET": function (args) {
+                throw "method not allowed";
+            },
+            "POST": function (args) {
+                FileRepository.log("/chat/commands/toggle");
+                App.chatBot?.chatCommandManager.toggleCommands();
+                return Promise.resolve(App.chatBot?.chatCommandManager.commandsEnabledForViewers);
             },
             "PUT": function (args) {
                 throw "method not allowed";
@@ -766,6 +804,8 @@ class App {
                 //set the value, then write the file
                 App.eventSubscriptionConfig = new Map(args);
 
+                console.log("/subscriptions/configuration", JSON.stringify(args));
+
                 return FileRepository.saveEventSubscriptions(args);
             },
             "DELETE": function (args) {
@@ -875,6 +915,22 @@ class App {
         Controller.set("/plugin", {
             "GET": function (args) {
                 return Promise.resolve(Array.from(App.pluginList));
+            },
+            "POST": function (args) {
+                throw "method not allowed";
+            },
+            "PUT": function (args) {
+                throw "method not allowed";
+            },
+            "DELETE": function (args) {
+                throw "method not allowed";
+            },
+
+        });
+
+        Controller.set("/actions", {
+            "GET": function (args) {
+                return Promise.resolve(App.getActions());
             },
             "POST": function (args) {
                 throw "method not allowed";
@@ -1124,7 +1180,7 @@ class App {
         }
 
         // FileRepository.log("startEventSub " + eventSubscriptionConfig);
-        App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, App.config.listenerPort, App.oAuthProvider);
+        App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null/* App.config.listenerPort */, App.oAuthProvider);
 
         var subs = new Map();
 
@@ -1141,6 +1197,19 @@ class App {
                 subs.set(sub[0], {
                     condition: x.condition,
                     handler: function (data) {
+                        console.log("data", data);
+                        console.log("x", x);
+                        
+                        x.actions.forEach(function(action){
+                            console.log("action", action);
+                            const pluginName = action.name.substr(0, action.name.indexOf("."));
+                            const actionName = action.name.substr(action.name.indexOf("."));
+                            const plugin = App.globalState.get(pluginName);
+                            console.log("plugin", plugin);
+                            const actionObject = plugin.actions.get(action.name)
+                            console.log("actionObject", actionObject);
+                            actionObject.handler(data);
+                        });
                         App.oscManager.send("/" + data.payload.subscription.type, JSON.stringify(data));
                     }
                 })
@@ -1149,11 +1218,11 @@ class App {
         // FileRepository.log("subs " + JSON.stringify(Array.from(subs.entries())));
 
         App.eventSubListener.AddHandler("message", function (event) {
-            // FileRepository.log("eventSubListener message", event);
+            console.log("eventSubListener message", event);
             var obj = JSON.parse(event.data);
 
             if (obj.metadata.message_type === Constants.session_welcome && !App.subbed) {
-                // FileRepository.log("welcome in. do subs");
+                FileRepository.log("welcome in. do subs");
                 App.subbed = true;
                 for (var [key, value] of subs) {
                     FileRepository.log("sub: " + key + " " + JSON.stringify(value));
@@ -1167,12 +1236,12 @@ class App {
                     });
                 }
             } else if (obj.metadata.message_type === "notification") {
-                oscManager.send("/eventsub.message", event.data);
+                App.oscManager?.send("/eventsub.message", event.data);
                 // FileRepository.log("doing sub event " + obj.metadata.subscription_type);
                 subs.get(obj.metadata.subscription_type).handler(obj);
             }
         }, true);
-        return Promise.resolve(App.eventSubListener.connect());
+        return Promise.resolve();//App.eventSubListener.connect());
     }
 
     static endPubSub() {
@@ -1195,6 +1264,14 @@ class App {
         }, false);
         return App.pubSubListener.connect()
     }
+
+    // static initVoicemodApi(){
+        // App.VoicemodApi = new VoicemodApi(null, App.VoicemodApiClientKey);
+        
+        // setTimeout(function(){
+            // App.VoicemodApi.GetSounds();
+        // }, 5000);
+    // }
 
     static initOscManager() {
 

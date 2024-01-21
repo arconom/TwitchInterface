@@ -152,8 +152,18 @@ export default class dataAccess {
         .catch(function (e) {
             console.log(e);
         });
-
     }
+    
+    getAvailableActions() {
+        var self = this;
+        return fetch(this.hostname + "/actions").then(function (res) {
+            return res.json();
+        })
+        .catch(function (e) {
+            console.log(e);
+        });
+    }
+
     getBookmarkedChannels() {
         var self = this;
         return fetch(this.hostname + "/chat/channels/saved").then(function (res) {
@@ -188,14 +198,14 @@ export default class dataAccess {
 
     }
     joinChannel(channel) {
-        var self = this;
-        return fetch(this.hostname + "/chat/join?channel=" + channel).then(function (res) {
+        const self = this;
+        return fetch(this.hostname + "/chat/join?channel=" + channel)
+        .then(function (res) {
             return res.json();
         })
         .catch(function (e) {
-            console.log(e);
+            //console.log(e);
         });
-
     }
     getUserInfoById(id) {
         var self = this;
@@ -342,12 +352,24 @@ export default class dataAccess {
         });
     }
     getChatCommands() {
-        var self = this;
+        const self = this;
         return fetch(this.hostname + "/chat/commands").then(function (res) {
             return res.json();
         })
         .catch(function (e) {
             console.log(e);
+        });
+    }
+    toggleChatCommands() {
+        const self = this;
+
+        return fetch(this.hostname + "/chat/commands/toggle", {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).catch(function (e) {
+            //console.log(e);
         });
     }
     getChatCommandState() {

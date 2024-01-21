@@ -74,8 +74,8 @@
 							<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-													<v-btn style="margin-right: 2em;" color="primary" @click="saveRepeatingMessages" :disabled="areRepeatingMessagesValid">Save</v-btn>
-													<v-btn style="margin-right: 2em;" color="primary" @click="addRepeatingMessage">Add</v-btn>1
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveRepeatingMessages" :disabled="areRepeatingMessagesValid">Save</v-btn>
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="addRepeatingMessage">Add</v-btn>1
 												Repeating Messages
 												"./data/repeatingMessages.json"
 									</v-expansion-panel-title>
@@ -112,7 +112,7 @@
 								</v-expansion-panel>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatScopes">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveChatScopes">Save</v-btn>
 										Chat Scopes
 										"./data/chatscopes.json"
 									</v-expansion-panel-title>
@@ -122,8 +122,8 @@
 								</v-expansion-panel>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandStateClickHandler">Save</v-btn>
-										<v-btn style="margin-right: 2em;" color="primary" @click="refreshChatCommandStateClickHandler">Refresh</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveChatCommandStateClickHandler">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click.stop="refreshChatCommandStateClickHandler">Refresh</v-btn>
 										Chat Command State
 										"./data/commandstate.json"
 									</v-expansion-panel-title>
@@ -150,49 +150,55 @@
 								</v-expansion-panel>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandConfig">Save</v-btn>
-										Chat Command Config
-										"./data/commandconfig.json"
+                                        <v-col cols="1">
+                                            <v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandConfig">Save</v-btn>
+                                        </v-col>
+                                        <v-col cols="3">
+                                            <v-checkbox label="Toggle Commands" @click.stop="toggleCommands" v-model="chatCommandsEnabled"/>
+                                        </v-col>
+                                        <v-col>
+                                            Chat Command Config ./data/commandconfig.json
+                                        </v-col>
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
 										<v-text-field placeholder="Search" 
 											@click="searchClickHandler"
 											v-model="searchChatCommandConfig"></v-text-field>
-									<v-row v-for="(item, i) in chatCommandConfigDisplay" :key="i" :class="getRowColor(i)">
+									<v-row v-for="(item, i) in chatCommandConfigDisplay" :key="item.key" :class="getRowColor(i)">
 										<v-col cols="1" sm="1">
 											<v-checkbox @click="toggleChatCommandConfig(item.key)" v-model="item.enabled"/>
 										</v-col>
 										<v-col cols="4" sm="11">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="key" 
-											v-model="item.key"></v-text-field>
+											:model-value="item.key"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="Currency Type" 
-											v-model="item.currencyType"></v-text-field>
+											:model-value="item.currencyType"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="Cost" 
-											v-model="item.cost"></v-text-field>
+											:model-value="item.cost"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											type="number" 
 											label="cooldown (in seconds)" 
-											v-model="item.cooldownSeconds" ></v-text-field>
+											:model-value="item.cooldownSeconds" ></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
-											<v-select @update:model-value="updateChatCommandConfig(item.key, item)" 
-											v-model="item.role" 
+											<v-select @change="updateChatCommandConfig(item.key, item)" 
+											:model-value="item.role" 
 											:items="roles" 
 											label="Role" ></v-select>
 										</v-col>
 										<v-col cols="12" sm="12">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="description" 
-											v-model="item.description"></v-text-field>
+											:model-value="item.description"></v-text-field>
 										</v-col>
 									</v-row>
 									</v-expansion-panel-text>
@@ -346,7 +352,7 @@
 								<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click="saveEventSubscriptionsClickHandler">Save</v-btn>
+										<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveEventSubscriptionsClickHandler">Save</v-btn>
 										Event Subscriptions
 										Entries here are saved to"./data/EventSubscriptions.json"
 							</v-expansion-panel-title>
@@ -359,11 +365,18 @@
 												<v-checkbox :key="i" 
 												@click="setEventSubscription(item.name, i, !item.value)" 
 												v-model="item.value"
-												:label="item.name"/>
+												:label="item.displayName"/>
 											</v-col>
 											<v-col cols="1">
 												<v-btn @click="removeEventSubscription(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
 											</v-col>
+											<v-col cols="1">
+                                                <v-btn @click="addActionToEventSubscription(item.name, item.subKey)" color="primary">+</v-btn>                                            
+											</v-col>
+											<v-col cols="12" v-for="(action,j) in item.actions" :key="j">
+                                                <v-combobox :items="availableActions" v-model="action.name"></v-combobox>
+                                                <v-btn @click="removeActionFromEventSubscription(item.subKey, j)" color="error"><v-icon icon="mdi-delete"></v-btn>                                            
+                                            </v-col>
 										</v-row>
 									</v-expansion-panel-text>
 								</v-expansion-panel>

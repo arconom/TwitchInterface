@@ -2,13 +2,16 @@ import WebSocket from "ws";
 import HandlerMap from "./HandlerMap.mjs";
 import WebSocketMessage from "./WebSocketMessage.mjs";
 import WebSocketMessageList from "./WebSocketMessageList.mjs";
-import {FileRepository} from "./FileRepository.mjs";
+import {
+    FileRepository
+}
+from "./FileRepository.mjs";
 
 export default class WebSocketListener extends HandlerMap {
 
     constructor(uri, port) {
-     	// FileRepository.log("WebSocketListener.ctor");
-		super();
+        // FileRepository.log("WebSocketListener.ctor");
+        super();
         this.uri = uri;
         this.port = port;
         this.webSocketMessageList = new WebSocketMessageList([]);
@@ -16,14 +19,25 @@ export default class WebSocketListener extends HandlerMap {
         this.connect();
     }
 
+    get WebSocketConnectionString() {
+        let returnMe = this.uri;
+        if (this.port) {
+            returnMe += ":" + this.port;
+        }
+
+        return returnMe;
+    }
+
     connect() {
-     	FileRepository.log("WebSocketListener.connect", this.uri + ":" + this.port);
+        FileRepository.log("WebSocketListener.connect " + this.uri + ":" + this.port);
         var self = this;
 
         //using websocket to transmit chat data to the web client
-        self.socket = new WebSocket(this.uri);// + ":" + this.port);
+        self.socket = new WebSocket(this.WebSocketConnectionString);
 
         self.socket.on('connection', function connection(ws) {
+            FileRepository.log("WebSocketListener.onconnection");
+            
             ws.on('message', function message(data) {
                 FileRepository.log('message from ', ws, data);
             });
@@ -59,17 +73,17 @@ export default class WebSocketListener extends HandlerMap {
     }
 
     // waitForSocket(callback) {
-        // var self = this;
-        // var interval = setInterval(checkStatus, 500);
+    // var self = this;
+    // var interval = setInterval(checkStatus, 500);
 
-        // function checkStatus() {
-            // if (self.socket.readyState === 1) {
-                // clearInterval(interval);
-                // callback();
-            // } else {
-                // FileRepository.log( "waiting for a socket", self.socket.readyState);
-            // }
-        // }
+    // function checkStatus() {
+    // if (self.socket.readyState === 1) {
+    // clearInterval(interval);
+    // callback();
+    // } else {
+    // FileRepository.log( "waiting for a socket", self.socket.readyState);
+    // }
+    // }
     // }
 
 }
