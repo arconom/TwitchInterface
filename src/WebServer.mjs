@@ -86,9 +86,8 @@ export default class WebServer {
                         url = req.url;
                     }
 
-                    // FileRepository.log("WebServer.start route url" + url);
+                    FileRepository.log("WebServer.start route url" + url);
                     var route = self.routes.get(url);
-                    FileRepository.log("WebServer.start route " + JSON.stringify(route));
                     if (route) {
 
                         var handler = route[req.method];
@@ -105,6 +104,7 @@ export default class WebServer {
                             ?.then(function (data) {
 
                                 if (typeof data === "error") {
+                                    FileRepository.log("WebServer.start error on request " + req.url);
                                     res.statusCode = data.statusCode;
                                     res.write(data.message);
                                 } else {

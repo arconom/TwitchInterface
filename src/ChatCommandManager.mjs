@@ -188,7 +188,7 @@ export default class ChatCommandManager {
             if (self.hasRole(obj.context, roleToCheck)) {
                 FileRepository.log("getCommandResult permission granted");
                 if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
-                    FileRepository.log("getCommandResult executing command");
+                    FileRepository.log("getCommandResult executing command name: " + commandName);
                     commandState.executionCount = (commandState.executionCount ?? 0) + 1;
                     commandState.lastExecution = Date.now();
                     self.setCommandState(key, commandState);

@@ -96,6 +96,7 @@ class App {
 
 
     static init() {
+        FileRepository.log("App.init start");
 
         App.globalState.set("app", App);
         App.globalState.set("filerepository", FileRepository);
@@ -106,16 +107,17 @@ class App {
         .then(App.loadConfig)
         .then(App.loadSecrets)
         .then(function () {
-            console.log("App.config.overlayWebSocketPort", App.config.overlayWebSocketPort);
+            FileRepository.log("App.config.overlayWebSocketPort", App.config.overlayWebSocketPort);
             App.overlayWebSocket = new WebUIInterface(App.config.overlayWebSocketPort);
             App.webUIInterface = new WebUIInterface(App.config.webUIInterfacePort);
-            
+
             App.initOscManager();
             App.initOAuthProvider();
             App.initTwitchAPIProvider();
             App.chatBot = new ChatBot(App);
         })
         .then(function () {
+            FileRepository.log("App.init before readCommandState");
             FileRepository.readCommandState()
             .then(function (result) {
                 // console.log(result);
@@ -131,9 +133,9 @@ class App {
         .then(App.startObsManager)
         .then(App.loadOscMappings)
         .then(function () {
+            FileRepository.log("App.init before getPluginList");
             return FileRepository.getPluginList()
             .then(function (list) {
-                console.log("plugins", list);
                 App.pluginList = list;
             }).then(function () {
                 return FileRepository.readPluginConfig()
@@ -157,12 +159,21 @@ class App {
         // });
         // })
         .then(function () {
+            FileRepository.log("App.init before getUserInfo");
             App.twitchAPIProvider
             .getUserInfo(App.config.botName,
                 function (res) {
-                App.botUserInfo = res.data[0];
-                FileRepository.log("App.botUserInfo " + JSON.stringify(App.botUserInfo));
+                FileRepository.log("jeemers " + JSON.stringify(res));
+                if (res && res.length > 0) {
+                    App.botUserInfo = res[0];
+                    FileRepository.log("App.botUserInfo " + JSON.stringify(App.botUserInfo));
+                }
+            })
+            .catch(function (e) {
+                FileRepository.Log("App.init error getting bot user info " + e);
             });
+
+            FileRepository.log("App.init before readUsers");
 
             FileRepository.readUsers()
             .then(function (data) {
@@ -172,6 +183,8 @@ class App {
             .catch(function () {
                 //no file
             });
+
+            FileRepository.log("App.init before readWallets");
 
             FileRepository.readWallets()
             .then(function (data) {
@@ -189,6 +202,8 @@ class App {
                 //no file
             });
 
+            FileRepository.log("App.init before loadEventSubscriptions");
+
             App.loadEventSubscriptions();
             App.twitchAPIProvider.getSubscriptions(null, function (data) {
                 if (data?.length > 0) {
@@ -197,6 +212,7 @@ class App {
                 }
             });
 
+            FileRepository.log("App.init before loadPlugins");
             FileRepository.loadPlugins(App.pluginConfig)
             .then(function (plugins) {
                 plugins.forEach(plugin => {
@@ -233,18 +249,21 @@ class App {
         })
         .then(App.startWalletSaveInterval)
         .then(App.startWebServer)
-        .then(App.startOverlay);
+        .then(App.startOverlay)
+        .catch(function (e) {
+            FileRepository.Log("Main.init error " + e);
+        });
     }
 
-    static getActions(){
+    static getActions() {
         let keys = App.globalState.keys();
         let returnMe = [];
-        
-        for(let key of keys){
+
+        for (let key of keys) {
             let actionKeys = App.globalState.get(key).actions?.keys();
             returnMe = returnMe.concat(Array.from(actionKeys ?? []));
         }
-        
+
         return returnMe;
     }
 
@@ -257,6 +276,7 @@ class App {
     }
 
     static loadEventSubscriptions() {
+        FileRepository.log("App.loadEventSubscriptions");
 
         return FileRepository.loadEventSubscriptions().then(function (data) {
             if (data) {
@@ -273,6 +293,7 @@ class App {
     }
 
     static loadRepeatingMessages() {
+        FileRepository.log("App.loadRepeatingMessages");
         return FileRepository.readRepeatingMessages()
         .then(function (data) {
             if (data) {
@@ -285,6 +306,7 @@ class App {
     }
 
     static loadOscMappings() {
+        FileRepository.log("App.loadOscMappings");
         return FileRepository.loadOscMappings().then(function (data) {
             if (data) {
                 Array.from(JSON.parse(data))
@@ -296,6 +318,7 @@ class App {
     }
 
     static loadConfig() {
+        FileRepository.log("App.loadConfig");
         return FileRepository.loadConfig().then(function (data) {
             FileRepository.log("loadConfig " + data);
             try {
@@ -307,6 +330,7 @@ class App {
     }
 
     static loadApiScopes() {
+        FileRepository.log("App.loadApiScopes");
         return FileRepository.loadApiScopes().then(function (data) {
             if (data !== undefined && data.length > 0) {
                 FileRepository.log("App.activeApiScopes " + App.activeApiScopes);
@@ -316,6 +340,7 @@ class App {
     }
 
     static loadChatScopes() {
+        FileRepository.log("App.loadChatScopes");
 
         return FileRepository.loadChatScopes().then(function (data) {
             if (data !== undefined && data.length > 0) {
@@ -328,7 +353,7 @@ class App {
 
     static loadSecrets() {
 
-        FileRepository.log("loadSecrets ");
+        FileRepository.log("App.loadSecrets ");
         return FileRepository.loadSecrets().then(function (data) {
             var d = null;
             try {
@@ -341,6 +366,7 @@ class App {
     }
 
     static startOverlay() {
+        FileRepository.log("App.startOverlay");
         let hostname = "127.0.0.1";
         let port = App.config.webServerPort;
         return openBrowser(hostname + ":" + port + "/overlay", {
@@ -368,6 +394,7 @@ class App {
     }
 
     static startWebServer() {
+        FileRepository.log("App.startWebServer");
 
         //todo make a way for plugins to create endpoints
         //maybe not, name collisions are bad
@@ -388,10 +415,9 @@ class App {
                 throw "method not allowed";
             },
             "POST": function (args) {
-                try{
+                try {
                     return App.chatBot.sendMessage(args.channel, args.message);
-                }
-                catch(e){
+                } catch (e) {
                     FileRepository.log(e);
                 }
             },
@@ -990,7 +1016,7 @@ class App {
                     App.twitchAPIProvider[args.key](args.args, function (data) {
                         FileRepository.log("api endpoint " + args.key + " returning " + JSON.stringify(data));
 
-                        if (args.key === "getUserInfo") {
+                        if (args.key === "getUserInfo" && data && data.length > 0) {
                             FileRepository.log("saving user info");
                             App.users.set(data[0].id, data[0]);
                             FileRepository.saveUsers(Array.from(App.users.entries()));
@@ -1067,8 +1093,16 @@ class App {
         });
 
         App.chatBot.AddHandler("message", function (x) {
+            //todo this might be a bit too expensive to run this often
             // console.log("chatbot message", x);
-            // FileRepository.saveChatMessage(x.target.substr(1), x.msg);
+            var chatMessage = JSON.stringify({
+                target: x.target,
+                msg: x.msg,
+                context: x.context,
+                self: x.self,
+            });
+
+            FileRepository.saveChatMessage(chatMessage);
 
             if (!x.self) {
                 App.oscManager.send("/chat.message", JSON.stringify({
@@ -1076,13 +1110,6 @@ class App {
                         message: x.msg
                     }), () => {});
             }
-
-            var chatMessage = JSON.stringify({
-                target: x.target,
-                msg: x.msg,
-                context: x.context,
-                self: x.self,
-            });
 
             App.webUIInterface.send(chatMessage);
 
@@ -1119,7 +1146,6 @@ class App {
             // VRChatInterface.send("/input/Jump", 0);
             // }, 300);
              */
-            FileRepository.saveChatMessage(chatMessage);
         }, true);
 
         //add any chat handlers in the plugins and flag them as persistent, so they aren't removed after 1 execution
@@ -1180,7 +1206,7 @@ class App {
         }
 
         // FileRepository.log("startEventSub " + eventSubscriptionConfig);
-        App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null/* App.config.listenerPort */, App.oAuthProvider);
+        App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null /* App.config.listenerPort */, App.oAuthProvider);
 
         var subs = new Map();
 
@@ -1199,15 +1225,15 @@ class App {
                     handler: function (data) {
                         console.log("data", data);
                         console.log("x", x);
-                        
-                        x.actions.forEach(function(action){
+
+                        x.actions.forEach(function (action) {
                             console.log("action", action);
                             const pluginName = action.name.substr(0, action.name.indexOf("."));
                             const actionName = action.name.substr(action.name.indexOf("."));
                             const plugin = App.globalState.get(pluginName);
                             console.log("plugin", plugin);
                             const actionObject = plugin.actions.get(action.name)
-                            console.log("actionObject", actionObject);
+                                console.log("actionObject", actionObject);
                             actionObject.handler(data);
                         });
                         App.oscManager.send("/" + data.payload.subscription.type, JSON.stringify(data));
@@ -1218,7 +1244,6 @@ class App {
         // FileRepository.log("subs " + JSON.stringify(Array.from(subs.entries())));
 
         App.eventSubListener.AddHandler("message", function (event) {
-            console.log("eventSubListener message", event);
             var obj = JSON.parse(event.data);
 
             if (obj.metadata.message_type === Constants.session_welcome && !App.subbed) {
@@ -1241,7 +1266,7 @@ class App {
                 subs.get(obj.metadata.subscription_type).handler(obj);
             }
         }, true);
-        return Promise.resolve();//App.eventSubListener.connect());
+        return Promise.resolve(); //App.eventSubListener.connect());
     }
 
     static endPubSub() {
@@ -1266,11 +1291,11 @@ class App {
     }
 
     // static initVoicemodApi(){
-        // App.VoicemodApi = new VoicemodApi(null, App.VoicemodApiClientKey);
-        
-        // setTimeout(function(){
-            // App.VoicemodApi.GetSounds();
-        // }, 5000);
+    // App.VoicemodApi = new VoicemodApi(null, App.VoicemodApiClientKey);
+
+    // setTimeout(function(){
+    // App.VoicemodApi.GetSounds();
+    // }, 5000);
     // }
 
     static initOscManager() {
@@ -1300,17 +1325,17 @@ class App {
 
     // static giveCurrencyToAllChatters(channelId, currency) {
 
-        // let chatters = App.chatBot.channels.get(channelId).chatters;
+    // let chatters = App.chatBot.channels.get(channelId).chatters;
 
-        // chatters.forEach(function (chatter) {
-            // add currency to each chatter's wallet
+    // chatters.forEach(function (chatter) {
+    // add currency to each chatter's wallet
 
-            // let currency = rpgCurrency();
-            // currency.add(1);
+    // let currency = rpgCurrency();
+    // currency.add(1);
 
-            // let wallet = App.getWallet(chatter.id, chatter.username, obj.target);
-            // wallet.addCurrency(currency);
-        // });
+    // let wallet = App.getWallet(chatter.id, chatter.username, obj.target);
+    // wallet.addCurrency(currency);
+    // });
 
     // }
 

@@ -67,10 +67,11 @@ var plugin = {
                     var wordleState = obj.chatBot.chatCommandManager.getCommandState(key);
 
                     if (wordleState) {
+                        wordleState.wordGenerator = globalState.get("wordgenerator").wordGenerator;
                         wordle = new Wordle(wordleState);
 
                         if (wordle) {
-                            wordle.submit(obj.args);
+                            wordle.submit(obj.args.toString());
 
                             obj.chatBot.chatCommandManager.setCommandState(key, wordle.getState());
 

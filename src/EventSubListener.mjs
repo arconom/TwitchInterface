@@ -42,7 +42,7 @@ export default class EventSubListener extends WebSocketListener {
         }, true);
 
         this.AddHandler("error", function (event) {
-            FileRepository.log("EventSubListener error " + JSON.stringify(event));
+            FileRepository.log("EventSubListener error "+ event.type + " " + event.data);
         }, true);
 
         this.AddHandler("message", function (event) {
@@ -50,12 +50,12 @@ export default class EventSubListener extends WebSocketListener {
             
             if (event && event.data) {
                 var obj = JSON.parse(event.data);
+
                 if (obj.metadata.message_type === "session_keepalive") {
                     return;
                 }
 
                 if (obj.metadata.message_type === "session_welcome") {
-                    FileRepository.log("EventSubListener session id " + obj.payload.session.id);
                     self.sessionId = obj.payload.session.id;
                 }
             }

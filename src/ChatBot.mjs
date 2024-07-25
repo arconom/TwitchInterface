@@ -43,6 +43,9 @@ export default class ChatBot extends HandlerMap {
             identity: {
                 username: app.config.botName,
                 password: app.secrets.tmi
+            },
+            options: {
+                skipMembership: false
             }
         };
 
@@ -79,6 +82,10 @@ export default class ChatBot extends HandlerMap {
             //todo parse args here?
             self.onMessageHandler.call(self, target, context, msg, isSelf);
         });
+
+        self.client.on('join', joinHandler);
+        self.client.on('part', partHandler);
+
         self.AddHandler("message", function (x) {
             try {
                 var commandMessage = self.chatCommandManager.getCommandResult(x);
@@ -114,12 +121,38 @@ export default class ChatBot extends HandlerMap {
                 FileRepository.log(new Date(Date.now()).toISOString() + " \r\n " + e);
             }
         }, true);
-        self.client.on('connected', function (address, port) {
+        self.client.on('connected', function (address, port, connection) {
+            FileRepository.log("Chatbot.connected handler " +
+                JSON.stringify(address) +
+                JSON.stringify(port) +
+                JSON.stringify(self.client));
             self.onConnectedHandler.call(self, address, port);
+
+            // connection.sendUTF('CAP REQ :twitch.tv/tags twitch.tv/commands');
         });
 
         // Connect to Twitch:
         self.client.connect();
+        
+        function joinPartHandler(channel, username, isSelf, action) {
+            const obj = {
+                channel: channel,
+                username: username,
+                isSelf: isSelf,
+                timestamp: Date.now(),
+                action: action
+            };
+
+            FileRepository.saveChatMessage(JSON.stringify(obj));
+        }
+        
+        function joinHandler(channel, username, isSelf) {
+            joinPartHandler(channel, username, isSelf, "JOIN");
+        }
+
+        function partHandler(channel, username, isSelf) {
+            joinPartHandler(channel, username, isSelf, "PART");
+        }
     }
 
     joinChannel(name) {
@@ -136,8 +169,7 @@ export default class ChatBot extends HandlerMap {
         .then(function () {
             self.client.join(name);
         })
-        .catch(function(e)
-        {
+        .catch(function (e) {
             FileRepository.log(e);
         });
     }
@@ -283,9 +315,9 @@ export default class ChatBot extends HandlerMap {
         let channelState = self.channels.get(channel);
 
         if (!channelState?.chatters) {
-            return self.getChatters().then(function(){
-				return Promise.resolve(self.channels.get(channel).chatters);
-			});
+            return self.getChatters().then(function () {
+                return Promise.resolve(self.channels.get(channel).chatters);
+            });
         } else {
             return Promise.resolve(channelState.chatters);
         }

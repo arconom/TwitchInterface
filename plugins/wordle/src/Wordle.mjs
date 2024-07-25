@@ -57,7 +57,9 @@ export default class Wordle {
 
     submit(word) {
         //check the word against the instance word
+        
         word = word.toLowerCase();
+        
         this.lastGuess = word;
         if (word.length === this.selectedWord.length) {
             if (this.wordGenerator.getDefinition(word)) {
@@ -86,6 +88,7 @@ export default class Wordle {
                         if (selectedLetters[i] === letters[i]) {
                             //matching letter, matching position
                             this.matchingLetters.set(i, true);
+                            this.hasLetters.add(letters[i]);
                         } else if (selectedLetters.indexOf(letters[i]) > -1
                              && !this.matchingLetters.get(i)) {
                             //has the letter

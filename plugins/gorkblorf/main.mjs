@@ -36,15 +36,14 @@ var plugin = {
                 if (responseMessage.length === 0) {
                     responseMessage = "gorkblorf molunga spafs spafs spafs >><<";
                 }
-				
-				message.chatBot.sendMessage(message.target.substr(1), respondingTo + " " + responseMessage);
+
+                message.chatBot.sendMessage(message.target.substr(1), respondingTo + " " + responseMessage);
+            } else {
+                // console.log("gorkblorf chose not to respond to you");
             }
-			else{
-				// console.log("gorkblorf chose not to respond to you");
-			}
-        }else{
-			// console.log("gorkblorf not done loading, so it can't respond");
-		}
+        } else {
+            // console.log("gorkblorf not done loading, so it can't respond");
+        }
     },
     commands: new Map(),
     load: function (globalState) {
@@ -68,15 +67,18 @@ var plugin = {
         return FileRepository.loadChatMessages(
             function (msg) {
             var obj = JSON.parse(msg);
-            var channelName = obj.target.substr(1);
-            var messageList = ChatLog.get(channelName);
 
-            if (messageList?.length > 0) {
-                messageList.push(obj);
-            } else {
-                messageList = [obj];
+            if (obj.target) {
+                var channelName = obj.target.substr(1);
+                var messageList = ChatLog.get(channelName);
+
+                if (messageList?.length > 0) {
+                    messageList.push(obj);
+                } else {
+                    messageList = [obj];
+                }
+                ChatLog.set(channelName, messageList);
             }
-            ChatLog.set(channelName, messageList);
         })
         .then(function (data) {
             return new Promise(function (resolve, reject) {

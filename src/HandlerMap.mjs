@@ -1,18 +1,21 @@
-import {FileRepository} from "./FileRepository.mjs";
+import {
+    FileRepository
+}
+from "./FileRepository.mjs";
 
 export default class HandlerMap {
 
     constructor() {
         this.handlers = new Map();
-		
-		this.AddHandler("error", function(err){
-			FileRepository.log("HandlerMap.error " + err.error);
-		});
-		
-		this.AddHandler("close", function(err){
-			FileRepository.log("HandlerMap.close " + err.reason);
-		});
-		
+
+        this.AddHandler("error", function (err) {
+            FileRepository.log("HandlerMap.error " + err.error);
+        });
+
+        this.AddHandler("close", function (err) {
+            FileRepository.log("HandlerMap.close " + err.reason);
+        });
+
     }
 
     RemoveHandler(key, id) {
@@ -52,27 +55,32 @@ export default class HandlerMap {
         // FileRepository.log( "ExecuteHandlers", key);
         var self = this;
         var promises = [];
-        var arr = self.handlers.get(key);
 
-        if (arr && arr.length > 0) {
-            arr.forEach(function (x) {
-                if (typeof x === "function") {
-                    promises.push(new Promise(function (resolve, reject) {
-                            x(args);
-                        }));
-                } else if (x?.value && typeof x?.value === "function") {
-                    promises.push(new Promise(function (resolve, reject) {
-                            x.value(args);
-                        }));
-                } else {
-                    FileRepository.log( "HandlerMap.ExecuteHandlers invalid handler", x);
-                }
-            });
+        try {
+            var arr = self.handlers.get(key);
 
-            self.handlers.set(key, arr.filter(x => x.isPersistent));
-            return Promise.all(promises);
+            if (arr && arr.length > 0) {
+                arr.forEach(function (x) {
+                    if (typeof x === "function") {
+                        promises.push(new Promise(function (resolve, reject) {
+                                x(args);
+                            }));
+                    } else if (x?.value && typeof x?.value === "function") {
+                        promises.push(new Promise(function (resolve, reject) {
+                                x.value(args);
+                            }));
+                    } else {
+                        FileRepository.log("HandlerMap.ExecuteHandlers invalid handler", x);
+                    }
+                });
+
+                self.handlers.set(key, arr.filter(x => x.isPersistent));
+
+                    return Promise.all(promises);
+            }
+            return Promise.resolve();
+        } catch (e) {
+            FileRepository.Log(e);
         }
-        return Promise.resolve();
-
     }
 }

@@ -48,7 +48,6 @@ var bannedWords = [
 var EnglishDefinitions;
 await import("./EnglishDefinitions.mjs").then(function (data) {
     EnglishDefinitions = data.EnglishDefinitions;
-    console.log("EnglishDefinitions.mjs " + EnglishDefinitions.length + " definitions loaded");
 })
 .catch(function (err) {
     zl.extract('./plugins/wordgenerator/src/EnglishDefinitions.zip', "./plugins/wordgenerator/src/")

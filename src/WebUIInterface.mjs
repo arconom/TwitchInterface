@@ -14,7 +14,7 @@ import HandlerMap from "./HandlerMap.mjs";
 export default class WebUIInterface extends HandlerMap {
 
     constructor(port) {
-        console.log("WebUIInterface.constructor", port);
+        FileRepository.log("WebUIInterface.constructor", port);
         super();
 		var self = this;
         self.port = port;

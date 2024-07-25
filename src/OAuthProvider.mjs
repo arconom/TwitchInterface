@@ -43,10 +43,6 @@ export default class OAuthProvider extends HandlerMap {
         this.preferredBrowser = preferredBrowser;
     }
 
-    readJson(data) {
-        return data.json();
-    }
-
     getState() {
         return Math.floor(Math.random() * 999999999);
         // return Nonce(15);
@@ -212,23 +208,36 @@ export default class OAuthProvider extends HandlerMap {
 
             self.accessTokenDebouncer = Date.now() + 5000;
 
-            // FileRepository.log( "OAuthProvider.getAccessToken request", url, requestOptions);
+            //FileRepository.log( "OAuthProvider.getAccessToken request " + url);
             return fetch(url, requestOptions)
-            .then(self.readJson)
             .then(function (data) {
-                if (data.access_token) {
-                    FileRepository.log("getAccessToken result", data);
-                    self.token = data;
-                    return self.ExecuteHandlers("token", self);
-                } else {
-                    FileRepository.log("OAuthProvider.getAccessToken failed to get token", data);
-                    return Promise.resolve();
+                const result = data.json();
+                FileRepository.log("OAuthProvider.getAccessToken data.json() " + result);
+                return result;
+            })
+            .then(function (data) {
+                FileRepository.log("-----------------------------------------------");
+
+                try {
+
+                    if (data.access_token) {
+                        FileRepository.log("OAuthProvider.getAccessToken result " + JSON.stringify(data));
+                        self.token = data;
+                        return self.ExecuteHandlers("token", self);
+                    } else {
+                        FileRepository.log("OAuthProvider.getAccessToken failed to get token " + data);
+                        return Promise.resolve();
+                    }
+                } catch (e) {
+                    FileRepository.log(e);
                 }
             })
             .catch(function (e) {
-                FileRepository.log("getAccessToken exception", e);
+                FileRepository.log("getAccessToken exception " + e);
                 self.server.close();
             });
+
+            FileRepository.log("getAccessToken after fetch");
 
             /*             // example object
             // {

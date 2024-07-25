@@ -393,7 +393,7 @@ export const vueInstance = {
         createWebSocket: function () {
             var self = this;
 
-            self.webSocket = new WebSocket("ws://localhost:8080");
+            self.webSocket = new WebSocket("ws://localhost:8081");
             self.webSocket.addEventListener('message', (event) => {
                 //console.log("websocket message", event);
 
