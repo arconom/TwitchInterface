@@ -23,7 +23,7 @@ var plugin = {
     // chatBot: self
     // }
     exports: {
-        //gorkblorf: Gorkblorf
+        gorkblorf: Gorkblorf
     },
     chatMessageHandler: function (message) {
         if (!message.self && plugin.loadComplete) {

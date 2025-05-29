@@ -27,7 +27,7 @@ export const vueInstance = {
             chatCommandConfigVersion: 1,
             chatCommandState: new Map(),
             chatCommands: new Map(),
-            chatCommandsEnabled: true, 
+            chatCommandsEnabled: true,
             config: [],
             cost: 0,
             maxCost: 0,
@@ -65,32 +65,31 @@ export const vueInstance = {
         }
     },
     methods: {
-        addActionToEventSubscription: function(name, key){
+        addActionToEventSubscription: function (name, key) {
             let subs = this.eventSubscriptions.get(name);
-            
-            let target = subs.find(function(sub){
+
+            let target = subs.find(function (sub) {
                 return JSON.stringify(sub.condition) === key;
             });
-            
-            
-            if(!target.actions){
+
+            if (!target.actions) {
                 target.actions = [];
             }
-            
+
             target.actions.push({
                 name: ""
             });
         },
-        removeActionFromEventSubscription: function(name, index){
+        removeActionFromEventSubscription: function (name, index) {
             let sub = this.eventSubscriptions.get(name);
-            
-            if(!sub.actions){
+
+            if (!sub.actions) {
                 return;
             }
-            
+
             sub.actions.splice(index);
         },
-        toggleCommands: function(){
+        toggleCommands: function () {
             var self = this;
             self.chatCommandsEnabled = !self.chatCommandsEnabled;
             dataAccess.toggleChatCommands();
@@ -199,7 +198,7 @@ export const vueInstance = {
                 var temp = self.chatCommandConfig;
                 if (data?.length > 0) {
                     data.forEach(function (x) {
-						//console.log("chatCommandConfig", x);
+                        //console.log("chatCommandConfig", x);
                         // this needs to be a number, so the v-select displays the string
                         x[1].role = parseInt(x[1].role);
                         temp.set(x[0], x[1]);
@@ -276,8 +275,16 @@ export const vueInstance = {
         submitApiRequest: function () {
             var self = this;
             self.selectedEndpoint.key = this.selectedEndpointKey;
+
+            const keys = Object.keys(self.selectedEndpoint.args);
             
-            if(self.selectedEndpoint.args.choices){
+            keys.forEach(function(key){
+                if(self.selectedEndpoint.args[key] == ""){
+                    delete self.selectedEndpoint.args[key];
+                }
+            });
+
+            if (self.selectedEndpoint.args.choices) {
                 self.selectedEndpoint.args.choices = self.selectedEndpoint.args.choices.replace('\"', '"');
             }
 
@@ -286,8 +293,8 @@ export const vueInstance = {
                 if (self.selectedEndpoint.key === "getUserInfo") {
                     self.users.set(data[0].id, new User(data[0]));
                 }
-				self.snackbar = true;
-				self.snackbarText = "API result: " + JSON.stringify(data); 
+                self.snackbar = true;
+                self.snackbarText = "API result: " + JSON.stringify(data);
             });
         },
         deleteConfig: function (index) {
@@ -393,7 +400,7 @@ export const vueInstance = {
         createWebSocket: function () {
             var self = this;
 
-            self.webSocket = new WebSocket("ws://localhost:8081");
+            self.webSocket = new WebSocket("ws://localhost:8082");
             self.webSocket.addEventListener('message', (event) => {
                 //console.log("websocket message", event);
 
@@ -480,7 +487,11 @@ export const vueInstance = {
         },
         setPluginConfig: function (name, value) {
             var temp = this.pluginConfig;
-            temp.set(name, value);
+            
+            let item = temp.get(name);
+            item.active = value;
+            temp.set(name, item);
+
             this.pluginConfig = temp;
         },
         addEventSubscription: function () {
@@ -555,13 +566,52 @@ export const vueInstance = {
         },
         deleteRepeatingMessage: function (id) {
             dataAccess.deleteRepeatingMessage(id);
+            this.repeatingMessages.delete(id);
         },
         addRepeatingMessage: function (e) {
             var self = this;
             this.repeatingMessages.set(new Date().getTime(), self.newRepeatingMessage);
             e.preventDefault();
             e.stopPropagation();
-        }
+        },
+        pluginDrag: function (index) {
+            console.log("pluginDrag");
+            this.draggingPluginIndex = index;
+        },
+        pluginDrop: function (event, index) {
+
+            console.log("pluginDrop");
+            let arr = Array.from(this.pluginConfig.entries());
+            let draggedItem = arr.splice(this.draggingPluginIndex, 1)[0];
+
+            arr.splice(index, 0, draggedItem);
+
+            arr.forEach(function (element, index, array) {
+                // console.log("element ", element);
+                element[1].order = index;
+            });
+
+            this.pluginConfig = new Map(arr);
+            this.draggingPluginIndex = null;
+            event.target.classList.remove("drag-target");
+        },
+        
+        
+pluginDragEnter:function(e){
+    e.target.classList.add("drag-target");
+    e.preventDefault();
+},
+pluginDragLeave:function(e){
+    e.target.classList.remove("drag-target");
+},
+
+pluginDragOver:function(e){
+    e.preventDefault();
+},
+
+
+        
+        
     },
     computed: {
         areRepeatingMessagesValid: function () {
@@ -585,8 +635,18 @@ export const vueInstance = {
         configDisplay: function () {
             var self = this;
             return self.config.filter(function (x) {
-                return x.title.indexOf(self.searchConfig) > -1 ||
-                x.value.indexOf(self.searchConfig) > -1;
+                const titleMatch = x.title.indexOf(self.searchConfig) > -1;
+
+                let val;
+
+                if (typeof x.value !== "string") {
+                    val = x.value.toString();
+                } else {
+                    val = x.value;
+                }
+
+                const valueMatch = val.indexOf(self.searchConfig) > -1;
+                return titleMatch || valueMatch;
             });
         },
 
@@ -595,7 +655,8 @@ export const vueInstance = {
             .filter((x) =>
                 Object.values(x).some((v) => typeof v === "string" ?
                     v.indexOf(this.searchPlugins) > -1
-                     : false));
+                     : false))
+                    .sort((a,b)=>a[1].order - b[1].order);
         },
         roles: function () {
             return Array.from(ChatRoles.entries()).map(x => {
@@ -715,24 +776,20 @@ export const vueInstance = {
                         Object.values(x).some((v) => typeof v === "string" &&
                             v.indexOf(this.searchChatCommandConfig) > -1))
                     .sort((a, b) => {
-                        if(a.key < b.key){
+                        if (a.key < b.key) {
                             return -1;
-                        }
-                        else if(a.key > b.key){
+                        } else if (a.key > b.key) {
                             return 1;
-                        }
-                        else if(a.key == b.key){
+                        } else if (a.key == b.key) {
                             return 0;
                         }
                     })
                     .sort((a, b) => {
                         if (a.enabled & !b.enabled) {
                             return -1;
-                        }
-                        else if (!a.enabled & b.enabled) {
+                        } else if (!a.enabled & b.enabled) {
                             return 1;
-                        }
-                        else if (a.enabled == b.enabled) {
+                        } else if (a.enabled == b.enabled) {
                             return 0;
                         }
                     });

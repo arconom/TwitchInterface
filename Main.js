@@ -134,16 +134,21 @@ class App {
         .then(App.loadOscMappings)
         .then(function () {
             FileRepository.log("App.init before getPluginList");
-            return FileRepository.getPluginList()
+            return FileRepository.getPluginFolderList()
             .then(function (list) {
                 App.pluginList = list;
             }).then(function () {
                 return FileRepository.readPluginConfig()
                 .then(function (pluginConfig) {
                     App.pluginConfig = new Map(pluginConfig);
+
+                    //todo this uses the folder name, which is not optimal.
                     App.pluginList.forEach(function (plugin) {
                         if (!App.pluginConfig.get(plugin)) {
-                            App.pluginConfig.set(plugin, false);
+                            App.pluginConfig.set(plugin, {
+                                active: false,
+                                order: Infinity
+                            });
                         }
                     })
                 });
@@ -163,7 +168,6 @@ class App {
             App.twitchAPIProvider
             .getUserInfo(App.config.botName,
                 function (res) {
-                FileRepository.log("jeemers " + JSON.stringify(res));
                 if (res && res.length > 0) {
                     App.botUserInfo = res[0];
                     FileRepository.log("App.botUserInfo " + JSON.stringify(App.botUserInfo));
@@ -185,7 +189,6 @@ class App {
             });
 
             FileRepository.log("App.init before readWallets");
-
             FileRepository.readWallets()
             .then(function (data) {
                 try {
@@ -203,7 +206,6 @@ class App {
             });
 
             FileRepository.log("App.init before loadEventSubscriptions");
-
             App.loadEventSubscriptions();
             App.twitchAPIProvider.getSubscriptions(null, function (data) {
                 if (data?.length > 0) {
@@ -212,46 +214,103 @@ class App {
                 }
             });
 
-            FileRepository.log("App.init before loadPlugins");
-            FileRepository.loadPlugins(App.pluginConfig)
+            // FileRepository.log("App.init before loadPlugins " + JSON.stringify(Array.from(App.pluginConfig.entries())));
+            return FileRepository.loadPlugins(App.pluginConfig)
             .then(function (plugins) {
-                plugins.forEach(plugin => {
-                    if (plugin.default.chatMessageHandler) {
-                        App.pluginChatHandlers.push(plugin.default.chatMessageHandler);
-                    }
 
-                    //add commands to the list
-                    if (plugin?.default .load) {
-                            plugin.default.load(App.globalState)
-                            .then(function (loadedPlugin) {
-                                for (var command of plugin?.default .commands?.entries()) {
-                                        App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
+                // FileRepository.log("plugins " + plugins.map((p) => p.default.name));
 
-                                        if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
-                                            App.chatBot.chatCommandManager.setCommandConfig(command[0], {
-                                                key: command[0]
-                                            });
-                                        }
+                let orderedMap = new Map();
 
-                                        if (plugin.default.exports) {
-                                            // set a global state if the plugin has exports
-                                            App.globalState.set(plugin.default.name, plugin.default.exports);
-                                        }
-                                    }
+                // FileRepository.log("setting up orderedMap");
+
+                //todo this is suboptimal data structure
+                let keys = Array.from(App.pluginConfig.keys());
+
+                keys.forEach(function (key) {
+                    // FileRepository.log("key " + key);
+                    // FileRepository.log("order " + App.pluginConfig.get(key).order);
+
+                    orderedMap.set(App.pluginConfig.get(key).order, key);
+                });
+
+                FileRepository.log("orderedMap " + Array.from(orderedMap.entries()));
+
+                for (let i = 0; i < orderedMap.size; i++) {
+                    let pluginName = orderedMap.get(i);
+
+                    // FileRepository.log("plugins " + JSON.stringify(plugins.map((p) => p.default.name)));
+                    // FileRepository.log("pluginName " + pluginName);
+
+                    let pluginToLoad = plugins.find((element) => element.default.name === pluginName);
+
+                    if (pluginToLoad) {
+                        //throw "pluginToLoad should not be null " + pluginName;
+
+
+                        FileRepository.log("loading plugin " + pluginToLoad.default.name);
+
+                        if (pluginToLoad.default.chatMessageHandler) {
+                            FileRepository.log("chatMessageHandler " + pluginToLoad.default.name);
+                            // console.log("adding chatMessageHandler");
+                            App.pluginChatHandlers.push(pluginToLoad.default.chatMessageHandler);
+                        }
+
+                        if (pluginToLoad.default.exports) {
+                            FileRepository.log("exports " + pluginToLoad.default.name);
+
+                            // set a global state if the plugin has exports
+                            // console.log("setting a value in globalState", pluginToLoad.default.name);
+                            App.globalState.set(pluginToLoad.default.name, pluginToLoad.default.exports);
+                        }
+
+                        if (pluginToLoad.default.config) {
+                            FileRepository.log("config " + pluginToLoad.default.name);
+                            const keys = Object.keys(pluginToLoad.default.config);
+                            keys.forEach(function (key) {
+                                if (App.config[key] === null || App.config[key] === undefined) {
+                                    FileRepository.log("adding config key " + key);
+                                    App.config[key] = pluginToLoad.default.config[key];
+                                }
                             });
                         }
-                        else {
-                            FileRepository.log("plugin has no load function " + plugin.default);
-                        }
-                });
+
+                        // add commands to the list
+                        if (pluginToLoad?.default .load) {
+                                FileRepository.log("load " + pluginToLoad.default.name);
+                                // console.log("loading plugin", pluginToLoad.default.name);
+                                pluginToLoad.default.load(App.globalState)
+                                .then(function (loadedPlugin) {
+
+                                    for (var command of pluginToLoad?.default .commands?.entries()) {
+                                            App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
+
+                                            if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
+                                                App.chatBot.chatCommandManager.setCommandConfig(command[0], {
+                                                    key: command[0]
+                                                });
+                                            }
+                                        }
+                                });
+                            }
+                            else {
+                                FileRepository.log("plugin has no load function " + pluginToLoad.default);
+                            }
+                    }
+                }
+
+            })
+            .catch(function (err) {
+                FileRepository.log("Error loading plugins " + err);
             });
 
+            FileRepository.log("finished loading plugin config");
         })
         .then(App.startWalletSaveInterval)
         .then(App.startWebServer)
         .then(App.startOverlay)
         .catch(function (e) {
-            FileRepository.Log("Main.init error " + e);
+            FileRepository.log("Main.init error " + e);
         });
     }
 
@@ -324,6 +383,7 @@ class App {
             try {
                 App.config = new Config(JSON.parse(data));
             } catch (e) {
+                FileRepository.log("Main.loadConfig " + e);
                 App.config = new Config(null);
             }
         });
@@ -595,10 +655,18 @@ class App {
                     return 400;
                 }
             },
-            "DELETE": function (id) {
+            "DELETE": function (params) {
+                const id = parseInt(params.id);
+                FileRepository.log("/chat/repeatingmessages DELETE " + id);
+                FileRepository.log("App.chatBot?.repeatingMessages has " + App.chatBot?.repeatingMessages.has(parseInt(id)));
+                FileRepository.log("App.chatBot?.repeatingMessages keys " + Array.from(App.chatBot?.repeatingMessages.keys()));
+
                 //remove a repeating message
                 App.chatBot?.repeatingMessages.delete(id);
-                return FileRepository.saveRepeatingMessages(JSON.stringify(Array.from(App.chatBot?.repeatingMessages)));
+                
+                return FileRepository.saveRepeatingMessages(JSON.stringify(Array.from(App.chatBot?.repeatingMessages))).then(function () {
+                    return FileRepository.readRepeatingMessages();
+                });
             },
         });
 
@@ -830,7 +898,7 @@ class App {
                 //set the value, then write the file
                 App.eventSubscriptionConfig = new Map(args);
 
-                console.log("/subscriptions/configuration", JSON.stringify(args));
+                FileRepository.log("/subscriptions/configuration", JSON.stringify(args));
 
                 return FileRepository.saveEventSubscriptions(args);
             },
@@ -910,6 +978,8 @@ class App {
                     obj[x.title] = x.value;
                 });
 
+                App.config = obj;
+
                 return FileRepository.saveConfig(obj);
             },
             "DELETE": function (args) {
@@ -926,7 +996,16 @@ class App {
                 throw "method not allowed";
             },
             "PUT": function (args) {
-                args.forEach(function (t) {
+
+                //example input
+                // [["common", {
+                // "active": true,
+                // "order": null
+                // }
+                // ]]
+
+                args.forEach(function (t, i) {
+                    t[1].order = i;
                     App.pluginConfig.set(t[0], t[1]);
                 });
 
@@ -1223,17 +1302,17 @@ class App {
                 subs.set(sub[0], {
                     condition: x.condition,
                     handler: function (data) {
-                        console.log("data", data);
-                        console.log("x", x);
+                        FileRepository.log("data", data);
+                        FileRepository.log("x", x);
 
                         x.actions.forEach(function (action) {
-                            console.log("action", action);
+                            FileRepository.log("action", action);
                             const pluginName = action.name.substr(0, action.name.indexOf("."));
                             const actionName = action.name.substr(action.name.indexOf("."));
                             const plugin = App.globalState.get(pluginName);
-                            console.log("plugin", plugin);
+                            FileRepository.log("plugin", plugin);
                             const actionObject = plugin.actions.get(action.name)
-                                console.log("actionObject", actionObject);
+                                FileRepository.log("actionObject", actionObject);
                             actionObject.handler(data);
                         });
                         App.oscManager.send("/" + data.payload.subscription.type, JSON.stringify(data));

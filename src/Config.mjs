@@ -1,5 +1,15 @@
 export class Config {
     constructor(data) {
+        var self = this;
+
+        if (data) {
+            const keys = Object.keys(data);
+
+            keys.forEach(function (key) {
+                self[key] = data[key];
+            });
+        }
+
         this.botName = data?.botName ?? "";
         this.broadcasterUsername = data?.broadcasterUsername ?? "";
         this.chatDelay = data?.chatDelay ?? 2000;
@@ -16,77 +26,3 @@ export class Config {
         this.webUIInterfacePort = 8082;
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

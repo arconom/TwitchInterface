@@ -5,7 +5,10 @@ import {
 }
 from 'node:fs/promises';
 
-import {Constants} from "./Constants.mjs";
+import {
+    Constants
+}
+from "./Constants.mjs";
 import LineByLineReader from 'line-by-line';
 
 export const FileRepository = {
@@ -100,12 +103,17 @@ export const FileRepository = {
 
     loadPlugins: function (activePluginMap) {
         var path = "./plugins/";
-        return this.getPluginList()
+        return this.getPluginFolderList()
         .then((folders) => {
             var promises = [];
 
+            FileRepository.log("folders " + folders);
+            FileRepository.log("activePluginMap " + JSON.stringify(Array.from(activePluginMap.entries())));
+
             folders.forEach(folder => {
                 if (activePluginMap.get(folder)) {
+
+                    FileRepository.log("importing plugin " + folder);
                     promises.push(import("../" + path + folder + "/main.mjs"));
                 }
             });
@@ -114,7 +122,7 @@ export const FileRepository = {
         });
     },
 
-    getPluginList: function () {
+    getPluginFolderList: function () {
         var path = "./plugins/";
         return readdir(path);
     },
@@ -259,11 +267,11 @@ export const FileRepository = {
     },
 
     writeJsonFileAsync: function (filename, data) {
-		return this.writeFileAsync(filename, data, true);
+        return this.writeFileAsync(filename, data, true);
     },
 
     writeTextFileAsync: function (filename, data) {
-		return this.writeFileAsync(filename, data, false);
+        return this.writeFileAsync(filename, data, false);
     },
 
     writeFileAsync: function (filename, data, isJson) {
@@ -274,12 +282,12 @@ export const FileRepository = {
         return new Promise(function (resolve, reject) {
             // this.log("FileRepository.writeFileAsync going to write");
             try {
-				let writeMe = data;
-				
-				if(isJson){
-					writeMe = JSON.stringify(data, Constants.replacer);
-				}
-				
+                let writeMe = data;
+
+                if (isJson) {
+                    writeMe = JSON.stringify(data, Constants.replacer);
+                }
+
                 fs.writeFile(filename, writeMe, function (err, data) {
                     // this.log("FileRepository.writeFileAsync written");
                     if (err) {
@@ -349,6 +357,5 @@ export const FileRepository = {
             console.error(err);
         }
     }
-
 
 }

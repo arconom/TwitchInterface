@@ -12,14 +12,22 @@ var plugin = {
     // chatBot: self
     // }
     exports: {
-        wordGenerator: new WordGenerator()
+        wordGenerator: null
     },
     commands: new Map(),
     load: function (globalState) {
-        var FileRepository = globalState.get("filerepository");
+        const FileRepository = globalState.get("filerepository");
         FileRepository.log("wordgenerator.load");
 
-        var Constants = globalState.get("constants");
+        const Common = globalState.get("common");
+        const Constants = globalState.get("constants");
+
+        try {
+            plugin.exports.wordGenerator = new WordGenerator(Common.commonEnglishWords, Common.englishDefinitions);
+        } catch (e) {
+            FileRepository.log(e);
+
+        }
 
         plugin.commands.set("prcacro", {
             description: "Generate an acronym using common words, pass the word to acronymize",
@@ -36,7 +44,7 @@ var plugin = {
             }
         });
         plugin.commands.set("prcallit", {
-			
+
             description: "Generate an alliteration using common words, pass the first letter and then the number of words",
             handler: function (obj) {
                 var msg = plugin.exports.wordGenerator.getCommonAlliteration(obj.args[0].toLowerCase(), parseInt(obj.args[1]));

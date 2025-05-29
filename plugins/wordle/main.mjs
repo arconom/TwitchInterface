@@ -11,7 +11,6 @@ var plugin = {
     // "self": bool,
     // chatBot: Object<ChatBot>
     // }
-    dependencies: ["wordgenerator"],
     commands: new Map(),
     load: function (globalState) {
         var FileRepository = globalState.get("filerepository");

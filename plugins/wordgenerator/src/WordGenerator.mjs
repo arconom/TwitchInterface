@@ -1,10 +1,3 @@
-import fs from 'fs';
-import zl from "zip-lib";
-
-import {
-    CommonEnglishWords
-}
-from "./CommonEnglishWords.mjs";
 
 var bannedTags = ["slang",
     "offensive",
@@ -45,32 +38,20 @@ var bannedWords = [
 	"damn",
 ];
 
-var EnglishDefinitions;
-await import("./EnglishDefinitions.mjs").then(function (data) {
-    EnglishDefinitions = data.EnglishDefinitions;
-})
-.catch(function (err) {
-    zl.extract('./plugins/wordgenerator/src/EnglishDefinitions.zip', "./plugins/wordgenerator/src/")
-    .then(function (data) {
-        EnglishDefinitions = data.EnglishDefinitions;
-    }, function (err) {
-        console.log("EnglishDefinitions.mjs error", err);
-    })
-    .catch(function (err) {
-        console.log("EnglishDefinitions.mjs error", err);
-    });
-});
 export default class WordGenerator {
 
-    constructor() {
+    constructor(commonEnglishWords, englishDefinitions) {
+        if(!commonEnglishWords || !englishDefinitions){
+            throw "WordGenerator.constructor error: commonEnglishWords or englishDefinitions was not an array of strings as expected";
+        }
         this.usedWords = [];
         this.definitions = new Map();
         this.lastWord = null;
         this.words = new Set();
-        this.commonWords = this.initCommonWords();
+        this.commonWords = this.initCommonWords(commonEnglishWords);
         this.wordList = null;
         this.commonWordList = null;
-        this.initializeWordList()
+        this.initializeWordList(englishDefinitions)
     }
 
     getWordList() {
@@ -87,25 +68,20 @@ export default class WordGenerator {
         return this.commonWordList;
     }
 
-    initCommonWords() {
+    initCommonWords(commonEnglishWords /*array*/) {
         var returnMe = new Set();
 
-        for (let i = 0; i < CommonEnglishWords.length; i++) {
-            returnMe.add(CommonEnglishWords[i]);
+        for (let i = 0; i < commonEnglishWords.length; i++) {
+            returnMe.add(commonEnglishWords[i]);
         }
 
         return returnMe;
     }
 
-    initializeWordList() {
+    initializeWordList(englishDefinitions /*array*/) {
         var startTime = Date.now();
 
-        if (EnglishDefinitions?.length < 1) {
-            throw "EnglishDefinitions did not load";
-
-        }
-
-        for (var x of EnglishDefinitions) {
+        for (var x of englishDefinitions) {
             //no spaces
             //no initialism
             //no abbreviation

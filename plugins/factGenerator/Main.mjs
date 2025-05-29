@@ -1,6 +1,6 @@
 
 var plugin = {
-    name: "fact generator",
+    name: "factGenerator",
 
     //commands is a map of keys and functions that take an object as a parameter and return a string
     // {
@@ -10,7 +10,6 @@ var plugin = {
     // "self": bool,
     // chatBot: Object<ChatBot>
     // }
-    dependencies: [],
     commands: new Map(),
     load: function (globalState) {
         var FileRepository = globalState.get("filerepository");

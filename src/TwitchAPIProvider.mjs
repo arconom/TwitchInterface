@@ -129,7 +129,7 @@ export default class TwitchAPIProvider {
         var url = this.baseUri + `clips` + ObjectToQuerystring(args);
 
         var requestOptions = {
-            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            method: 'GET', // *GET, POST, PUT, DELETE, etc.
             headers: self.getHeaders()
         };
 

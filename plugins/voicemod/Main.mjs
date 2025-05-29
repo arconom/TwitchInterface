@@ -5,9 +5,6 @@ import OverlayMessage from "../../src/OverlayMessage.mjs";
 var plugin = {
     name: "voicemod",
 
-    //an array of strings, naming the other plugins that are dependencies
-    dependencies: [],
-
     //commands is a map of keys and functions that take an object as a parameter and return a string
     // {
     // target: string,

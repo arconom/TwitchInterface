@@ -15,7 +15,21 @@
 	margin-right: 2em;
 }
 
+.plugin-row{
+    border: solid #212121;
+}
 
+.plugin-row:hover{
+    border: solid lightblue;
+}
+
+.plugin-row.drag-target{
+    border: solid lightgreen;
+}
+
+[draggable] * {
+pointer-events: none;
+}
 </style>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.1.1/dist/vuetify.min.css"/>
@@ -308,15 +322,30 @@
 											<v-text-field placeholder="Search" 
 											@click="searchClickHandler"
 											v-model="searchPlugins"></v-text-field>
-											<v-checkbox v-for="(item, i) in pluginConfigDisplay" :key="i" 
-												@click="setPluginConfig(item[0],!item[1])" 
-												:label="item[0]"
-												v-model="item[1]"
-												/>
+                                            
+                                            <div>
+                                                Click and Drag to reorder
+                                            </div>
+                                            <div>Restart the bot to pick up changes here.</div>
+                                            
+                                            <div v-for="(item, i) in pluginConfigDisplay" :key="i" 
+                                                draggable="true"
+                                                @dragenter="pluginDragEnter"
+                                                @dragleave="pluginDragLeave"
+                                                @dragover="pluginDragOver"
+                                                @drag="pluginDrag(i)"
+                                                @drop="pluginDrop($event, i)"
+                                                @click="setPluginConfig(item[0],!item[1].active)" 
+                                                class="plugin-row"
+                                            >
+                                                <v-checkbox 
+                                                    :label="item[0]"
+                                                    v-model="item[1].active"/>
+                                            </div>
+                                                
 										</v-expansion-panel-text>
 									</v-expansion-panel>
 								</v-expansion-panels>
-							<div>Restart the bot to pick up changes here.</div>
 						</v-container>
 					</v-window-item>
 
