@@ -53,6 +53,8 @@ var plugin = {
                 new VoicemodApi(config.uri,
                     config.clientKey);
 
+            plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));
+
             plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log(e));
         });
 
@@ -60,8 +62,9 @@ var plugin = {
             description: "play a sound",
             handler: function (obj) {
                 const key = obj.args[0];
-                
+
                 try {
+                    // console.log("prsound playing sound", key);
                      plugin.exports.VoicemodApi.PlaySound(key);
                 } catch (e) {
                     FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "

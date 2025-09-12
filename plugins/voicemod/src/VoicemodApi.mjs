@@ -33,16 +33,17 @@ export default class VoicemodApi {
         this.soundsMap = new Map();
 
         this.onopen = (e) => {
-            this.onMessageOnceHandlers.push(function (message) {
+            const self = this;
+            
+            self.onMessageOnceHandlers.push(function (message) {
                 self.GetSounds();
             });
 
-            this.SendMessage("registerClient", {
+            self.SendMessage("registerClient", {
                 "clientKey": self.clientKey
             });
         };
-        this.onclose = (e) => {
-        };
+        this.onclose = (e) => {};
         this.onmessage = (m) => {
             this.responses.set(m.data.actionId ?? ((new Date().getTime() * 1000) + (Math.floor(Math.random() * 1000))).toString(), m);
             this.onMessageOnceHandlers.forEach(function (handler) {
@@ -97,7 +98,7 @@ export default class VoicemodApi {
             this.webSocket.onerror = this.onerror;
 
         } catch (e) {
-            console.log(e);
+            // console.log(e);
             setTimeout(function () {
                 this.Connect(this.NextPort);
             }, 1000);
@@ -112,7 +113,9 @@ export default class VoicemodApi {
         };
 
         var message = JSON.stringify(messageObject);
+        //todo I don't remember why I am saving messages here
         this.messages.set(messageObject.id, messageObject);
+        // console.log("SendMessage", message);
         this.webSocket?.send(message);
     }
 
@@ -134,31 +137,50 @@ export default class VoicemodApi {
             memes = JSON.parse(message.data);
         }
 
-        let mappedMemes = memes?.actionObject.listOfMemes.map(x => {
-            return [x.name.toLowerCase().replaceAll(/[^\w]/g, ""), x.fileName];
-        }).sort((a, b) => {
-            return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0
-        });
+        try {
+            console.log("processing Voicemod sounds");
 
-        //we make a map containing a list of filenames for each unique key
-        //the keys are the names of the sounds in Voicemod
-        //this means that several sounds that are named the same
-        //will be put into a pool for random selection
-        for (let i = 0; i < mappedMemes?.length; i++) {
-            const key = mappedMemes[i][0];
-            const fileName = mappedMemes[i][1];
-
-            if (self.soundsMap.has(key)) {
-                let fileNameArray = self.soundsMap.get(key);
-                fileNameArray.push(fileName);
-                self.soundsMap.set(key, fileNameArray);
-            } else {
-                self.soundsMap.set(key, [fileName]);
+        /*
+            voicemod sound
+            {
+                FileName: "",
+                Image: "",
+                Name: "",
+                Type: ""
             }
+        */
+
+            let mappedMemes = memes?.actionObject.listOfMemes.map(x => {
+                return [x.Name.toLowerCase().replaceAll(/[^\w]/g, ""), x.FileName];
+            }).sort((a, b) => {
+                return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0
+            });
+
+            //we make a map containing a list of filenames for each unique key
+            //the keys are the names of the sounds in Voicemod
+            //this means that several sounds that are named the same
+            //will be put into a pool for random selection
+            for (let i = 0; i < mappedMemes?.length; i++) {
+                const key = mappedMemes[i][0];
+                const fileName = mappedMemes[i][1];
+
+                console.log(key);
+
+                if (self.soundsMap.has(key)) {
+                    let fileNameArray = self.soundsMap.get(key);
+                    fileNameArray.push(fileName);
+                    self.soundsMap.set(key, fileNameArray);
+                } else {
+                    self.soundsMap.set(key, [fileName]);
+                }
+            }
+        } catch (e) {
+            console.log(e);
         }
     }
 
     PlaySound(key) {
+        // console.log("PlaySound", key);
         if (this.soundsMap.has(key)) {
             let index = 0;
             let arr = this.soundsMap.get(key);
@@ -167,9 +189,11 @@ export default class VoicemodApi {
                 index = Math.floor(Math.random() * arr.length);
             }
 
+            // console.log("PlaySound playing", arr[index]);
+
             this.SendMessage("playMeme", {
-                fileName: arr[index],
-                isKeyDown: true
+                FileName: arr[index],
+                IsKeyDown: true
             });
         }
     }

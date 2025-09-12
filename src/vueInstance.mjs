@@ -318,7 +318,8 @@ export const vueInstance = {
             dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
         },
         addConfig: function (item) {
-            this.config.push(item);
+            console.log("addConfig", item);
+            this.config.unshift({"title": "new item", "value": "value"});
         },
         deleteSecret: function (index) {
             this.secrets.splice(index, 1);
@@ -633,9 +634,18 @@ pluginDragOver:function(e){
             return true;
         },
         configDisplay: function () {
+            
             var self = this;
+            console.log("configDisplay", self?.config);
+            
             return self.config.filter(function (x) {
-                const titleMatch = x.title.indexOf(self.searchConfig) > -1;
+                
+                if(!x?.title)
+                {
+                    return false;
+                }
+                
+                const titleMatch = x?.title?.indexOf(self.searchConfig) > -1;
 
                 let val;
 

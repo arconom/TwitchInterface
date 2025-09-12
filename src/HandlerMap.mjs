@@ -76,7 +76,7 @@ export default class HandlerMap {
 
                 self.handlers.set(key, arr.filter(x => x.isPersistent));
 
-                    return Promise.all(promises);
+                return Promise.all(promises);
             }
             return Promise.resolve();
         } catch (e) {

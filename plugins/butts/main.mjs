@@ -16,56 +16,61 @@ var plugin = {
         replacerWordListCommaDelimited: ""
     },
     chatMessageHandler: function (message) {
-        plugin.FileRepository.log("butts.chatMessageHandler" + message.msg);
-        plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.messageResponseFrequencyFloat" + plugin.app.config.messageResponseFrequencyFloat);
-        plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.textReplaceFrequencyFloat" + plugin.app.config.textReplaceFrequencyFloat);
-        plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.textReplaceFrequencyFloat" + plugin?.app?.config?.replacerWordListCommaDelimited);
+        // plugin.FileRepository.log("butts.chatMessageHandler" + message.msg);
+        // plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.messageResponseFrequencyFloat" + plugin.app.config.messageResponseFrequencyFloat);
+        // plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.textReplaceFrequencyFloat" + plugin.app.config.textReplaceFrequencyFloat);
+        // plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.textReplaceFrequencyFloat" + plugin?.app?.config?.replacerWordListCommaDelimited);
+        try {
 
+            if (!plugin.replacerWordList) {
+                // plugin.replacerWordList = plugin?.app?.config?.replacerWordListCommaDelimited.split(",") ?? [];
+                plugin.replacerWordList = plugin.app.config.replacerWordListCommaDelimited.split(",") ?? [];
+                plugin.FileRepository.log("butts.chatMessageHandler created wordlist " + plugin.replacerWordList);
+            }
 
+            if (!message.self &&
+                plugin.loadComplete &&
+                message.msg.indexOf("@") === -1 &&
+                message.msg.length < 100) {
 
+                let messageChanged = false;
 
-        if (!plugin.replacerWordList) {
-            // plugin.replacerWordList = plugin?.app?.config?.replacerWordListCommaDelimited.split(",") ?? [];
-            plugin.replacerWordList = plugin.app.config.replacerWordListCommaDelimited.split(",") ?? [];
-            plugin.FileRepository.log("butts.chatMessageHandler created wordlist " + plugin.replacerWordList);
-        }
+                if (Math.random() < plugin.app.config.messageResponseFrequencyFloat) {
+                    const words = message.msg.split(" ");
 
-        if (!message.self && plugin.loadComplete) {
+                    let newWords = [];
 
-            let messageChanged = false;
+                    for (let i = 0; i < words.length; i++) {
 
-            if (Math.random() < plugin.app.config.messageResponseFrequencyFloat) {
-                const words = message.msg.split(" ");
+                        let triggerValue = Math.random() +
+                            Math.random() * plugin.app.config.textReplaceFrequencyFloat;
 
-                let newWords = [];
+                        const doReplace = triggerValue < plugin.app.config.textReplaceFrequencyFloat;
 
-                for (let i = 0; i < words.length; i++) {
-                    
-                    let triggerValue = Math.random() + Math.random() * plugin.app.config.textReplaceFrequencyFloat;
-                    
-                    const doReplace = triggerValue < plugin.app.config.textReplaceFrequencyFloat
-                    && words[i].indexOf("@") == -1;
-                    
-                    if (doReplace) {
-                        
-                        let syllables = plugin.WordSyllabizer.Syllabize(words[i]);
-                        let syllableIndex = Math.floor(Math.random() * (syllables.length - 2) + 1);
-                        let index = Math.floor(Math.random() * plugin.replacerWordList.length);
-                        
-                        syllables[syllableIndex] = plugin.replacerWordList[index];
-                        newWords.push(syllables.join(""));
-                        
-                        messageChanged = true;
-                    } else {
-                        newWords.push(words[i]);
+                        if (doReplace) {
+
+                            let syllables = plugin.WordSyllabizer.Syllabize(words[i]);
+                            // let syllableIndex = Math.floor(Math.random() * (syllables.length - 2) + 1);
+                            let syllableIndex = Math.floor(Math.random() * syllables.length);
+                            let index = Math.floor(Math.random() * plugin.replacerWordList.length);
+
+                            syllables[syllableIndex] = plugin.replacerWordList[index];
+                            newWords.push(syllables.join(""));
+
+                            messageChanged = true;
+                        } else {
+                            newWords.push(words[i]);
+                        }
+                    }
+
+                    if (messageChanged) {
+                        var responseMessage = newWords.join(" ");
+                        message.chatBot.sendMessage(message.target.substr(1), responseMessage);
                     }
                 }
-
-                if (messageChanged) {
-                    var responseMessage = newWords.join(" ");
-                    message.chatBot.sendMessage(message.target.substr(1), responseMessage);
-                }
             }
+        } catch (e) {
+            plugin.FileRepository.log("butts.chatMessageHandler", e);
         }
     },
     commands: new Map(),
@@ -76,7 +81,6 @@ var plugin = {
         plugin.Common = globalState.get("common");
 
         plugin.WordSyllabizer = new plugin.Common.wordSyllabizer();
-
 
         // if this fails to load, it is because it is trying to load before Common,
         // so the order needs to be adjusted
@@ -119,7 +123,7 @@ var plugin = {
                 var key = obj.target + stateKey + ".ignore";
 
                 let idList = obj.chatBot.chatCommandManager.getCommandState(key);
-                
+
                 const index = idList.indexOf(obj.context.userId);
                 idList.splice(index, 1);
 
