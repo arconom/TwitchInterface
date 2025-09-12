@@ -155,7 +155,7 @@ export const vueInstance = {
             this.saveChatCommandConfig();
         },
         toggleChatCommandConfig: function (key) {
-            // console.log("updateChatCommandConfig", key);
+            // console.log("toggleChatCommandConfig", key);
             var item = this.chatCommandConfig.get(key);
             item.enabled = !item.enabled;
             this.chatCommandConfig.set(key, item);

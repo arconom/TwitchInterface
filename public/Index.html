@@ -185,34 +185,34 @@ pointer-events: none;
 										<v-col cols="4" sm="11">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="key" 
-											:model-value="item.key"></v-text-field>
+											v-model="item.key"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="Currency Type" 
-											:model-value="item.currencyType"></v-text-field>
+											v-model="item.currencyType"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="Cost" 
-											:model-value="item.cost"></v-text-field>
+											v-model="item.cost"></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											type="number" 
 											label="cooldown (in seconds)" 
-											:model-value="item.cooldownSeconds" ></v-text-field>
+											v-model="item.cooldownSeconds" ></v-text-field>
 										</v-col>
 										<v-col cols="6" sm="6">
 											<v-select @change="updateChatCommandConfig(item.key, item)" 
-											:model-value="item.role" 
+											v-model="item.role" 
 											:items="roles" 
 											label="Role" ></v-select>
 										</v-col>
 										<v-col cols="12" sm="12">
 											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
 											label="description" 
-											:model-value="item.description"></v-text-field>
+											v-model="item.description"></v-text-field>
 										</v-col>
 									</v-row>
 									</v-expansion-panel-text>
