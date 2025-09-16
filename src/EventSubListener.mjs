@@ -30,24 +30,24 @@ export default class EventSubListener extends WebSocketListener {
         this.maxCost = 0;
 
         this.AddHandler("open", function (event) {
-            FileRepository.log("EventSubListener open event " + event);
+            FileRepository.log("EventSubListener open event " + JSON.stringify(event));
         }, true);
 
         this.AddHandler("close", function (event) {
             if (event.code >= 4000) {
-                FileRepository.log("close event error " + event.code + " " + event.reason);
+                FileRepository.log("EventSubListener close event error " + event.code + " " + event.reason);
             }
             FileRepository.log("EventSubListener close event " + JSON.stringify(event));
             self.closeHandler(event.data);
         }, true);
 
         this.AddHandler("error", function (event) {
-            FileRepository.log("EventSubListener error "+ event.type + " " + event.data);
+            FileRepository.log("EventSubListener error " + event.type + " " + event.data);
         }, true);
 
         this.AddHandler("message", function (event) {
             FileRepository.log("EventSubListener message event " + event.type + " " + event.data);
-            
+
             if (event && event.data) {
                 var obj = JSON.parse(event.data);
 
@@ -68,7 +68,6 @@ export default class EventSubListener extends WebSocketListener {
     }
 
     closeHandler(data) {
-
         if (data?.metadata.message_type === "session_reconnect") {
             this.socket.close();
             this.websocketUri = data.payload.session.reconnect_url;
@@ -76,12 +75,9 @@ export default class EventSubListener extends WebSocketListener {
         } else if (data?.metadata.message_type === "revocation") {
             FileRepository.log("EventSubListener.closeHandler connection revoked");
             return this.socket.close();
-        }
-        else{
+        } else {
             return this.socket.close();
-            
         }
-
     }
 
     readJson(data) {
@@ -111,7 +107,7 @@ export default class EventSubListener extends WebSocketListener {
         var self = this;
 
         return self.oAuthProvider.validateToken(function () {
-            FileRepository.log("EventSubListener.subscribe after validate " + eventName + " " + condition);
+            FileRepository.log("EventSubListener.subscribe after validate " + eventName + " " + JSON.stringify(condition));
 
             var data = self.getSubscriptionConfig(SubscriptionTypes.get(eventName), condition);
             var requestOptions = {
@@ -125,11 +121,17 @@ export default class EventSubListener extends WebSocketListener {
             };
 
             FileRepository.log("EventSubListener.subscribe subscribing " + Constants.eventSubUrl + " " + JSON.stringify(requestOptions));
-            
+
             return fetch(Constants.eventSubUrl, requestOptions)
             .then(self.checkResponse)
             .then(self.readJson)
-            .then(self.getCostInfo)
+            .then(function (data) {
+                FileRepository.log("EventSubListener.getCostInfo " + data.total_cost);
+                FileRepository.log("EventSubListener.getCostInfo this ", this);
+                self.cost = data?.total_cost;
+                self.maxCost = data?.max_total_cost;
+                return Promise.resolve(data);
+            })
             .catch(function (e) {
                 FileRepository.log("\r\n EventSubListener.subscribe Error: " + e + "\r\n" +
                     "eventName: " + eventName + "\r\n" +
@@ -145,6 +147,7 @@ export default class EventSubListener extends WebSocketListener {
 
     getCostInfo(data) {
         FileRepository.log("EventSubListener.getCostInfo " + data.total_cost);
+        FileRepository.log("EventSubListener.getCostInfo this ", this);
         this.cost = data?.total_cost;
         this.maxCost = data?.max_total_cost;
 
@@ -172,11 +175,11 @@ export default class EventSubListener extends WebSocketListener {
             .then(self.checkResponse)
             .then(self.readJson)
             .catch(function (e) {
-                FileRepository.log(e);
+                FileRepository.log("EventSubListener.unsubscribe error " + e);
             });
         })
         .catch(function (e) {
-            FileRepository.log(e);
+            FileRepository.log("EventSubListener.unsubscribe error " + e);
         });
     }
 
@@ -262,7 +265,7 @@ export default class EventSubListener extends WebSocketListener {
 
     checkResponse(res, req) {
         if (res.status >= 400) {
-            FileRepository.log("checkResponse " + JSON.stringify(res) + " " + res.statusText);
+            FileRepository.log("EventSubListener.checkResponse " + JSON.stringify(res) + " " + res.statusText);
             throw res.statusText;
         }
         return res;

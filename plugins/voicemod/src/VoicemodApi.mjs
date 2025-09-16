@@ -3,6 +3,7 @@ import {
     v4 as uuidv4
 }
 from "uuid";
+import HandlerMap from "../../../src/HandlerMap.mjs";
 
 const ports = ["59129", "20000", "39273", "42152", "43782", "46667", "35679", "37170", "38501", "33952", "30546"];
 const path = "v1";
@@ -12,8 +13,9 @@ const voices = {
     robot: "robot"
 };
 
-export default class VoicemodApi {
+export default class VoicemodApi extends HandlerMap {
     constructor(uri = "ws://127.0.0.1", clientKey) {
+        super();
         var self = this;
         this.webSocket = null;
         this.uri = uri;
@@ -130,6 +132,7 @@ export default class VoicemodApi {
     }
 
     ProcessMemes(message) {
+            console.log("ProcessMemes");
         let memes = null;
         const self = this;
 
@@ -164,7 +167,7 @@ export default class VoicemodApi {
                 const key = mappedMemes[i][0];
                 const fileName = mappedMemes[i][1];
 
-                console.log(key);
+                // console.log(key);
 
                 if (self.soundsMap.has(key)) {
                     let fileNameArray = self.soundsMap.get(key);
@@ -174,6 +177,9 @@ export default class VoicemodApi {
                     self.soundsMap.set(key, [fileName]);
                 }
             }
+            
+            self.ExecuteHandlers("memesGot", self.soundsMap);
+            
         } catch (e) {
             console.log(e);
         }

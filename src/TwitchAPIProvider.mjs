@@ -241,11 +241,10 @@ export default class TwitchAPIProvider {
                     return new User(x);
                 });
 
-                if(callback){callback(users);}
-            }
-            else{
-                
-            }
+                if (callback) {
+                    callback(users);
+                }
+            } else {}
         });
     }
 
@@ -329,18 +328,21 @@ export default class TwitchAPIProvider {
                 .then(function (res) {
                     FileRepository.log("TwitchAPIProvider.requestJson check callback " + JSON.stringify(res));
                     if (typeof callback === "function") {
-                        return callback(res);
+                        try {
+                            return callback(res);
+                        } catch (e) {
+                            FileRepository.log("TwitchAPIProvider.requestJson callback error" + e);
+                        }
                     }
                     return Promise.resolve(null);
-                })
-                ;
+                });
             } else {
                 FileRepository.log("TwitchAPIProvider.requestJson could not get OAuth token" + requestOptions);
                 return Promise.reject();
             }
         })
         .catch(function (e) {
-            FileRepository.log(e);
+            FileRepository.log("TwitchAPIProvider.requestJson error " + e);
         });
 
     }

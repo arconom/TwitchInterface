@@ -94,7 +94,7 @@ export default class Wallet extends HandlerMap {
         var self = this;
         FileRepository.log("getCurrency " + type);
         if (self.currencies.has(type)) {
-            FileRepository.log("getCurrency " + self.currencies.get(type));
+            FileRepository.log("getCurrency " + JSON.stringify(self.currencies.get(type)));
             return self.currencies.get(type);
         } else {
             FileRepository.log("getCurrency didn't find key " + type);

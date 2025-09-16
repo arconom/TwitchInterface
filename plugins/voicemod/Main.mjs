@@ -13,7 +13,9 @@ var plugin = {
     // "self": bool,
     // chatBot: Object<ChatBot>
     // }
-    exports: {},
+    exports: {
+        actions: null
+    },
     commands: new Map(),
     load: function (globalState) {
         const FileRepository = globalState.get("filerepository");
@@ -24,19 +26,17 @@ var plugin = {
         const Constants = globalState.get("constants");
         const stateKey = "voicemod";
         const configFilePath = `./plugins/voicemod/data/config.json`;
+        // const Constants = globalState.get("constants");
+        // const App = globalState.get("App");
 
         let config = new VoicemodConfig();
 
+        FileRepository.readFileAsync(configFilePath)?.then(function (data) {
 
-        plugin.exports.actions = new Map();
-
-        FileRepository.readFileAsync(configFilePath).then(function (data) {
-
-            FileRepository.log("voicemod.load", data);
+            FileRepository.log("voicemod.load" + data);
 
             if (data) {
                 var obj = JSON.parse(data);
-
                 config.uri = obj.uri;
                 config.clientKey = obj.clientKey;
             } else {
@@ -46,35 +46,54 @@ var plugin = {
             // this function will be called by Main.js in the app
             //load whatever dependencies you need in here and do setup
 
-            // const Constants = globalState.get("constants");
-            // const App = globalState.get("App");
 
             plugin.exports.VoicemodApi =
                 new VoicemodApi(config.uri,
                     config.clientKey);
 
+            plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
             plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));
-
             plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log(e));
-        });
 
-        plugin.commands.set("prsound", {
-            description: "play a sound",
-            handler: function (obj) {
-                const key = obj.args[0];
+            plugin.commands.set("prsound", {
+                description: "play a sound",
+                handler: function (obj) {
+                    const key = obj.args[0];
 
-                try {
-                    // console.log("prsound playing sound", key);
-                     plugin.exports.VoicemodApi.PlaySound(key);
-                } catch (e) {
-                    FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
-                         + "VoicemodAPI encountered an error" + " \r\n " + e);
+                    try {
+                        // console.log("prsound playing sound", key);
+                        plugin.exports.VoicemodApi.PlaySound(key);
+                    } catch (e) {
+                        FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
+                             + "VoicemodAPI encountered an error" + " \r\n " + e);
+                    }
                 }
-            }
-        });
+            });
 
-        return Promise.resolve();
+            return Promise.resolve();
+        })
+        .catch((e) => {
+            FileRepository.log("voicemod.load error " + e);
+        });
     }
 };
+
+function getActions(soundsMap) {
+    console.log("trying to map voicemod actions ");
+    let returnMe = new Map();
+
+    for (let kvp of soundsMap) {
+        // console.log("voicemod.action " + kvp[0]);
+
+        returnMe.set(kvp[0], {
+            handler: () => {
+                plugin.exports.VoicemodApi.PlaySound(kvp[0])
+            }
+        });
+    }
+
+    plugin.exports.actions = returnMe;
+    // console.log("this should be a map full of sounds ", Array.from(plugin.exports.actions.keys()));
+}
 
 export default plugin;

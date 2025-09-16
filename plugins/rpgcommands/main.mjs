@@ -138,7 +138,7 @@ var plugin = {
                 }
                 var messages = [
                     `I'm not with him.`, 
-`Don't worry, he's just....unique.`,
+                    `Don't worry, he's just....unique.`,
                     "His personality is disarming"
                 ];
                 var message = messages[Math.floor(Math.random() * messages.length)];
@@ -155,9 +155,8 @@ var plugin = {
                 var messages = [
                     `I'm sure you meant to do that, ${name}.`, 
                     `How about you let me take care of that next time, ${name}.`, 
-`Need a paddle, ${name}?`,
+                    `Need a paddle, ${name}?`,
                 ];
-
 
                 var message = messages[Math.floor(Math.random() * messages.length)];
 
@@ -175,7 +174,7 @@ var plugin = {
                     `I had that idea a month ago and no one listened to me, ${name}`, 
                     `Wish I had thought of that, ${name}`, 
                     `I could have thought of that too, if I had another minute, ${name}`, 
-`That's a great idea, ${name}`
+                    `That's a great idea, ${name}`
                 ];
                 var message = messages[Math.floor(Math.random() * messages.length)];
                 return message;
@@ -192,7 +191,7 @@ var plugin = {
                     `Butterfingers, ${name}.`, 
                     `Did you mean to do that, ${name}?`, 
                     `The bad guys are over there, ${name}.`, 
-`Everyone hit the deck! ${name} forgot their glasses again!`
+                    `Everyone hit the deck! ${name} forgot their glasses again!`
                 ];
                 var message = messages[Math.floor(Math.random() * messages.length)];
                 return message;
@@ -210,7 +209,7 @@ var plugin = {
                     `Run!  Run like very fast wind!`, 
                     `Let's get outta here!`, 
                     `Terribly sorry, my gran is on fire!`, 
-`Meep meep zip bang!`,
+                    `Meep meep zip bang!`,
                 ];
                 var message = messages[Math.floor(Math.random() * messages.length)];
                 return message;

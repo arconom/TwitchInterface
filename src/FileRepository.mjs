@@ -101,22 +101,22 @@ export const FileRepository = {
         return this.readFileAsync("./data/OAuth.txt");
     },
 
-    loadPlugins: function (activePluginMap) {
+    loadPlugins: function (orderedMap) {
         var path = "./plugins/";
         return this.getPluginFolderList()
         .then((folders) => {
             var promises = [];
 
             FileRepository.log("folders " + folders);
-            FileRepository.log("activePluginMap " + JSON.stringify(Array.from(activePluginMap.entries())));
+            FileRepository.log("orderedMap " + JSON.stringify(Array.from(orderedMap.entries())));
 
-            folders.forEach(folder => {
-                if (activePluginMap.get(folder)) {
-
-                    FileRepository.log("importing plugin " + folder);
-                    promises.push(import("../" + path + folder + "/main.mjs"));
+            for (const kvp of orderedMap) {
+                const name = kvp[1];
+                if (folders.indexOf(name) > -1) {
+                    FileRepository.log("importing plugin " + name);
+                    promises.push(import("../" + path + name + "/main.mjs"));
                 }
-            });
+            }
 
             return Promise.all(promises);
         });
@@ -275,7 +275,7 @@ export const FileRepository = {
     },
 
     writeFileAsync: function (filename, data, isJson) {
-        this.log("FileRepository.writeFileAsync " + filename + "\r\n" + data);
+        this.log("FileRepository.writeFileAsync " + filename + "\r\n" + JSON.stringify(data));
         if (!data) {
             return;
         }

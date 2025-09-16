@@ -214,88 +214,93 @@ class App {
                 }
             });
 
-            // FileRepository.log("App.init before loadPlugins " + JSON.stringify(Array.from(App.pluginConfig.entries())));
-            return FileRepository.loadPlugins(App.pluginConfig)
-            .then(function (plugins) {
+            const orderedMap = new Map();
 
-                // FileRepository.log("plugins " + plugins.map((p) => p.default.name));
+            // FileRepository.log("setting up orderedMap");
 
-                let orderedMap = new Map();
+            //todo this is suboptimal data structure
+            let keys = Array.from(App.pluginConfig.keys());
 
-                // FileRepository.log("setting up orderedMap");
+            keys.forEach(function (key) {
+                // FileRepository.log("key " + key);
+                // FileRepository.log("order " + App.pluginConfig.get(key).order);
 
-                //todo this is suboptimal data structure
-                let keys = Array.from(App.pluginConfig.keys());
-
-                keys.forEach(function (key) {
-                    // FileRepository.log("key " + key);
-                    // FileRepository.log("order " + App.pluginConfig.get(key).order);
-
+                if (App.pluginConfig.get(key).active) {
                     orderedMap.set(App.pluginConfig.get(key).order, key);
-                });
+                }
+            });
 
-                FileRepository.log("orderedMap " + Array.from(orderedMap.entries()));
+            FileRepository.log("orderedMap " + Array.from(orderedMap.entries()));
 
-                for (let i = 0; i < orderedMap.size; i++) {
-                    let pluginName = orderedMap.get(i);
+            // FileRepository.log("App.init before loadPlugins " + JSON.stringify(Array.from(App.pluginConfig.entries())));
+            return FileRepository.loadPlugins(orderedMap)
+            ?.then(function (plugins) {
 
-                    // FileRepository.log("plugins " + JSON.stringify(plugins.map((p) => p.default.name)));
-                    // FileRepository.log("pluginName " + pluginName);
+                if (App.globalState == null || App.globalState == undefined) {
+                    throw "globalState should be something";
+                }
 
+                FileRepository.log("main.js loading plugins " + plugins.map((p) => p.default.name));
+
+                for (const kvp of orderedMap) {
+                    let pluginName = kvp[1];
                     let pluginToLoad = plugins.find((element) => element.default.name === pluginName);
 
                     if (pluginToLoad) {
                         //throw "pluginToLoad should not be null " + pluginName;
+                        console.log("loading plugin " + pluginToLoad.default.name);
 
+                        if (pluginName === "voicemod" && pluginToLoad?.default ?.exports?.actions != null && pluginToLoad?.default ?.exports?.actions != undefined) {
+                                console.log("loading voicemod " + pluginToLoad.default.exports.actions.get("test"));
+                            }
 
-                        FileRepository.log("loading plugin " + pluginToLoad.default.name);
+                            if (pluginToLoad.default.chatMessageHandler) {
+                                FileRepository.log("loading chatMessageHandler for plugin " + pluginToLoad.default.name);
+                                // console.log("adding chatMessageHandler");
+                                App.pluginChatHandlers.push(pluginToLoad.default.chatMessageHandler);
+                            }
 
-                        if (pluginToLoad.default.chatMessageHandler) {
-                            FileRepository.log("chatMessageHandler " + pluginToLoad.default.name);
-                            // console.log("adding chatMessageHandler");
-                            App.pluginChatHandlers.push(pluginToLoad.default.chatMessageHandler);
-                        }
+                            if (pluginToLoad.default.exports) {
+                                FileRepository.log("exports " + pluginToLoad.default.name);
 
-                        if (pluginToLoad.default.exports) {
-                            FileRepository.log("exports " + pluginToLoad.default.name);
+                                // set a global state if the plugin has exports
+                                // console.log("setting a value in globalState", pluginToLoad.default.name);
+                                App.globalState.set(pluginToLoad.default.name, pluginToLoad.default.exports);
+                            }
 
-                            // set a global state if the plugin has exports
-                            // console.log("setting a value in globalState", pluginToLoad.default.name);
-                            App.globalState.set(pluginToLoad.default.name, pluginToLoad.default.exports);
-                        }
-
-                        if (pluginToLoad.default.config) {
-                            FileRepository.log("config " + pluginToLoad.default.name);
-                            const keys = Object.keys(pluginToLoad.default.config);
-                            keys.forEach(function (key) {
-                                if (App.config[key] === null || App.config[key] === undefined) {
-                                    FileRepository.log("adding config key " + key);
-                                    App.config[key] = pluginToLoad.default.config[key];
-                                }
-                            });
-                        }
-
-                        // add commands to the list
-                        if (pluginToLoad?.default .load) {
-                                FileRepository.log("load " + pluginToLoad.default.name);
-                                // console.log("loading plugin", pluginToLoad.default.name);
-                                pluginToLoad.default.load(App.globalState)
-                                .then(function (loadedPlugin) {
-
-                                    for (var command of pluginToLoad?.default .commands?.entries()) {
-                                            App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
-
-                                            if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
-                                                App.chatBot.chatCommandManager.setCommandConfig(command[0], {
-                                                    key: command[0]
-                                                });
-                                            }
-                                        }
+                            if (pluginToLoad.default.config) {
+                                FileRepository.log("config " + pluginToLoad.default.name);
+                                const keys = Object.keys(pluginToLoad.default.config);
+                                keys.forEach(function (key) {
+                                    if (App.config[key] === null || App.config[key] === undefined) {
+                                        FileRepository.log("adding config key " + key);
+                                        App.config[key] = pluginToLoad.default.config[key];
+                                    }
                                 });
                             }
-                            else {
-                                FileRepository.log("plugin has no load function " + pluginToLoad.default);
-                            }
+
+                            // add commands to the list
+                            if (pluginToLoad?.default .load) {
+                                    FileRepository.log("load " + pluginToLoad.default.name);
+                                    console.log("globalstate at plugin load", Array.from(App.globalState.keys()));
+                                    // console.log("loading plugin", pluginToLoad.default.name);
+                                    pluginToLoad.default.load(App.globalState)
+                                    ?.then(function (loadedPlugin) {
+
+                                        for (var command of pluginToLoad?.default .commands?.entries()) {
+                                                App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
+
+                                                if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
+                                                    App.chatBot.chatCommandManager.setCommandConfig(command[0], {
+                                                        key: command[0]
+                                                    });
+                                                }
+                                            }
+                                    });
+                                }
+                                else {
+                                    FileRepository.log("plugin has no load function " + pluginToLoad.default);
+                                }
                     }
                 }
 
@@ -393,8 +398,8 @@ class App {
         FileRepository.log("App.loadApiScopes");
         return FileRepository.loadApiScopes().then(function (data) {
             if (data !== undefined && data.length > 0) {
-                FileRepository.log("App.activeApiScopes " + App.activeApiScopes);
                 App.activeApiScopes = JSON.parse(data);
+                FileRepository.log("App.activeApiScopes " + App.activeApiScopes);
             }
         });
     }
@@ -663,7 +668,7 @@ class App {
 
                 //remove a repeating message
                 App.chatBot?.repeatingMessages.delete(id);
-                
+
                 return FileRepository.saveRepeatingMessages(JSON.stringify(Array.from(App.chatBot?.repeatingMessages))).then(function () {
                     return FileRepository.readRepeatingMessages();
                 });
@@ -898,7 +903,7 @@ class App {
                 //set the value, then write the file
                 App.eventSubscriptionConfig = new Map(args);
 
-                FileRepository.log("/subscriptions/configuration", JSON.stringify(args));
+                FileRepository.log("/subscriptions/configuration " + JSON.stringify(args));
 
                 return FileRepository.saveEventSubscriptions(args);
             },
@@ -1273,7 +1278,7 @@ class App {
     static endEventSub() {
 
         App.isEventSubRunning = false;
-        return App.eventSubListener.close();
+        return App.eventSubListener?.close();
     }
 
     static startEventSub() {
@@ -1281,45 +1286,14 @@ class App {
         if (App.isEventSubRunning) {
             FileRepository.log("EventSub already running");
 
-            return Promise.resolve(true);
+            // return Promise.resolve(true);
         }
 
+
+        App.eventSubListener?.close();
         // FileRepository.log("startEventSub " + eventSubscriptionConfig);
         App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null /* App.config.listenerPort */, App.oAuthProvider);
 
-        var subs = new Map();
-
-        for (var sub of App.eventSubscriptionConfig.entries()) {
-            FileRepository.log("eventSubscriptionConfig " + JSON.stringify(sub));
-
-            sub[1]
-            .filter(function (x) {
-                return x.enabled;
-            })
-            .forEach(function (x) {
-                //build the conditions object
-                // FileRepository.log("eventSubscriptionConfig.forEach " + JSON.stringify(x));
-                subs.set(sub[0], {
-                    condition: x.condition,
-                    handler: function (data) {
-                        FileRepository.log("data", data);
-                        FileRepository.log("x", x);
-
-                        x.actions.forEach(function (action) {
-                            FileRepository.log("action", action);
-                            const pluginName = action.name.substr(0, action.name.indexOf("."));
-                            const actionName = action.name.substr(action.name.indexOf("."));
-                            const plugin = App.globalState.get(pluginName);
-                            FileRepository.log("plugin", plugin);
-                            const actionObject = plugin.actions.get(action.name)
-                                FileRepository.log("actionObject", actionObject);
-                            actionObject.handler(data);
-                        });
-                        App.oscManager.send("/" + data.payload.subscription.type, JSON.stringify(data));
-                    }
-                })
-            });
-        }
         // FileRepository.log("subs " + JSON.stringify(Array.from(subs.entries())));
 
         App.eventSubListener.AddHandler("message", function (event) {
@@ -1328,9 +1302,9 @@ class App {
             if (obj.metadata.message_type === Constants.session_welcome && !App.subbed) {
                 FileRepository.log("welcome in. do subs");
                 App.subbed = true;
-                for (var [key, value] of subs) {
-                    FileRepository.log("sub: " + key + " " + JSON.stringify(value));
-                    App.eventSubListener.subscribe(key, value.condition)
+                for (var [key, value] of App.eventSubscriptionConfig.entries()) {
+                    FileRepository.log("Main. sub: " + key + " " + JSON.stringify(value));
+                    App.eventSubListener.subscribe(key, value[0].condition)
                     .then(function (x) {
                         if (x) {
                             FileRepository.log("startEventSub subscribed to " + JSON.stringify(x));
@@ -1341,8 +1315,32 @@ class App {
                 }
             } else if (obj.metadata.message_type === "notification") {
                 App.oscManager?.send("/eventsub.message", event.data);
-                // FileRepository.log("doing sub event " + obj.metadata.subscription_type);
-                subs.get(obj.metadata.subscription_type).handler(obj);
+                FileRepository.log("doing sub event " + obj.metadata.subscription_type);
+
+                const eventSubConfig = App.eventSubscriptionConfig.get(obj.metadata.subscription_type)[0];
+                FileRepository.log("eventSubConfig " + JSON.stringify(eventSubConfig));
+
+                eventSubConfig?.actions?.forEach(function (action) {
+                    FileRepository.log("action" + JSON.stringify(action));
+                    const pluginName = action.name.substr(0, action.name.indexOf("."));
+                    const actionName = action.name.substr(action.name.indexOf(".") + 1);
+                    const plugin = App.globalState.get(pluginName);
+
+                    if (plugin !== null && plugin !== undefined) {
+                        // FileRepository.log("plugin " + pluginName + " actions " + JSON.stringify(plugin));
+                        FileRepository.log("plugin " + pluginName + " actions " + Array.from(plugin.actions.keys()));
+                        FileRepository.log("actionName " + actionName);
+                        const actionObject = plugin.actions.get(actionName);
+                        FileRepository.log("actionObject" + JSON.stringify(actionObject));
+                        actionObject?.handler(event.data);
+                    } else {
+                        const plugins = Array.from(App.globalState.keys());
+
+                        FileRepository.log("Main.js could not find plugin " + pluginName);
+                        FileRepository.log("plugin list " + plugins);
+                    }
+                });
+                App.oscManager.send("/" + obj.metadata.subscription_type, JSON.stringify(event.data));
             }
         }, true);
         return Promise.resolve(); //App.eventSubListener.connect());
@@ -1432,3 +1430,9 @@ class App {
 }
 
 App.init();
+
+setInterval(function () {
+    if (App.globalState.has("voicemod") && App.globalState.get("voicemod")?.exports?.actions != null) {
+        console.log(Array.from(App.globalState.get("voicemod")?.exports?.actions.keys()));
+    }
+}, 2000);

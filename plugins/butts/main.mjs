@@ -20,6 +20,15 @@ var plugin = {
         // plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.messageResponseFrequencyFloat" + plugin.app.config.messageResponseFrequencyFloat);
         // plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.textReplaceFrequencyFloat" + plugin.app.config.textReplaceFrequencyFloat);
         // plugin.FileRepository.log("butts.chatMessageHandler plugin.app.config.textReplaceFrequencyFloat" + plugin?.app?.config?.replacerWordListCommaDelimited);
+        
+        if(
+            message.msg.indexOf("!") > -1 ||
+            message.msg.indexOf("@") > -1 
+        )
+        {
+            return;
+        }
+        
         try {
 
             if (!plugin.replacerWordList) {

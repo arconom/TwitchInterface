@@ -140,7 +140,7 @@ SubscriptionTypes.set(SubscriptionTypeNames.channelCheer, {
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelFollow, {
     name: "channel.follow",
-    version: "1",
+    version: "2",
 	"condition": {
         "broadcaster_user_id": "",
 		 "moderator_user_id": ""
@@ -173,7 +173,7 @@ SubscriptionTypes.set(SubscriptionTypeNames.channelGoalProgress, {
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelHype_trainBegin, {
     name: "channel.hype_train.begin",
-    version: "1",
+    version: "2",
 	"condition": {
         "broadcaster_user_id": ""
     },
@@ -181,7 +181,7 @@ SubscriptionTypes.set(SubscriptionTypeNames.channelHype_trainBegin, {
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelHype_trainEnd, {
     name: "channel.hype_train.end",
-    version: "1",
+    version: "2",
 	"condition": {
         "broadcaster_user_id": ""
     },
@@ -189,7 +189,7 @@ SubscriptionTypes.set(SubscriptionTypeNames.channelHype_trainEnd, {
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelHype_trainProgress, {
     name: "channel.hype_train.progress",
-    version: "1",
+    version: "2",
 	"condition": {
         "broadcaster_user_id": ""
     },
@@ -336,7 +336,7 @@ SubscriptionTypes.set(SubscriptionTypeNames.channelUnban, {
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelUpdate, {
     name: "channel.update",
-    version: "1",
+    version: "2",
 	"condition": {
         "broadcaster_user_id": ""
     },

@@ -83,7 +83,7 @@ export const vueInstance = {
         removeActionFromEventSubscription: function (name, index) {
             let sub = this.eventSubscriptions.get(name);
 
-            if (!sub.actions) {
+            if (!sub?.actions) {
                 return;
             }
 
