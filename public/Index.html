@@ -38,6 +38,55 @@ pointer-events: none;
 <body>
 	<div id="app">
 		<v-app>
+            <v-dialog v-model="showChatCommandDialog" width="75%">
+                <v-card>
+                    <v-card-text>
+                        <v-row>
+                            <v-col cols="4" sm="11">
+                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].key = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                label="key" 
+                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].key"></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="6">
+                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].currencyType = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                label="Currency Type" 
+                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].currencyType"></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="6">
+                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].cost = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                label="Cost" 
+                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].cost"></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="6">
+                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].cooldownSeconds = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                type="number" 
+                                label="cooldown (in seconds)" 
+                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].cooldownSeconds" ></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="6">
+                                <v-select @update:model-value="newValue => {chatCommandConfigDisplay[chatCommandEditingIndex].role = newValue; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])}" 
+                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].role" 
+                                :items="roles" 
+                                label="Role" ></v-select>
+                            </v-col>
+                            <v-col cols="12" sm="12">
+                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].description = $event.target.value;updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                label="description" 
+                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].description"></v-text-field>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      text="Close Dialog"
+                      @click="showChatCommandDialog = false"
+                    ></v-btn>
+                  </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+
 			<v-app-bar title="Popular Rhinoceros Twitch Bot"></v-app-bar>
 			<v-main>
 				<v-tabs v-model="currentTab">
@@ -173,48 +222,39 @@ pointer-events: none;
                                         <v-col>
                                             Chat Command Config ./data/commandconfig.json
                                         </v-col>
-									</v-expansion-panel-title>
-									<v-expansion-panel-text>
 										<v-text-field placeholder="Search" 
 											@click="searchClickHandler"
 											v-model="searchChatCommandConfig"></v-text-field>
-									<v-row v-for="(item, i) in chatCommandConfigDisplay" :key="item.key" :class="getRowColor(i)">
-										<v-col cols="1" sm="1">
-											<v-checkbox @click="toggleChatCommandConfig(item.key)" v-model="item.enabled"/>
-										</v-col>
-										<v-col cols="4" sm="11">
-											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
-											label="key" 
-											v-model="item.key"></v-text-field>
-										</v-col>
-										<v-col cols="6" sm="6">
-											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
-											label="Currency Type" 
-											v-model="item.currencyType"></v-text-field>
-										</v-col>
-										<v-col cols="6" sm="6">
-											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
-											label="Cost" 
-											v-model="item.cost"></v-text-field>
-										</v-col>
-										<v-col cols="6" sm="6">
-											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
-											type="number" 
-											label="cooldown (in seconds)" 
-											v-model="item.cooldownSeconds" ></v-text-field>
-										</v-col>
-										<v-col cols="6" sm="6">
-											<v-select @change="updateChatCommandConfig(item.key, item)" 
-											v-model="item.role" 
-											:items="roles" 
-											label="Role" ></v-select>
-										</v-col>
-										<v-col cols="12" sm="12">
-											<v-text-field @change="updateChatCommandConfig(item.key, item)" 
-											label="description" 
-											v-model="item.description"></v-text-field>
-										</v-col>
-									</v-row>
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+                                    <v-container fill-height>
+                                        <v-row v-for="(item, i) in chatCommandConfigDisplay" :key="item.key" :class="getRowColor(i)">
+                                            <v-col cols="1" sm="1" align-self="center">
+                                                <v-switch
+                                                  @click="toggleChatCommandConfig(item.key)" 
+                                                  :model-value="item.enabled"
+                                                  :color="item.enabled ? 'primary' : 'gray'"
+                                                  hide-details
+                                                ></v-switch>
+                                            </v-col>
+                                            <v-col cols="2" align-self="center">
+                                                {{item.key}}
+                                            </v-col>
+                                            <v-col cols="7" align-self="center">
+                                                {{item.description}}
+                                            </v-col>
+                                            <v-col cols="1" sm="1" align-self="center">
+                                                <v-btn variant="text" @click="chatCommandEditingIndex = i; showChatCommandDialog = true">
+                                                    <v-icon icon="mdi-pencil" color="primary" size="x-large"></v-icon>
+                                                </v-btn>
+                                            </v-col>
+                                            <v-col cols="1" sm="1" align-self="center">
+                                                <v-btn variant="text" @click="chatCommands.delete(item.key)">
+                                                    <v-icon icon="mdi-delete" color="error" size="x-large"></v-icon>
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+                                    </v-container>
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 							</v-expansion-panels>

@@ -1,3 +1,1 @@
-Type !prvote # to submit your vote.  
- __0: (0 votes) Frizzle 
- __1: (1 votes)  Gerault
+nothing was selected.

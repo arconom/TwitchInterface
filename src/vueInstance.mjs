@@ -56,6 +56,8 @@ export const vueInstance = {
             selectedEndpointKey: "",
             selectedEventSubscriptionKey: "channel.follow",
             selectedOscMappingKey: "/eventsub.message",
+            showChatCommandDialog: false,
+            chatCommandEditingIndex: null,
             snackbar: false,
             snackbarText: "",
             snackbarTimeout: 2000,

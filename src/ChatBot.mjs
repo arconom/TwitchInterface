@@ -133,7 +133,7 @@ export default class ChatBot extends HandlerMap {
 
         // Connect to Twitch:
         self.client.connect();
-        
+
         function joinPartHandler(channel, username, isSelf, action) {
             const obj = {
                 channel: channel,
@@ -145,7 +145,7 @@ export default class ChatBot extends HandlerMap {
 
             FileRepository.saveChatMessage(JSON.stringify(obj));
         }
-        
+
         function joinHandler(channel, username, isSelf) {
             joinPartHandler(channel, username, isSelf, "JOIN");
         }
@@ -161,7 +161,15 @@ export default class ChatBot extends HandlerMap {
         return self.app.twitchAPIProvider.getUserInfo({
             login: name
         }, function (res) {
-            let user = new User(res.data[0]);
+            let user;
+
+            if (res.data) {
+                user = new User(res.data[0]);
+
+            } else {
+                user = new User(res[0]);
+            }
+
             self.channels.set(name, {
                 broadcasterId: user.id
             });
@@ -261,17 +269,34 @@ export default class ChatBot extends HandlerMap {
     }
 
     sendMessage(channel, text) {
-        FileRepository.log(`sendMessage ` + channel + " " + text);
+        FileRepository.log(`sendMessage ` + channel + " " + text + " " + JSON.stringify(text));
         if (!this.client) {
             this.connect();
         }
 
         if (text && text.length > 0) {
-            return this.client?.say(channel, text)
-            .catch(function (err) {
-                console.log("error trying to say: \"" + text + "\" in channel: " + channel);
-                console.log(err);
-            });
+            try {
+
+                return this.client?.say(channel, text)
+                .catch(function (err) {
+                    FileRepository.log(
+                        "error trying to say: \"" +
+                        text +
+                        "\" in channel: " +
+                        channel +
+                        "\r\n" +
+                        err);
+                });
+            } catch (e) 
+            {
+                    FileRepository.log(
+                        "error trying to say: \"" +
+                        text +
+                        "\" in channel: " +
+                        channel +
+                        "\r\n" +
+                        e);
+            }
         }
     }
 

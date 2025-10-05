@@ -85,6 +85,7 @@ class App {
     static twitchAPIProvider;
     static users = new Map();
     static wallets = new Map();
+    static variables = new Map();
     static webServer;
     static webUIInterface;
 
@@ -242,17 +243,16 @@ class App {
 
                 FileRepository.log("main.js loading plugins " + plugins.map((p) => p.default.name));
 
-                for (const kvp of orderedMap) {
-                    let pluginName = kvp[1];
+                let keys = Array.from(orderedMap.keys()).sort();
+
+                for (const key of keys) {
+                    let pluginName = orderedMap.get(key);
                     let pluginToLoad = plugins.find((element) => element.default.name === pluginName);
 
                     if (pluginToLoad) {
                         //throw "pluginToLoad should not be null " + pluginName;
                         console.log("loading plugin " + pluginToLoad.default.name);
 
-                        if (pluginName === "voicemod" && pluginToLoad?.default ?.exports?.actions != null && pluginToLoad?.default ?.exports?.actions != undefined) {
-                                console.log("loading voicemod " + pluginToLoad.default.exports.actions.get("test"));
-                            }
 
                             if (pluginToLoad.default.chatMessageHandler) {
                                 FileRepository.log("loading chatMessageHandler for plugin " + pluginToLoad.default.name);
@@ -282,12 +282,15 @@ class App {
                             // add commands to the list
                             if (pluginToLoad?.default .load) {
                                     FileRepository.log("load " + pluginToLoad.default.name);
-                                    console.log("globalstate at plugin load", Array.from(App.globalState.keys()));
+                                    // console.log("globalstate at plugin load", Array.from(App.globalState.keys()));
                                     // console.log("loading plugin", pluginToLoad.default.name);
                                     pluginToLoad.default.load(App.globalState)
                                     ?.then(function (loadedPlugin) {
 
+                                        FileRepository.log("plugin commands " + Array.from(pluginToLoad.default.commands.keys()));
+
                                         for (var command of pluginToLoad?.default .commands?.entries()) {
+                                                FileRepository.log("loading plugin function " + command[0]);
                                                 App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
 
                                                 if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
@@ -1289,7 +1292,6 @@ class App {
             // return Promise.resolve(true);
         }
 
-
         App.eventSubListener?.close();
         // FileRepository.log("startEventSub " + eventSubscriptionConfig);
         App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null /* App.config.listenerPort */, App.oAuthProvider);
@@ -1346,8 +1348,36 @@ class App {
         return Promise.resolve(); //App.eventSubListener.connect());
     }
 
-    static endPubSub() {
+    static loadPlugins()
+    {
+        //get actions from the plugins and add them to a Map
+        //get variables and load them into a Map with default values
+        
+        
+    }
 
+    static loadActionConfig()
+    {
+        //load config from file
+        //map the actions to chat things and API things
+    }
+
+    static loadVariables()
+    {
+        //load a Map with keys = channel name + plugin name + variable name
+            return FileRepository.loadVariables()
+            ?.then(function (vMap) {
+                for(let v of vMap)
+                {
+                    variables.set(v[0], v[1]);
+                }
+            })
+            .catch(function (err) {
+                FileRepository.log("Error loading variables \r\n" + err);
+            });
+    }
+
+    static endPubSub() {
         App.isPubSubRunning = false;
         App.pubSubListener.close();
     }
@@ -1366,14 +1396,6 @@ class App {
         }, false);
         return App.pubSubListener.connect()
     }
-
-    // static initVoicemodApi(){
-    // App.VoicemodApi = new VoicemodApi(null, App.VoicemodApiClientKey);
-
-    // setTimeout(function(){
-    // App.VoicemodApi.GetSounds();
-    // }, 5000);
-    // }
 
     static initOscManager() {
 
@@ -1400,22 +1422,6 @@ class App {
         App.twitchAPIProvider = new TwitchAPIProvider(App.oAuthProvider);
     }
 
-    // static giveCurrencyToAllChatters(channelId, currency) {
-
-    // let chatters = App.chatBot.channels.get(channelId).chatters;
-
-    // chatters.forEach(function (chatter) {
-    // add currency to each chatter's wallet
-
-    // let currency = rpgCurrency();
-    // currency.add(1);
-
-    // let wallet = App.getWallet(chatter.id, chatter.username, obj.target);
-    // wallet.addCurrency(currency);
-    // });
-
-    // }
-
     static getWallet(userId, channel) {
         const key = userId + ":" + channel;
         if (!App.wallets.has(key)) {
@@ -1430,9 +1436,3 @@ class App {
 }
 
 App.init();
-
-setInterval(function () {
-    if (App.globalState.has("voicemod") && App.globalState.get("voicemod")?.exports?.actions != null) {
-        console.log(Array.from(App.globalState.get("voicemod")?.exports?.actions.keys()));
-    }
-}, 2000);

@@ -30,6 +30,20 @@ var plugin = {
         // const App = globalState.get("App");
 
         let config = new VoicemodConfig();
+        plugin.commands.set("prsound", {
+            description: "play a sound",
+            handler: function (obj) {
+                const key = obj.args[0];
+
+                try {
+                    // console.log("prsound playing sound", key);
+                    plugin.exports.VoicemodApi.PlaySound(key);
+                } catch (e) {
+                    FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
+                         + "VoicemodAPI encountered an error" + " \r\n " + e);
+                }
+            }
+        });
 
         FileRepository.readFileAsync(configFilePath)?.then(function (data) {
 
@@ -53,28 +67,13 @@ var plugin = {
 
             plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
             plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));
-            plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log(e));
+            plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log("Voicemod API error:  " + e));
 
-            plugin.commands.set("prsound", {
-                description: "play a sound",
-                handler: function (obj) {
-                    const key = obj.args[0];
-
-                    try {
-                        // console.log("prsound playing sound", key);
-                        plugin.exports.VoicemodApi.PlaySound(key);
-                    } catch (e) {
-                        FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
-                             + "VoicemodAPI encountered an error" + " \r\n " + e);
-                    }
-                }
-            });
-
-            return Promise.resolve();
         })
         .catch((e) => {
             FileRepository.log("voicemod.load error " + e);
         });
+        return Promise.resolve();
     }
 };
 

@@ -115,6 +115,7 @@ export default class ChatCommandManager {
     }
 
     setCommandState(id, state) {
+        FileRepository.log("ChatCommandManager.setCommandState " + id + " state " + JSON.stringify(state));
         this.commandState.set(id, state);
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
@@ -124,7 +125,7 @@ export default class ChatCommandManager {
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
 
-    getCommandResult(obj) {
+    async getCommandResult(obj) {
         //FileRepository.log("getCommandResult " + obj.msg);
 
         //obj = {
@@ -183,16 +184,27 @@ export default class ChatCommandManager {
                 commandState = {};
             }
 
-            let roleToCheck = self.commandsEnabledForViewers ? commandConfig?.role : ChatRoles.get(Constants.chatRoles.broadcaster);
+            let roleToCheck = self.commandsEnabledForViewers ? 
+                commandConfig?.role : 
+                ChatRoles.get(Constants.chatRoles.broadcaster);
 
             if (self.hasRole(obj.context, roleToCheck)) {
                 FileRepository.log("getCommandResult permission granted");
                 if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
-                    FileRepository.log("getCommandResult executing command name: " + commandName);
-                    commandState.executionCount = (commandState.executionCount ?? 0) + 1;
-                    commandState.lastExecution = Date.now();
-                    self.setCommandState(key, commandState);
-                    return chatCommand.handler(obj);
+                    try
+                    {
+                        FileRepository.log("getCommandResult executing command name: " + commandName);
+                        let message = await chatCommand.handler(obj);
+                        commandState.executionCount = (commandState.executionCount ?? 0) + 1;
+                        commandState.lastExecution = Date.now();
+                        self.setCommandState(key, commandState);
+                        return message;
+                    }
+                    catch(e)
+                    {
+                        FileRepository.log("getCommandResult failed while executing command: " + commandName);
+                        FileRepository.log(e);
+                    }
                 } else {
                     return "Wait for command to cool down in " +
                     (commandState.lastExecution + (commandConfig.cooldownSeconds * 1000) - Date.now()) +

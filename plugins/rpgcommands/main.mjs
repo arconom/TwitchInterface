@@ -18,7 +18,6 @@ var plugin = {
         const Constants = globalState.get("constants");
         const OverlayWebSocket = App.overlayWebSocket;
         const stateKey = "rpgcommands";
-        const currencyType = "rpg";
         const tiltDiceQuantity = 3;
         const tiltRatioCoefficient = 5;
         const averageScenesPerTilt = 3;
@@ -270,24 +269,11 @@ var plugin = {
         plugin.commands.set("prscene", {
             description: "Show the scenebuilding message and increment viewer currencies.",
             handler: function (obj) {
-                //const key = obj.target + stateKey;
-
                 let channel = obj.target.trim().substr(1);
-                // let channelState = App.chatBot.channels.get(channel);
-
-                // if (!channelState.chatters) {
-                // App.chatBot.getChatters().then(function () {
-                // process();
-                // });
-                // } else {
-                // process();
-                // }
 
                 App.chatBot.getChannelChatters(channel)
                 .then(function (chatters) {
 
-                    // let channel = obj.target.trim().substr(1);
-                    // let chatters = App.chatBot.channels.get(channel).chatters;
                     let chatterCount = chatters.length;
 
                     chatters.forEach(function (chatter) {

@@ -331,7 +331,7 @@ export default class TwitchAPIProvider {
                         try {
                             return callback(res);
                         } catch (e) {
-                            FileRepository.log("TwitchAPIProvider.requestJson callback error" + e);
+                            FileRepository.log("TwitchAPIProvider.requestJson callback error " + e + " \r\n" + callback);
                         }
                     }
                     return Promise.resolve(null);

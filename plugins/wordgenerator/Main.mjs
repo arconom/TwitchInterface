@@ -110,7 +110,7 @@ var plugin = {
                 words.push(plugin.exports.wordGenerator.getRandomDefinition());
             }
 
-            return words;
+            return words.join("");
         }
 
         function commonWordHandler(obj) {
@@ -129,7 +129,7 @@ var plugin = {
                 words.push(plugin.exports.wordGenerator.getCommonWord());
             }
 
-            return words;
+            return words.join("");
         }
 
         function wordHandler(obj) {
@@ -147,7 +147,7 @@ var plugin = {
                 words.push(plugin.exports.wordGenerator.getRandomWord());
             }
 
-            return words;
+            return words.join("");
         }
         return Promise.resolve();
     }
