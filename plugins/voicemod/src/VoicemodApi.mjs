@@ -86,6 +86,7 @@ export default class VoicemodApi extends HandlerMap {
             this.connectionAttempts++;
         }
 
+
         if (this.connectionAttempts > this.maxConnectionAttempts) {
             return;
         }

@@ -12,7 +12,8 @@ var plugin = {
     // chatBot: self
     // }
     exports: {
-        wordGenerator: null
+        wordGenerator: null, 
+        actions: null
     },
     commands: new Map(),
     load: function (globalState) {
@@ -26,42 +27,46 @@ var plugin = {
             plugin.exports.wordGenerator = new WordGenerator(Common.commonEnglishWords, Common.englishDefinitions);
         } catch (e) {
             FileRepository.log(e);
-
         }
 
-        plugin.commands.set("prcacro", {
+        plugin.exports.actions = new Map();
+        
+        plugin.exports.actions.set("Random Common Acronym", {
+            name: "Random Common Acronym",
             description: "Generate an acronym using common words, pass the word to acronymize",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 var msg = plugin.exports.wordGenerator.getCommonAcronym(obj.args[0].toLowerCase());
                 return msg;
             }
         });
-        plugin.commands.set("pracro", {
+        plugin.commands.set("Random Acronym", {
+            name: "Random Acronym",
             description: "Generate an acronym, pass the word to acronymize",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 var msg = plugin.exports.wordGenerator.getAcronym(obj.args[0].toLowerCase());
                 return msg;
             }
         });
-        plugin.commands.set("prcallit", {
-
+        plugin.commands.set("Random Common Alliteration", {
+            name: "Random Common Alliteration",
             description: "Generate an alliteration using common words, pass the first letter and then the number of words",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 var msg = plugin.exports.wordGenerator.getCommonAlliteration(obj.args[0].toLowerCase(), parseInt(obj.args[1]));
                 return msg;
             }
         });
-        plugin.commands.set("prallit", {
+        plugin.commands.set("Random Alliteration", {
+            name: "Random Alliteration",
             description: "Generate an alliteration, pass the first letter and then the number of words",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 var msg = plugin.exports.wordGenerator.getAlliteration(obj.args[0].toLowerCase(), parseInt(obj.args[1]));
                 return msg;
             }
         });
-
-        plugin.commands.set("prdefine", {
+        plugin.commands.set("Get Definition", {
+            name: "Get Definition",
             description: "Get the definition of the given word, if no word is given, get the definition of the most recently generated random word",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 var def = plugin.exports.wordGenerator.getDefinition(obj.args[0].toLowerCase());
 
                 if (def) {
@@ -71,32 +76,23 @@ var plugin = {
                 }
             }
         });
-        plugin.commands.set("prcword", {
+        plugin.commands.set("Random Common Word", {
+            name: "Random Common Word",
             description: "Generate a random common word, or up to 10 if a number is given",
             handler: commonWordHandler
         });
-        plugin.commands.set("prcwords", {
-            description: "Generate a random common word, or up to 10 if a number is given",
-            handler: commonWordHandler
-        });
-        plugin.commands.set("prword", {
+        plugin.commands.set("Random Word", {
+            name: "Random Word",
             description: "Generate a random word, or up to 10 if a number is given",
             handler: wordHandler
         });
-        plugin.commands.set("prwords", {
-            description: "Generate a random word, or up to 10 if a number is given",
-            handler: wordHandler
-        });
-        plugin.commands.set("prdef", {
-            description: "Generate a random word and definition, or up to 10 if a number is given",
-            handler: defHandler
-        });
-        plugin.commands.set("prdefs", {
+        plugin.commands.set("Random Definition", {
+            name: "Random Definition",
             description: "Generate a random word and definition, or up to 10 if a number is given",
             handler: defHandler
         });
 
-        function defHandler(obj) {
+        function defHandler(globalState, obj, json) {
             var wordCount = parseInt(obj.args[0]);
             var words = [];
 
@@ -113,7 +109,7 @@ var plugin = {
             return words.join("");
         }
 
-        function commonWordHandler(obj) {
+        function commonWordHandler(globalState, obj, json) {
             var wordCount = parseInt(obj.args[0]);
             var words = [];
 
@@ -132,7 +128,7 @@ var plugin = {
             return words.join("");
         }
 
-        function wordHandler(obj) {
+        function wordHandler(globalState, obj, json) {
             var wordCount = parseInt(obj.args[0]);
             var words = [];
 

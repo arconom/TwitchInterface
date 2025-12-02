@@ -1,29 +1,11 @@
-import {
-    Constants
-}
-from "./Constants.mjs";
+import { Constants } from "./Constants.mjs";
 
-import {
-    ChatCommand
-}
-from "./ChatCommand.mjs";
+import { ChatCommand } from "./ChatCommand.mjs";
 
-import {
-    FileRepository
-}
-from "./FileRepository.mjs";
-import {
-    ChatCommandConfigItem
-}
-from "./ChatCommandConfigItem.mjs";
-import {
-    TwitchChatMessageContext
-}
-from './TwitchChatMessageContext.mjs';
-import {
-    ChatRoles
-}
-from './ChatRoles.mjs';
+import { FileRepository } from "./FileRepository.mjs";
+import { ChatCommandConfigItem } from "./ChatCommandConfigItem.mjs";
+import { TwitchChatMessageContext } from './TwitchChatMessageContext.mjs';
+import { ChatRoles } from './ChatRoles.mjs';
 import Currency from './Currency.mjs';
 
 export default class ChatCommandManager {
@@ -39,10 +21,10 @@ export default class ChatCommandManager {
         // oscManager = Object<OscManager>
         // chatBot = Object<ChatBot>
         var self = this;
-        self.chatBot;
+        // self.chatBot;
         self.app = app;
-        self.config = app.config;
-        self.oscManager = app.oscManager;
+        // self.config = app.config;
+        // self.oscManager = app.oscManager;
         self.commands = new Map();
         self.commandsEnabledForViewers = true;
         self.pluginState = new Map();
@@ -76,7 +58,7 @@ export default class ChatCommandManager {
         });
     }
 
-    toggleCommands(){
+    toggleCommands() {
         const self = this;
         self.commandsEnabledForViewers = !self.commandsEnabledForViewers;
     }
@@ -125,9 +107,7 @@ export default class ChatCommandManager {
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
 
-    async getCommandResult(obj) {
-        //FileRepository.log("getCommandResult " + obj.msg);
-
+    async getCommandResult(chatMessage) {
         //obj = {
         // target: String,
         // msg: String,
@@ -138,13 +118,14 @@ export default class ChatCommandManager {
 
         const self = this;
         // Remove whitespace from chat message
-        const commandName = obj.msg.trim();
+        const commandName = chatMessage.msg.trim();
         var match = commandName.match(Constants.commandRegex);
         FileRepository.log("getCommandResult:  " + commandName);
 
         if (match?.index === 0 && match[1]?.length > 0) {
             FileRepository.log("getCommandResult match found");
-            const chatCommand = self.commands.get(match[1]);
+            // we are removing this in favour of using the config to store the actions
+            // const chatCommand = self.commands.get(match[1]);
             const commandConfig = self.commandConfig.get(match[1]);
 
             // ["prroll", {
@@ -155,53 +136,49 @@ export default class ChatCommandManager {
             // }
             // ],
 
-            if (!chatCommand || !commandConfig.enabled) {
-                FileRepository.log("ChatCommandManager.getCommandResult command disabled " + commandName);
+            if (!commandConfig.enabled) {
+                FileRepository.log("ChatCommandManager.getCommandResult command disabled " + commandName +
+                    "\r\n" + JSON.stringify(commandConfig));
                 return "";
             }
 
-            if (commandConfig.currencyType !== "" && commandConfig.cost > 0) {
-                let wallet = self.app.getWallet(obj.context.userId, obj.target);
-
-                let cur = new Currency({
-                    name: commandConfig.currencyType,
-                    value: commandConfig.cost
-                });
-
-                if (wallet.hasCurrency(cur)) {
-					wallet.subtractCurrency(cur);
-				}
-				else{
-					//not enough cash
-					return "not enough " + commandConfig.currencyType;
-				}
+            if (!self.payForCommand(chatMessage, commandConfig)) {
+                return "not enough currency of type:  " + commandConfig.currencyType;
             }
 
-            const key = obj.target + match[1];
+            const key = chatMessage.target + match[1];
             let commandState = self.getCommandState(key);
 
             if (!commandState) {
                 commandState = {};
             }
 
-            let roleToCheck = self.commandsEnabledForViewers ? 
-                commandConfig?.role : 
+            let roleToCheck = self.commandsEnabledForViewers ?
+                commandConfig?.role :
                 ChatRoles.get(Constants.chatRoles.broadcaster);
 
-            if (self.hasRole(obj.context, roleToCheck)) {
+            let message = "";
+
+            if (self.hasRole(chatMessage.context, roleToCheck)) {
                 FileRepository.log("getCommandResult permission granted");
                 if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
-                    try
-                    {
+                    try {
                         FileRepository.log("getCommandResult executing command name: " + commandName);
-                        let message = await chatCommand.handler(obj);
+                        // await chatCommand.handler(chatMessage);
+                        for (let action of commandConfig.actions) {
+                            let result = self.doAction(chatMessage, action);
+
+                            if (!!result) {
+                                message += result + "\r\n";
+                            }
+                        }
+
                         commandState.executionCount = (commandState.executionCount ?? 0) + 1;
                         commandState.lastExecution = Date.now();
                         self.setCommandState(key, commandState);
+
                         return message;
-                    }
-                    catch(e)
-                    {
+                    } catch (e) {
                         FileRepository.log("getCommandResult failed while executing command: " + commandName);
                         FileRepository.log(e);
                     }
@@ -214,6 +191,94 @@ export default class ChatCommandManager {
         }
     }
 
+    doAction(chatMessage, action) {
+        if (!action) {
+            return;
+        }
+
+        let message = "";
+        const self = this;
+        FileRepository.log("doAction " + JSON.stringify(action));
+        let pluginAction = action.key.split(".");
+        let pluginName = pluginAction[0];
+        let actionName = pluginAction[1];
+
+        const plugin = self.app.globalState.get(pluginName);
+        const actionObj = plugin.actions?.get(actionName);
+
+        FileRepository.log("doAction actions available:  " +
+            JSON.stringify(plugin.actions));
+
+        if (!!actionObj) {
+            FileRepository.log("doAction action found:  " + JSON.stringify(actionObj));
+            if (!!actionObj.handler) {
+                FileRepository.log("typeof action.json:  " + action.json + " " + typeof(action.json));
+                let json;
+
+                if (typeof(action.json) === "object") {
+                    json = action.json;
+                } else if (typeof(action.json) === "string") {
+                    try {
+                        json = JSON.parse(action.json ?? actionObj.defaultJSON);
+                    } catch (e) {
+                        json = {};
+                        FileRepository.log("doAction error while parsing json:  \r\n" + e);
+                    }
+                }
+                FileRepository.log(actionObj.name +
+                    // "-  globalstate: " + JSON.stringify(self.app.globalState) +
+                    // " message: " + Object.keys(chatMessage).join(", ") +
+                    // " target: " + chatMessage.target +
+                    // " msg: " + chatMessage.msg +
+                    // " context: " + JSON.stringify(chatMessage.context) +
+                    // " self: " + chatMessage.self +
+                    // " chatbot: " + chatMessage.chatBot +
+                    "\r\n args: " + chatMessage.args +
+                    "\r\n json:  " + JSON.stringify(json));
+
+                message += actionObj.handler(self.app.globalState, chatMessage, json) ?? "";
+
+                // if (!!json.followOnAction) {
+                    // FileRepository.log("json.followOnAction", json.followOnAction);
+                    // message += " \r\n" + self.doAction(chatMessage, json.followOnAction, message);
+                // }
+            }
+        } else {
+            FileRepository.log("doAction action not found:  " + actionName);
+        }
+
+    }
+
+    payForCommand(chatMessage, commandConfig) {
+        const self = this;
+
+        if (commandConfig.currencyType === "" || commandConfig.cost === 0) {
+            FileRepository.log("ChatCommandManager.payForCommand no cost found: " + 
+                commandConfig.currencyType + " " +
+                commandConfig.cost
+            );
+            return true;
+        }
+
+        let wallet = self.app.getWallet(chatMessage.context.userId, chatMessage.target);
+
+        let cur = new Currency({
+            name: commandConfig.currencyType,
+            value: commandConfig.cost
+        });
+
+        FileRepository.log("ChatCommandManager.payForCommand wallet " + JSON.stringify(wallet));
+        FileRepository.log("ChatCommandManager.payForCommand cur " + JSON.stringify(cur));
+
+        if (wallet.hasCurrency(cur)) {
+            wallet.subtractCurrency(cur);
+        } else {
+            //not enough cash
+            return false;
+        }
+
+        return true;
+    }
     getCommandDescriptions() {
         return Array.from(this.commands.entries().map(function (x) {
                 return x[0] + "\r\n" +

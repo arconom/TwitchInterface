@@ -27,28 +27,6 @@ export default class dataAccess {
         });
     }
 
-    getPluginConfig() {
-        var self = this;
-        return fetch(this.hostname + "/plugin/config").then(function (res) {
-            return res.json();
-			//should be Array.from(Map.entries())
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
-    }
-    getPluginList() {
-        var self = this;
-        return fetch(this.hostname + "/plugin").then(function (res) {
-            return res.json();
-			//should be Array.from(Map.entries())
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
-    }
     putPluginConfig(config) {
 
 		//config = Array.from(Map.entries())
@@ -125,7 +103,6 @@ export default class dataAccess {
     }
 
     updateSubscriptions(events) {
-
         if (!events) {
             return;
         }
@@ -136,41 +113,6 @@ export default class dataAccess {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(events) // body data type must match "Content-Type" header
-        });
-    }
-
-    getStartChat() {
-        var self = this;
-        return fetch(this.hostname + "/chat/start");
-
-    }
-    getActiveChannels() {
-        var self = this;
-        return fetch(this.hostname + "/chat/channels").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-    }
-    
-    getAvailableActions() {
-        var self = this;
-        return fetch(this.hostname + "/actions").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-    }
-
-    getBookmarkedChannels() {
-        var self = this;
-        return fetch(this.hostname + "/chat/channels/saved").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
         });
     }
     putBookmarkedChannels(channels) {
@@ -187,170 +129,77 @@ export default class dataAccess {
         });
     }
 
+    getPluginConfig() {
+        return this.getFile("/plugin/config");
+    }
+    getPluginList() {
+        return this.getFile("/plugin");
+    }
+    getStartChat() {
+        return this.getFile("/chat/start");
+    }
+    getActiveChannels() {
+        return this.getFile("/chat/channels");
+    }
+    getAvailableActions() {
+        return this.getFile("/actions");
+    }
+    getBookmarkedChannels() {
+        return this.getFile("/chat/channels/saved");
+    }
     leaveChannel(channel) {
-        var self = this;
-        return fetch(this.hostname + "/chat/leave?channel=" + channel).then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/chat/leave?channel=" + channel);
     }
     joinChannel(channel) {
-        const self = this;
-        return fetch(this.hostname + "/chat/join?channel=" + channel)
-        .then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            //console.log(e);
-        });
+        return this.getFile("/chat/join?channel=" + channel);
     }
     getUserInfoById(id) {
-        var self = this;
-        return fetch(this.hostname + "/user?id=" + id).then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/user?id=" + id);
     }
     getUserInfoByLogin(login) {
-        var self = this;
-        return fetch(this.hostname + "/user?login=" + login).then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/user?login=" + login);
     }
     getBotUserInfo() {
-        var self = this;
-        return fetch(this.hostname + "/user/bot")
-		.then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/user/bot");
     }
     getChatters(broadcasterId, moderatorId) {
-        var self = this;
-        return fetch(this.hostname + "/chatters?broadcasterid=" + broadcasterId + "&moderatorid=" + moderatorId).then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/chatters?broadcasterid=" + broadcasterId + "&moderatorid=" + moderatorId);
     }
     getSubscriptionTypes() {
-        var self = this;
-        return fetch(this.hostname + "/subscription/types").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/subscription/types");
     }
     getSubscriptions() {
-        var self = this;
-        return fetch(this.hostname + "/subscriptions/configuration").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/subscriptions/configuration");
     }
     getStartEventSub() {
-        var self = this;
-        return fetch(this.hostname + "/eventsub/start").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/eventsub/start");
     }
     getEventSubCost() {
-        var self = this;
-        return fetch(this.hostname + "/eventsub/cost").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/eventsub/cost");
     }
     getEndEventSub() {
-        var self = this;
-        return fetch(this.hostname + "/eventsub/end").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/eventsub/end");
     }
     getActiveSubscriptions() {
-        var self = this;
-        return fetch(this.hostname + "/subscriptions/active").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/subscriptions/active");
     }
     getOscMappings() {
-        var self = this;
-        return fetch(this.hostname + "/oscmappings").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
-
+        return this.getFile("/oscmappings");
     }
     getSecrets() {
-        var self = this;
-        return fetch(this.hostname + "/secrets").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/secrets");
     }
     getApiScopes() {
-        var self = this;
-        return fetch(this.hostname + "/api/scopes").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/api/scopes");
     }
     getActiveApiScopes() {
-        var self = this;
-        return fetch(this.hostname + "/api/scopes/active").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/api/scopes/active");
     }
     getChatScopes() {
-        var self = this;
-        return fetch(this.hostname + "/chat/scopes").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
-        });
+        return this.getFile("/chat/scopes");
     }
+    //todo remove this if not needed later
+/*  
     getChatCommands() {
         const self = this;
         return fetch(this.hostname + "/chat/commands").then(function (res) {
@@ -360,6 +209,7 @@ export default class dataAccess {
             console.log(e);
         });
     }
+*/    
     toggleChatCommands() {
         const self = this;
 
@@ -373,21 +223,49 @@ export default class dataAccess {
         });
     }
     getChatCommandState() {
+        return this.getFile("/chat/commandstate");
+    }
+    getCurrencies() {
+        return this.getFile("/currencies");
+    }
+    putCurrencies(data) {
+        return this.putFile("/currencies", data);
+    }
+    getVariables() {
+        return this.getFile("/variables");
+    }
+    putVariables(data) {
+        return this.putFile("/variables", data);
+    }
+    getRepeatingMessages() {
+        return this.getFile("/chat/repeatingmessages");
+    }
+    getFile(path)
+    {
         var self = this;
-        return fetch(this.hostname + "/chat/commandstate").then(function (res) {
+        return fetch(this.hostname + path).then(function (res) {
             return res.json();
         })
         .catch(function (e) {
             console.log(e);
         });
     }
-    getRepeatingMessages() {
+
+    putFile(path, data)
+    {
+        console.log("putFile", path, JSON.stringify(data));
+        
         var self = this;
-        return fetch(this.hostname + "/chat/repeatingmessages").then(function (res) {
-            return res.json();
-        })
-        .catch(function (e) {
-            console.log(e);
+        if (!data) {
+            return;
+        }
+
+        return fetch(self.hostname + path, {
+            method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data) // body data type must match "Content-Type" header
         });
     }
 

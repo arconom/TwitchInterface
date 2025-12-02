@@ -28,12 +28,23 @@ var plugin = {
         const configFilePath = `./plugins/voicemod/data/config.json`;
         // const Constants = globalState.get("constants");
         // const App = globalState.get("App");
-
         let config = new VoicemodConfig();
-        plugin.commands.set("prsound", {
+
+        plugin.exports.actions = new Map();
+
+        plugin.exports.actions.set("Play Sound", {
             description: "play a sound",
-            handler: function (obj) {
-                const key = obj.args[0];
+            defaultJSON: `{"soundName": ""}`,
+            handler: function (globalState, obj, json) {
+                const FileRepository = globalState.get("filerepository");
+                FileRepository.log("VoicemodAPI.PlaySound" + " \r\n " + JSON.stringify(json));
+                
+                let key = json.soundName;
+                
+                if(!key)
+                {
+                    key = obj?.msg?.split(" ")[1] ?? "";
+                }
 
                 try {
                     // console.log("prsound playing sound", key);
@@ -65,7 +76,7 @@ var plugin = {
                 new VoicemodApi(config.uri,
                     config.clientKey);
 
-            plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
+            // plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
             plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));
             plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log("Voicemod API error:  " + e));
 
@@ -77,7 +88,7 @@ var plugin = {
     }
 };
 
-function getActions(soundsMap) {
+/* function getActions(soundsMap) {
     console.log("trying to map voicemod actions ");
     let returnMe = new Map();
 
@@ -94,5 +105,5 @@ function getActions(soundsMap) {
     plugin.exports.actions = returnMe;
     // console.log("this should be a map full of sounds ", Array.from(plugin.exports.actions.keys()));
 }
-
+ */
 export default plugin;

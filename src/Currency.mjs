@@ -1,19 +1,15 @@
-import {
-    FileRepository
-}
-from "./FileRepository.mjs";
 
 export default class Currency {
     constructor(data) {
         var self = this;
 
         if (data) {
-            self.name = data.name ?? "unnamed";
-            self.value = data.value ?? data.min ?? 0;
-            self.min = data.min ?? 0;
-            self.max = data.max ?? 0;
+            self.name = data?.name ?? "";
+            self.value = data?.value ?? data.min ?? 0;
+            self.min = data?.min ?? 0;
+            self.max = data?.max ?? 0;
         } else {
-            self.name = "unnamed";
+            self.name = "";
             self.value = 0;
             self.min = 0;
             self.max = 0;

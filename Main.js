@@ -4,54 +4,23 @@ import WebServer from "./src/WebServer.mjs";
 import ChatBot from "./src/ChatBot.mjs";
 import OscManager from "./src/OscManager.mjs";
 import OAuthProvider from "./src/OAuthProvider.mjs";
-import {
-    ApiScopes
-}
-from "./src/ApiScopes.mjs";
-import {
-    ChatScopes
-}
-from "./src/ChatScopes.mjs";
-import {
-    ChatCommandConfigItem
-}
-from "./src/ChatCommandConfigItem.mjs";
-import {
-    Secrets
-}
-from "./src/Secrets.mjs";
-import {
-    Config
-}
-from "./src/Config.mjs";
-import {
-    TwitchEndpoints
-}
-from "./src/TwitchEndpoints.mjs";
+import { ApiScopes } from "./src/ApiScopes.mjs";
+import { ChatScopes } from "./src/ChatScopes.mjs";
+import { ChatCommandConfigItem } from "./src/ChatCommandConfigItem.mjs";
+import { Secrets } from "./src/Secrets.mjs";
+import { Config } from "./src/Config.mjs";
+import { TwitchEndpoints } from "./src/TwitchEndpoints.mjs";
 import TwitchAPIProvider from "./src/TwitchAPIProvider.mjs";
 import EventSubListener from "./src/EventSubListener.mjs";
-import {
-    FileRepository
-}
-from "./src/FileRepository.mjs";
-import {
-    SubscriptionTypeNames,
-    SubscriptionTypes
-}
-from "./src/SubscriptionTypes.mjs";
-import {
-    HTTPError
-}
-from "./src/HTTPError.mjs";
+import { FileRepository } from "./src/FileRepository.mjs";
+import { SubscriptionTypeNames, SubscriptionTypes } from "./src/SubscriptionTypes.mjs";
+import { HTTPError } from "./src/HTTPError.mjs";
 import Wallet from "./src/Wallet.mjs";
 import RepeatingMessage from "./src/RepeatingMessage.mjs";
 import PubSubListener from "./src/PubSubListener.mjs";
 import WebUIInterface from "./src/webUIInterface.mjs";
 import ObsManager from "./src/ObsManager.mjs";
-import {
-    Constants
-}
-from "./src/Constants.mjs";
+import { Constants } from "./src/Constants.mjs";
 
 process.on('warning', (warning) => {
     FileRepository.log(warning.name); // Print the warning name
@@ -67,6 +36,7 @@ class App {
     static chatLog = new Map();
     static chatSaveTimeout = null;
     static config = {};
+    static currencies = new Map();
     static eventSubListener;
     static eventSubscriptionConfig = new Map();
     static globalState = new Map();
@@ -85,6 +55,7 @@ class App {
     static twitchAPIProvider;
     static users = new Map();
     static wallets = new Map();
+    // static actions = new Map();
     static variables = new Map();
     static webServer;
     static webUIInterface;
@@ -107,6 +78,8 @@ class App {
         .then(App.loadApiScopes)
         .then(App.loadConfig)
         .then(App.loadSecrets)
+        .then(App.loadCurrencies)
+        .then(App.loadVariables)
         .then(function () {
             FileRepository.log("App.config.overlayWebSocketPort", App.config.overlayWebSocketPort);
             App.overlayWebSocket = new WebUIInterface(App.config.overlayWebSocketPort);
@@ -166,6 +139,7 @@ class App {
         // })
         .then(function () {
             FileRepository.log("App.init before getUserInfo");
+
             App.twitchAPIProvider
             .getUserInfo(App.config.botName,
                 function (res) {
@@ -184,6 +158,15 @@ class App {
             .then(function (data) {
                 // FileRepository.log("got users " + data);
                 App.users = new Map(JSON.parse(data));
+            })
+            .catch(function () {
+                //no file
+            });
+
+            FileRepository.readCurrencies()
+            .then(function (data) {
+                // FileRepository.log("got users " + data);
+                App.currencies = new Map(JSON.parse(data));
             })
             .catch(function () {
                 //no file
@@ -215,104 +198,19 @@ class App {
                 }
             });
 
-            const orderedMap = new Map();
+            const orderedMap = App.getPluginsInOrder();
 
-            // FileRepository.log("setting up orderedMap");
-
-            //todo this is suboptimal data structure
-            let keys = Array.from(App.pluginConfig.keys());
-
-            keys.forEach(function (key) {
-                // FileRepository.log("key " + key);
-                // FileRepository.log("order " + App.pluginConfig.get(key).order);
-
-                if (App.pluginConfig.get(key).active) {
-                    orderedMap.set(App.pluginConfig.get(key).order, key);
-                }
-            });
-
-            FileRepository.log("orderedMap " + Array.from(orderedMap.entries()));
-
-            // FileRepository.log("App.init before loadPlugins " + JSON.stringify(Array.from(App.pluginConfig.entries())));
             return FileRepository.loadPlugins(orderedMap)
-            ?.then(function (plugins) {
-
-                if (App.globalState == null || App.globalState == undefined) {
-                    throw "globalState should be something";
-                }
-
-                FileRepository.log("main.js loading plugins " + plugins.map((p) => p.default.name));
-
-                let keys = Array.from(orderedMap.keys()).sort();
-
-                for (const key of keys) {
-                    let pluginName = orderedMap.get(key);
-                    let pluginToLoad = plugins.find((element) => element.default.name === pluginName);
-
-                    if (pluginToLoad) {
-                        //throw "pluginToLoad should not be null " + pluginName;
-                        console.log("loading plugin " + pluginToLoad.default.name);
-
-
-                            if (pluginToLoad.default.chatMessageHandler) {
-                                FileRepository.log("loading chatMessageHandler for plugin " + pluginToLoad.default.name);
-                                // console.log("adding chatMessageHandler");
-                                App.pluginChatHandlers.push(pluginToLoad.default.chatMessageHandler);
-                            }
-
-                            if (pluginToLoad.default.exports) {
-                                FileRepository.log("exports " + pluginToLoad.default.name);
-
-                                // set a global state if the plugin has exports
-                                // console.log("setting a value in globalState", pluginToLoad.default.name);
-                                App.globalState.set(pluginToLoad.default.name, pluginToLoad.default.exports);
-                            }
-
-                            if (pluginToLoad.default.config) {
-                                FileRepository.log("config " + pluginToLoad.default.name);
-                                const keys = Object.keys(pluginToLoad.default.config);
-                                keys.forEach(function (key) {
-                                    if (App.config[key] === null || App.config[key] === undefined) {
-                                        FileRepository.log("adding config key " + key);
-                                        App.config[key] = pluginToLoad.default.config[key];
-                                    }
-                                });
-                            }
-
-                            // add commands to the list
-                            if (pluginToLoad?.default .load) {
-                                    FileRepository.log("load " + pluginToLoad.default.name);
-                                    // console.log("globalstate at plugin load", Array.from(App.globalState.keys()));
-                                    // console.log("loading plugin", pluginToLoad.default.name);
-                                    pluginToLoad.default.load(App.globalState)
-                                    ?.then(function (loadedPlugin) {
-
-                                        FileRepository.log("plugin commands " + Array.from(pluginToLoad.default.commands.keys()));
-
-                                        for (var command of pluginToLoad?.default .commands?.entries()) {
-                                                FileRepository.log("loading plugin function " + command[0]);
-                                                App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
-
-                                                if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
-                                                    App.chatBot.chatCommandManager.setCommandConfig(command[0], {
-                                                        key: command[0]
-                                                    });
-                                                }
-                                            }
-                                    });
-                                }
-                                else {
-                                    FileRepository.log("plugin has no load function " + pluginToLoad.default);
-                                }
-                    }
-                }
-
+            .then(function (plugins) {
+                FileRepository.log("this should be visible");
+                App.loadPlugins(plugins.map(x=>x.value), orderedMap);
+                return Promise.resolve();
             })
             .catch(function (err) {
                 FileRepository.log("Error loading plugins " + err);
+                //return Promise.reject(err);
+                return Promise.reject();
             });
-
-            FileRepository.log("finished loading plugin config");
         })
         .then(App.startWalletSaveInterval)
         .then(App.startWebServer)
@@ -322,21 +220,151 @@ class App {
         });
     }
 
+    static loadPlugins(plugins, orderedMap) {
+        FileRepository.log("main.js loadPlugins");
+        if (App.globalState == null || App.globalState == undefined) {
+            throw "globalState should be something";
+        }
+
+        FileRepository.log("main.js loading plugins " + plugins
+            .map(function (p) {
+                return p?.default ?.name ?? p?.name ?? JSON.stringify(p?.name);
+            }));
+
+        const keys = Array.from(orderedMap.keys()).sort();
+
+        FileRepository.log("main.js loadPlugins orderedMap " + orderedMap);
+        FileRepository.log("main.js loadPlugins keys " + keys);
+
+        for (const key of keys) {
+            FileRepository.log("main.js loadPlugins key " + key);
+            let pluginName = orderedMap.get(key);
+            let pluginToLoad = plugins
+                .find(function (element) {
+                    return element?.default ?.name === pluginName
+                });
+
+            App.loadPlugin(pluginToLoad);
+        }
+
+        FileRepository.log("main.js finished loading plugins");
+    }
+
+    static getPluginsInOrder() {
+        const orderedMap = new Map();
+
+        // FileRepository.log("setting up orderedMap");
+
+        //todo this is suboptimal data structure
+        let keys = Array.from(App.pluginConfig.keys());
+
+        keys.forEach(function (key) {
+            // FileRepository.log("key " + key);
+            // FileRepository.log("order " + App.pluginConfig.get(key).order);
+
+            if (App.pluginConfig.get(key).active) {
+                orderedMap.set(App.pluginConfig.get(key).order, key);
+            }
+        });
+
+        FileRepository.log("getPluginsInOrder returning " + Array.from(orderedMap.entries()));
+        return orderedMap;
+    }
+
+    static loadPlugin(pluginToLoad) {
+        if (pluginToLoad) {
+            //throw "pluginToLoad should not be null " + pluginName;
+            FileRepository.log("loading plugin " + pluginToLoad.default.name);
+
+            if (pluginToLoad.default.chatMessageHandler) {
+                FileRepository.log("loading chatMessageHandler for plugin " + pluginToLoad.default.name);
+                // console.log("adding chatMessageHandler");
+                App.pluginChatHandlers.push(pluginToLoad.default.chatMessageHandler);
+            }
+
+            if (pluginToLoad.default.exports) {
+                FileRepository.log("exports " + pluginToLoad.default.name);
+
+                // set a global state if the plugin has exports
+                // console.log("setting a value in globalState", pluginToLoad.default.name);
+                App.globalState.set(pluginToLoad.default.name, pluginToLoad.default.exports);
+            }
+
+            if (pluginToLoad.default.config) {
+                FileRepository.log("config " + pluginToLoad.default.name);
+                const keys = Object.keys(pluginToLoad.default.config);
+                keys.forEach(function (key) {
+                    if (App.config[key] === null || App.config[key] === undefined) {
+                        FileRepository.log("adding config key " + key);
+                        App.config[key] = pluginToLoad.default.config[key];
+                    }
+                });
+            }
+
+            // add commands to the list
+            if (pluginToLoad?.default .load) {
+                    FileRepository.log("load " + pluginToLoad.default.name);
+                    // console.log("globalstate at plugin load", Array.from(App.globalState.keys()));
+                    // console.log("loading plugin", pluginToLoad.default.name);
+                    pluginToLoad.default.load(App.globalState)
+/*                     ?.then(function (loadedPlugin) {
+
+                        FileRepository.log("plugin commands " + Array.from(pluginToLoad.default.commands.keys()));
+
+                        for (var command of pluginToLoad?.default .commands?.entries()) {
+                                FileRepository.log("loading plugin function " + command[0]);
+                                App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
+
+                                if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
+                                    App.chatBot.chatCommandManager.setCommandConfig(command[0], {
+                                        key: command[0]
+                                    });
+                                }
+                            }
+                    });
+ */                }
+                else {
+                    FileRepository.log("plugin has no load function " + pluginToLoad.default.name);
+                }
+
+                // for(let a of pluginToLoad?.default.actions)
+                // {
+                // App.actions.set(a.name, a);
+                // }
+
+
+                FileRepository.log("finished loading plugin " + pluginToLoad.default.name);
+        }
+    }
+
     static getActions() {
+        FileRepository.log("getActions");
+
         let keys = App.globalState.keys();
         let returnMe = [];
 
+
         for (let key of keys) {
+            FileRepository.log("getActions key " + key);
             let actionKeys = App.globalState.get(key).actions?.keys();
-            returnMe = returnMe.concat(Array.from(actionKeys ?? []));
+            // returnMe = returnMe.concat(Array.from(actionKeys ?? [])
+                    // .map(x => key + "." + x));
+            returnMe = returnMe.concat(Array.from(actionKeys ?? [])
+                    .map(x => {
+                        let action = App.globalState.get(key).actions.get(x);
+                        action.displayName = key + "." + x;
+                        return action;
+                    }));
         }
 
+        FileRepository.log("getActions returning " + JSON.stringify(returnMe));
         return returnMe;
     }
 
     //todo figure out a way to fix the maxlisteners error
 
     static startWalletSaveInterval() {
+        FileRepository.log("startWalletSaveInterval");
         let interval = setInterval(function () {
             FileRepository.saveWallets(Array.from(App.wallets.entries()));
         }, 5 * 60 * 1000);
@@ -430,6 +458,37 @@ class App {
                 //no data in the file
             }
             App.secrets = new Secrets(d);
+        });
+    }
+
+    static loadCurrencies() {
+
+        FileRepository.log("App.loadCurrencies ");
+        return FileRepository.readCurrencies().then(function (data) {
+            var d = null;
+            try {
+                d = new Map(JSON.parse(data).value);
+            } catch (e) {
+                //no data in the file
+            }
+            App.currencies = d;
+        });
+    }
+
+    static loadVariables() {
+
+        FileRepository.log("App.loadVariables");
+        return FileRepository.loadVariables().then(function (data) {
+            console.log("App.loadVariables", data);
+            var d = null;
+            try {
+                d = new Map(JSON.parse(data).value);
+            } catch (e) {
+                //no data in the file
+                console.log(e);
+            }
+            App.variables = d;
+            console.log("App.loadVariables App.variables", App.variables);
         });
     }
 
@@ -609,23 +668,35 @@ class App {
 
         });
 
+        //todo delete if not needed later
+        /*
         Controller.set("/chat/commands", {
-            "GET": function (args) {
-                // FileRepository.log("/chat/scopes", ChatScopes.entries());
-                return Promise.resolve(Array.from(App.chatBot?.chatCommandManager?.commands.entries() ?? []));
-            },
-            "POST": function (args) {
-                throw "method not allowed";
-            },
-            "PUT": function (args) {
-                throw "method not allowed";
-            },
-            "DELETE": function (args) {
-                throw "method not allowed";
-            },
+        "GET": function (args) {
+        // FileRepository.log("/chat/scopes", ChatScopes.entries());
+        return Promise.resolve(Array.from(App.chatBot?.chatCommandManager?.commands.entries() ?? []));
+        },
+        "POST": function (args) {
+        throw "method not allowed";
+        },
+        "PUT": function (args) {
+        if (App.chatBot) {
+        let map = new Map(Array.from(args));
+        App.chatBot?.chatCommandManager?.commands.entries() = map;
+        return FileRepository.saveCommands(
+        JSON.stringify(
+        Array.from(
+        App.chatBot?.chatCommandManager?.commands.entries())));
+        } else {
+        return 400;
+        }
+        throw "method not allowed";
+        },
+        "DELETE": function (args) {
+        throw "method not allowed";
+        },
 
         });
-
+         */
         Controller.set("/chat/commands/toggle", {
             "GET": function (args) {
                 throw "method not allowed";
@@ -825,21 +896,24 @@ class App {
                 //or get by id or login
                 if (args?.id) {
                     FileRepository.log("getting user by id");
-                    var vals = App.users.values();
+                    return App.getUserById(args.id);
 
-                    for (let i = 0; i < vals.length; i++) {
-                        if (vals[i].id === args) {
-                            return vals[i];
-                        }
-                    }
+                    // var vals = App.users.values();
+                    // for (let i = 0; i < vals.length; i++) {
+                        // if (vals[i].id === args) {
+                            // return vals[i];
+                        // }
+                    // }
                 } else if (args?.login) {
                     FileRepository.log("getting user by login");
-                    var vals = App.users.values();
-                    for (let i = 0; i < vals.length; i++) {
-                        if (vals[i].login === args.login) {
-                            return vals[i];
-                        }
-                    }
+                    App.getUserByLogin(args.login);
+
+                    // var vals = App.users.values();
+                    // for (let i = 0; i < vals.length; i++) {
+                        // if (vals[i].login === args.login) {
+                            // return vals[i];
+                        // }
+                    // }
                 } else {
                     FileRepository.log("getting all users" + JSON.stringify(App.users));
                     var entries = Array.from(App.users?.entries())
@@ -861,6 +935,81 @@ class App {
                 //remove a user from the list
                 App.users.delete(args.id);
                 return FileRepository.saveUsers(App.users);
+            },
+        });
+
+        Controller.set("/currencies", {
+            "GET": function (args) {
+                //get the currency list
+                //or get by id or login
+                if (args?.name) {
+                    FileRepository.log("getting currency by name");
+                    var vals = App.currencies.values();
+
+                    for (let i = 0; i < vals.length; i++) {
+                        if (vals[i].id === args) {
+                            return vals[i];
+                        }
+                    }
+                } else {
+                    var entries = Array.from(App.currencies?.entries() ?? [])
+                    return Promise.resolve(entries);
+                }
+            },
+            "POST": function (args) {
+                //add a currency
+                App.currencies.set(args.id, args);
+                return FileRepository.saveCurrencies(App.currencies);
+            },
+            "PUT": function (args) {
+                //update currency
+                var map = new Map(args);
+                App.currencies = map;
+                console.log("App.currencies after PUT", App.currencies);
+                return FileRepository.saveCurrencies(App.currencies);
+            },
+            "DELETE": function (args) {
+                //remove a currency from the list
+                App.currencies.delete(args.id);
+                return FileRepository.saveCurrencies(App.currencies);
+            },
+        });
+
+        Controller.set("/variables", {
+            "GET": function (args) {
+                //get the currency list
+                //or get by id or login
+                if (args?.name) {
+                    FileRepository.log("getting variable by name");
+                    var vals = App.variables.values();
+
+                    for (let i = 0; i < vals.length; i++) {
+                        if (vals[i].id === args) {
+                            return vals[i];
+                        }
+                    }
+                } else {
+                    var entries = Array.from(App.variables?.entries()?? [])
+                    return Promise.resolve(entries);
+                }
+            },
+            "POST": function (args) {
+                //add a currency
+                App.variables.set(args.id, args);
+                return FileRepository.saveVariables(App.variables);
+            },
+            "PUT": function (args) {
+                //update currency
+                console.log("variables.put", args);
+                var map = new Map(args);
+                App.variables = map;
+                console.log("App.variables after PUT", App.variables);
+                return FileRepository.saveVariables(App.variables);
+            },
+            "DELETE": function (args) {
+                //remove a currency from the list
+                App.variables.delete(args.id);
+                return FileRepository.saveVariables(App.variables);
             },
         });
 
@@ -1348,35 +1497,13 @@ class App {
         return Promise.resolve(); //App.eventSubListener.connect());
     }
 
-    static loadPlugins()
-    {
-        //get actions from the plugins and add them to a Map
-        //get variables and load them into a Map with default values
-        
-        
-    }
 
-    static loadActionConfig()
-    {
-        //load config from file
-        //map the actions to chat things and API things
-    }
+/*     static doAction(key, scope) {
+        // scope is globalState
 
-    static loadVariables()
-    {
-        //load a Map with keys = channel name + plugin name + variable name
-            return FileRepository.loadVariables()
-            ?.then(function (vMap) {
-                for(let v of vMap)
-                {
-                    variables.set(v[0], v[1]);
-                }
-            })
-            .catch(function (err) {
-                FileRepository.log("Error loading variables \r\n" + err);
-            });
+        actions.get(key)(scope, perhaps the chat message);
     }
-
+ */
     static endPubSub() {
         App.isPubSubRunning = false;
         App.pubSubListener.close();
@@ -1433,6 +1560,73 @@ class App {
 
         return App.wallets.get(key);
     }
+
+    // ], ["984802343", {
+            // "id": "984802343",
+            // "login": "littlemiscakes",
+            // "username": "LittleMiscakes",
+            // "type": "",
+            // "broadcasterType": "",
+            // "description": "",
+            // "profileImageUrl": "",
+            // "offlineImageUrl": "",
+            // "viewCount": 0,
+            // "createdAt": "1970-01-01T00:00:00Z"
+
+    static async getUserByLogin(query)
+    {
+        const login = query.replace("@",'');
+        let users = Array.from(App.users.values());
+        let user = users.find((x) => x.login === login);
+        
+        FileRepository.log("App.getUserByLogin" + " " + login);
+        
+        if (!!user)
+        {
+            await App.twitchAPIProvider
+            .getUserInfo({login:login},
+                function (res) {
+                    
+                FileRepository.log("App.getUserByLogin res \r\n" + JSON.stringify(res));
+                    
+                if (res && res.length > 0) {
+                    user = res[0];
+                }
+            })
+            .catch(function (e) {
+                FileRepository.log("App.getUserByLogin error getting user info " + e);
+            });
+        }
+
+        FileRepository.log("App.getUserByLogin returning " + JSON.stringify(user));
+        return user;
+    }
+
+    static async getUserById(query)
+    {
+        FileRepository.log("App.getUserById" + " " + query);
+        let user = users.get(query);
+        
+        if (!!user)
+        {
+            return await App.twitchAPIProvider
+            .getUserInfo({id: query},
+                function (res) {
+                if (res && res.length > 0) {
+                    user = res[0];
+                }
+            })
+            .catch(function (e) {
+                FileRepository.log("App.getUserByLogin error getting user info " + e);
+            });
+        }
+        else
+        {
+            return user;
+        }
+    }
+
+
 }
 
 App.init();
