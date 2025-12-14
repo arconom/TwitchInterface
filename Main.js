@@ -267,7 +267,7 @@ class App {
             }
         });
 
-        FileRepository.log("getPluginsInOrder returning " + Array.from(orderedMap.entries()));
+        FileRepository.log("getPluginsInOrder returning " + Array.from(orderedMap.entries()).sort((a,b) => a[0] - b[0]).join("\r\n"));
         return orderedMap;
     }
 

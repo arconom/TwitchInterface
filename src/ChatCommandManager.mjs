@@ -128,6 +128,13 @@ export default class ChatCommandManager {
             // const chatCommand = self.commands.get(match[1]);
             const commandConfig = self.commandConfig.get(match[1]);
 
+            if (!commandConfig) {
+                return;
+            }
+
+            FileRepository.log("getCommandResult   commandConfig:  " + JSON.stringify(commandConfig));
+            FileRepository.log("getCommandResult   commandConfig:  " + JSON.stringify(Array.from(self.commandConfig.entries())));
+
             // ["prroll", {
             // "key": "prroll",
             // "cooldownSeconds": 0,
@@ -136,13 +143,19 @@ export default class ChatCommandManager {
             // }
             // ],
 
-            if (!commandConfig.enabled) {
+            if (!commandConfig?.enabled) {
                 FileRepository.log("ChatCommandManager.getCommandResult command disabled " + commandName +
                     "\r\n" + JSON.stringify(commandConfig));
                 return "";
             }
 
-            if (!self.payForCommand(chatMessage, commandConfig)) {
+            let isMod = self.hasRole(chatMessage.context, Constants.chatRoles.moderator);
+            let canPay = self.payForCommand(chatMessage, commandConfig);
+            
+            FileRepository.log("isMod " + isMod);
+            FileRepository.log("canPay " + canPay);
+            
+            if (!isMod && !canPay) {
                 return "not enough currency of type:  " + commandConfig.currencyType;
             }
 
@@ -155,7 +168,7 @@ export default class ChatCommandManager {
 
             let roleToCheck = self.commandsEnabledForViewers ?
                 commandConfig?.role :
-                ChatRoles.get(Constants.chatRoles.broadcaster);
+                Constants.chatRoles.broadcaster;
 
             let message = "";
 
@@ -165,7 +178,7 @@ export default class ChatCommandManager {
                     try {
                         FileRepository.log("getCommandResult executing command name: " + commandName);
                         // await chatCommand.handler(chatMessage);
-                        for (let action of commandConfig.actions) {
+                        for (let action of commandConfig?.actions) {
                             let result = self.doAction(chatMessage, action);
 
                             if (!!result) {
@@ -188,6 +201,10 @@ export default class ChatCommandManager {
                     " ms";
                 }
             }
+            else
+            {
+                FileRepository.log("getCommandResult permission denied", roleToCheck);
+            }
         }
     }
 
@@ -199,6 +216,8 @@ export default class ChatCommandManager {
         let message = "";
         const self = this;
         FileRepository.log("doAction " + JSON.stringify(action));
+        FileRepository.log("doAction globalState:  " +
+            JSON.stringify(Array.from(self.app.globalState.keys())));
         let pluginAction = action.key.split(".");
         let pluginName = pluginAction[0];
         let actionName = pluginAction[1];
@@ -206,8 +225,10 @@ export default class ChatCommandManager {
         const plugin = self.app.globalState.get(pluginName);
         const actionObj = plugin.actions?.get(actionName);
 
+
         FileRepository.log("doAction actions available:  " +
             JSON.stringify(plugin.actions));
+
 
         if (!!actionObj) {
             FileRepository.log("doAction action found:  " + JSON.stringify(actionObj));
@@ -222,7 +243,7 @@ export default class ChatCommandManager {
                         json = JSON.parse(action.json ?? actionObj.defaultJSON);
                     } catch (e) {
                         json = {};
-                        FileRepository.log("doAction error while parsing json:  \r\n" + e);
+                        // FileRepository.log("doAction error while parsing json:  \r\n" + e);
                     }
                 }
                 FileRepository.log(actionObj.name +
@@ -239,24 +260,22 @@ export default class ChatCommandManager {
                 message += actionObj.handler(self.app.globalState, chatMessage, json) ?? "";
 
                 // if (!!json.followOnAction) {
-                    // FileRepository.log("json.followOnAction", json.followOnAction);
-                    // message += " \r\n" + self.doAction(chatMessage, json.followOnAction, message);
+                // FileRepository.log("json.followOnAction", json.followOnAction);
+                // message += " \r\n" + self.doAction(chatMessage, json.followOnAction, message);
                 // }
             }
         } else {
             FileRepository.log("doAction action not found:  " + actionName);
         }
-
     }
 
     payForCommand(chatMessage, commandConfig) {
         const self = this;
 
         if (commandConfig.currencyType === "" || commandConfig.cost === 0) {
-            FileRepository.log("ChatCommandManager.payForCommand no cost found: " + 
+            FileRepository.log("ChatCommandManager.payForCommand no cost found: " +
                 commandConfig.currencyType + " " +
-                commandConfig.cost
-            );
+                commandConfig.cost);
             return true;
         }
 
@@ -290,11 +309,16 @@ export default class ChatCommandManager {
             })).join("\r\n");
     }
 
-    hasRole(context, role) {
+    hasRole(context,  roleName) {
         //context = Object<TwitchChatMessageContext>
         //role = String
-
-        FileRepository.log("hasRole " + JSON.stringify(context) + " " + role);
+        
+        
+        const roleValue = (typeof roleName === "number") ? roleName : ChatRoles.get(roleName);
+        FileRepository.log("hasRole " + JSON.stringify(context) + " " 
+            + " roleName " + roleName + " " + 
+            + " roleValue " + roleValue
+        );
 
         var userRoleValue = ChatRoles.get(Constants.chatRoles.viewer);
 
@@ -303,26 +327,28 @@ export default class ChatCommandManager {
             userRoleValue = ChatRoles.get(Constants.chatRoles.subscriber);
         }
 
-        if (context.mod) {
+        if (context.badges?.moderator?.trim() === "1") {
             FileRepository.log("hasRole moderator");
             userRoleValue = ChatRoles.get(Constants.chatRoles.moderator);
         }
 
-        if (context.badges.broadcaster === "1") {
+        if (context.badges?.broadcaster?.trim() === "1") {
             FileRepository.log("hasRole broadcaster");
             userRoleValue = ChatRoles.get(Constants.chatRoles.broadcaster);
         }
 
-        if (context.badges.vip === " 1 ") {
+        if (context.badges?.vip?.trim() === "1") {
             FileRepository.log("hasRole vip");
             userRoleValue = ChatRoles.get(Constants.chatRoles.vip);
         }
 
-        if (userRoleValue < role) {
+        if (userRoleValue < roleName) {
             FileRepository.log("command access denied to user " + context.username + ".  Current role " + userRoleValue);
 
         }
 
-        return userRoleValue >= role;
+        FileRepository.log("userRoleValue " + userRoleValue);
+        FileRepository.log("roleValue " + roleValue);
+        return userRoleValue >= roleValue;
     }
 }

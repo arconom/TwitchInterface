@@ -26,6 +26,7 @@ await import("./src/EnglishDefinitions.mjs").then(function (data) {
 });
 
 const commonActions = new Map();
+const stateKey = "common";
 
 //obj = {
 // target: String,
@@ -37,18 +38,22 @@ const commonActions = new Map();
 
 commonActions.set("Set Timer", {
     name: "Set Timer",
-    defaultJSON: `{"notifyUser": false, "name": "", "seconds": 0, "repeat": false, "maxIterations": 1}`,
+    defaultJson: `{"notifyUser": false, "name": "", "seconds": 0, "repeat": false, "maxIterations": 1}`,
     description: "Set a timer, with a name and an option to repeat.  !prtimer @notifyUser name seconds repeat iterations",
     handler: function (globalState, obj, json) {
-        const notifyUser = json?.notifyUser ?? obj.args[0];
+        const FileRepository = globalState.get("filerepository");
+        const App = globalState.get("app");
+        const notifyUser = json?.notifyUser ?? obj.args[0] === "true";
         const name = json?.name ?? obj.args[1] ?? "noname";
         const seconds = json?.seconds ?? parseInt(obj.args[2]) ?? 60;
-        const repeat = json?.repeat ?? obj.args[3] == "repeat" ? true : false;
+        const repeat = json?.repeat ?? 
+            (obj.args[3] == "repeat" || obj.args[3] == "true")
+            ? true : false;
         const maxIterations = json?.maxIterations ?? parseInt(obj.args[4]) ?? 1;
         const key = obj.target + stateKey;
         let iterations = 0;
 
-        obj.chatBot.chatCommandManager.setCommandState(key + name, {
+        App.chatBot.chatCommandManager.setCommandState(key + name, {
             seconds: seconds,
             repeat: repeat,
             notifyUser: notifyUser,
@@ -57,57 +62,78 @@ commonActions.set("Set Timer", {
             maxIterations: maxIterations,
         });
 
+        // FileRepository.log("Set Timer "  +
+            // " seconds " + seconds +
+            // " repeat " + repeat +
+            // " notifyUser " + notifyUser +
+            // " name " + name +
+            // " iterations " + iterations +
+            // " maxIterations " + maxIterations
+        // );
+
         if (repeat) {
-            return function (handler /* the caller passes a handler function into the call, usually it just looks for a string to post to the IRC channel */) {
-                let state = obj.chatBot.chatCommandManager.getCommandState(key + name);
-                let interval = setInterval(function () {
+            FileRepository.log("Set Timer repeat");
+            let interval = setInterval(function () {
+                // FileRepository.log("Set Timer repeat " + iterations);
 
-                    let state = obj.chatBot.chatCommandManager.getCommandState(key + name);
-                    let message;
+                let state = App.chatBot.chatCommandManager.getCommandState(key + name);
+                let message;
 
-                    if (state.iterations < state.maxIterations) {
-                        state.iterations++;
-                        obj.chatBot.chatCommandManager.setCommandState(key + name, state);
-                        // handler(`Timer ${name} tick ${notifyUser}`);
-                        message = "Timer " + name + " tick " + notifyUser;
-                    } else {
+                // FileRepository.log("timer state " + JSON.stringify(state));
+
+                if (state.iterations < state.maxIterations) {
+                    state.iterations++;
+                    App.chatBot.chatCommandManager.setCommandState(key + name, state);
+                    // handler(`Timer ${name} tick ${notifyUser}`);
+                    message = "Timer " + state.name + " tick " + state.iterations + " of " + state.maxIterations + ".  \r\n";
+                    // FileRepository.log("timer tick " + name);
+
+                    if (state.iterations >= state.maxIterations) 
+                    {
                         clearInterval(interval);
-                        obj.chatBot.chatCommandManager.deleteCommandState(key + name);
+                        App.chatBot.chatCommandManager.deleteCommandState(key + state.name);
                         // handler (`Timer ${name} has expired ${notifyUser}`);
 
-                        message = "Timer " + name + " has expired " + notifyUser;
+                        message += "Timer " + state.name + " has expired";
+                        // FileRepository.log("repeating timer has expired " + name);
                     }
-
-                    json.followOnActions?.forEach((x) => {
-                        x.json = {};
-                        x.json.message = message;
-                        App.chatBot.chatCommandManager.doAction(obj, x);
-                    });
-                }, seconds * 1000);
-
-                if (intervalMap.has(key + name)) {
-                    clearInterval(intervalMap.get(key + name));
                 }
 
-                intervalMap.set(key + name, interval);
-
-                obj.chatBot.chatCommandManager.setCommandState(key + name, state);
-            };
-        } else {
-            return new Promise(function (resolve, reject) {
-                setTimeout(function () {
-                    obj.chatBot.chatCommandManager.deleteCommandState(key + name);
-
-                    let message = "Timer " + name + " has expired " + notifyUser;
-
-                    json.followOnActions?.forEach((x) => {
+                json.followOnActions?.forEach((x) => {
+                    if (!x.json) {
                         x.json = {};
-                        x.json.message = message;
-                        App.chatBot.chatCommandManager.doAction(obj, x);
-                    });
+                    }
+                    x.json.message = message;
+                    
+                    FileRepository.log("x.json " + x.json);
+                    App.chatBot.chatCommandManager.doAction(obj, x);
+                });
+            }, seconds * 1000);
 
-                }, seconds * 1000);
-            });
+            if (intervalMap.has(key + name)) {
+                clearInterval(intervalMap.get(key + name));
+            }
+
+            intervalMap.set(key + name, interval);
+
+            App.chatBot.chatCommandManager.setCommandState(key + name, state);
+        } else {
+            FileRepository.log("Set Timer timeout");
+            setTimeout(function () {
+                obj.chatBot.chatCommandManager.deleteCommandState(key + name);
+
+                let message = "Timer " + name + " has expired";
+                FileRepository.log("timer has expired " + name);
+
+                json.followOnActions?.forEach((x) => {
+                    if (!x.json) {
+                        x.json = {};
+                    }
+                    x.json.message = message;
+                    App.chatBot.chatCommandManager.doAction(obj, x);
+                });
+
+            }, seconds * 1000);
         }
     }
 });
@@ -131,6 +157,8 @@ commonActions.set("Show Text", {
     name: "Show Text",
     description: "Display text on the browser source",
     handler: function (globalState, obj, json) {
+        const message = obj.args.join(" ");
+        const key = obj.target + stateKey;
         FileRepository.saveOBSTextSource(json.message);
     }
 });
@@ -138,7 +166,7 @@ commonActions.set("Show Text", {
 commonActions.set("Give Currency To All Chatters", {
     name: "Give Currency To All Chatters",
     description: "Increases the value of the given currency type, by the given value",
-    defaultJSON: `{currencyName: ""}`,
+    defaultJson: `{currencyName: ""}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
@@ -165,7 +193,7 @@ commonActions.set("Give Currency To All Chatters", {
 commonActions.set("Give Currency To A Chatter", {
     name: "Give Currency To A Chatter",
     description: "Increases the value of the given currency type, by the given value",
-    defaultJSON: `{userId: "0", currencyName: "", currencyAmount: 0}`,
+    defaultJson: `{userId: "0", currencyName: "", currencyAmount: 0}`,
     handler: async function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
@@ -215,7 +243,7 @@ commonActions.set("Give Currency To A Chatter", {
 commonActions.set("Remove Currency From A Chatter", {
     name: "Remove Currency From A Chatter",
     description: "Decreases the value of the given currency type, by the given value",
-    defaultJSON: `{userId: "0", currencyName: "", currencyAmount: 0}`,
+    defaultJson: `{userId: "0", currencyName: "", currencyAmount: 0}`,
     handler: async function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
@@ -255,7 +283,7 @@ commonActions.set("Remove Currency From A Chatter", {
 commonActions.set("Remove Currency From Current User", {
     name: "Remove Currency From Current User",
     description: "Decreases the value of the given currency type, by the given value",
-    defaultJSON: `{currencyName: "", currencyAmount: 0}`,
+    defaultJson: `{currencyName: "", currencyAmount: 0}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
@@ -311,7 +339,7 @@ commonActions.set("Get Currency Value", {
 commonActions.set("Random Message", {
     name: "Random Message",
     description: "Send a random message from a list in chat",
-    defaultJSON: `{"messages": "[\"\"]"}`,
+    defaultJson: `{"messages": "[\"\"]"}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
@@ -331,16 +359,17 @@ commonActions.set("Random Message", {
 commonActions.set("Say", {
     name: "Say",
     description: "Send a message to chat",
-    defaultJSON: `{"message": ""}`,
+    defaultJson: `{"message": ""}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
+        FileRepository.log("Say" + JSON.stringify(json));
         let name = obj.args[0];
         if (!name) {
             name = getNickname();
         }
-        App.chatBot.sendMessage(obj.target, json.message.replace("${name}", name));
+        App.chatBot.sendMessage(obj.target, json.message?.replace("${name}", name));
     }
 });
 

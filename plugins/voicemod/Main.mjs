@@ -34,7 +34,7 @@ var plugin = {
 
         plugin.exports.actions.set("Play Sound", {
             description: "play a sound",
-            defaultJSON: `{"soundName": ""}`,
+            defaultJson: `{"soundName": ""}`,
             handler: function (globalState, obj, json) {
                 const FileRepository = globalState.get("filerepository");
                 FileRepository.log("VoicemodAPI.PlaySound" + " \r\n " + JSON.stringify(json));

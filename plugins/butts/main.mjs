@@ -58,7 +58,7 @@ var plugin = {
 
                         if (doReplace) {
 
-                            let syllables = plugin.WordSyllabizer.Syllabize(words[i]);
+                            let syllables = plugin?.wordSyllabizer.Syllabize(words[i]);
                             // let syllableIndex = Math.floor(Math.random() * (syllables.length - 2) + 1);
                             let syllableIndex = Math.floor(Math.random() * syllables.length);
                             let index = Math.floor(Math.random() * plugin.replacerWordList.length);
@@ -85,13 +85,12 @@ var plugin = {
     exports: {},
     commands: new Map(),
     load: function (globalState) {
-        plugin.FileRepository = globalState.get("filerepository");
-        plugin.FileRepository.log("butts.load");
+        const FileRepository = globalState.get("filerepository");
+        FileRepository.log("butts.load");
         const stateKey = "butts";
-        plugin.Common = globalState.get("common");
+        const common = globalState.get("common");
         plugin.exports.actions = new Map();
-
-        plugin.WordSyllabizer = new plugin.Common.wordSyllabizer();
+        plugin.wordSyllabizer = new common.wordSyllabizer();
 
         // if this fails to load, it is because it is trying to load before Common,
         // so the order needs to be adjusted

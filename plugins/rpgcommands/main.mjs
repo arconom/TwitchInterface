@@ -56,7 +56,7 @@ var plugin = {
         plugin.exports.actions.set("Tilt", {
             name: "Tilt", 
             description: "Spend all your currency and add it to the Tilt Gauge.",
-            defaultJSON: `{followOnAction: "{key: "", name: "", json: ""}"}`,
+            defaultJson: `{followOnAction: "{key: "", name: "", json: ""}"}`,
             handler: function (globalState, obj, json) {
                 const key = obj.target + stateKey;
                 let tiltValue = parseInt(App.chatBot.chatCommandManager.getCommandState(key + "tilt")) ?? 0;
