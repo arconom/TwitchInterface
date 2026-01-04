@@ -38,7 +38,7 @@ export default class Wallet extends HandlerMap {
 
     addCurrency(/*currency*/ value) {
         let self = this;
-        // FileRepository.log("addCurrency " + JSON.stringify(value));
+        FileRepository.log("addCurrency " + JSON.stringify(value));
 
         if (self.currencies.has(value.name)) {
             let currency = self.currencies.get(value.name);
@@ -60,6 +60,7 @@ export default class Wallet extends HandlerMap {
 
     subtractCurrency(/*currency*/ value) {
         var self = this;
+        FileRepository.log("subtractCurrency " + JSON.stringify(value));
 
         if (self.currencies.has(value.name)) {
             var currency = self.currencies.get(value.name);

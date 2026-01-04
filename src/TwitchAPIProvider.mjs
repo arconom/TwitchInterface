@@ -88,7 +88,7 @@ export default class TwitchAPIProvider {
     }
 
     getUserInfo(args, callback) {
-        FileRepository.log("getUserInfo", args);
+        FileRepository.log("getUserInfo \r\n" + args);
         var self = this;
         var url = this.baseUri + "users" + ObjectToQuerystring(args);
         var requestOptions = {

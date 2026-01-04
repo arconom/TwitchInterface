@@ -28,8 +28,16 @@ export const FileRepository = {
         return this.writeJsonFileAsync("./data/Users.json", data);
     },
 
+    saveCurrencies: function (data) {
+        return this.writeJsonFileAsync("./data/Currencies.json", data);
+    },
+
     readUsers: function () {
         return this.readFileAsync("./data/Users.json");
+    },
+
+    readCurrencies: function () {
+        return this.readFileAsync("./data/Currencies.json");
     },
 
     saveWallets: function (data) {
@@ -107,18 +115,27 @@ export const FileRepository = {
         .then((folders) => {
             var promises = [];
 
-            FileRepository.log("folders " + folders);
-            FileRepository.log("orderedMap " + JSON.stringify(Array.from(orderedMap.entries())));
-
             for (const kvp of orderedMap) {
-                const name = kvp[1];
-                if (folders.indexOf(name) > -1) {
-                    FileRepository.log("importing plugin " + name);
-                    promises.push(import("../" + path + name + "/main.mjs"));
+                const pluginName = kvp[1];
+
+                if (folders.indexOf(pluginName) > -1) {
+                    promises.push(new Promise(function(resolve, reject){
+                        FileRepository.log("importing plugin " + pluginName);
+                        return import("../" + path + pluginName + "/main.mjs")
+                        .then((result) => {
+                            FileRepository.log("finished importing plugin " + pluginName);
+                            return resolve(result);
+                        })
+                        .catch((e) =>
+                        {
+                            FileRepository.log("error while importing plugin " + pluginName + "\r\n" + e);
+                            return reject(e);
+                        });
+                    }));
                 }
             }
 
-            return Promise.all(promises);
+            return Promise.allSettled(promises);
         });
     },
 
@@ -227,6 +244,16 @@ export const FileRepository = {
     saveApiScopes: function (data) {
         // FileRepository.log("saveApiScopes", JSON.stringify(data));
         return this.writeJsonFileAsync("./data/apiScopes.json", data)
+    },
+
+    loadVariables: function () {
+        // FileRepository.log("loadApiScopes");
+        return this.readFileAsync("./data/variables.json");
+    },
+
+    saveVariables: function (data) {
+        // FileRepository.log("saveApiScopes", JSON.stringify(data));
+        return this.writeJsonFileAsync("./data/variables.json", data)
     },
 
     loadChatScopes: function () {

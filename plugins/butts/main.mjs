@@ -34,7 +34,7 @@ var plugin = {
             if (!plugin.replacerWordList) {
                 // plugin.replacerWordList = plugin?.app?.config?.replacerWordListCommaDelimited.split(",") ?? [];
                 plugin.replacerWordList = plugin.app.config.replacerWordListCommaDelimited.split(",") ?? [];
-                plugin.FileRepository.log("butts.chatMessageHandler created wordlist " + plugin.replacerWordList);
+                // plugin.FileRepository.log("butts.chatMessageHandler created wordlist " + plugin.replacerWordList);
             }
 
             if (!message.self &&
@@ -58,7 +58,7 @@ var plugin = {
 
                         if (doReplace) {
 
-                            let syllables = plugin.WordSyllabizer.Syllabize(words[i]);
+                            let syllables = plugin?.wordSyllabizer.Syllabize(words[i]);
                             // let syllableIndex = Math.floor(Math.random() * (syllables.length - 2) + 1);
                             let syllableIndex = Math.floor(Math.random() * syllables.length);
                             let index = Math.floor(Math.random() * plugin.replacerWordList.length);
@@ -82,14 +82,15 @@ var plugin = {
             plugin.FileRepository.log("butts.chatMessageHandler", e);
         }
     },
+    exports: {},
     commands: new Map(),
     load: function (globalState) {
-        plugin.FileRepository = globalState.get("filerepository");
-        plugin.FileRepository.log("butts.load");
+        const FileRepository = globalState.get("filerepository");
+        FileRepository.log("butts.load");
         const stateKey = "butts";
-        plugin.Common = globalState.get("common");
-
-        plugin.WordSyllabizer = new plugin.Common.wordSyllabizer();
+        const common = globalState.get("common");
+        plugin.exports.actions = new Map();
+        plugin.wordSyllabizer = new common.wordSyllabizer();
 
         // if this fails to load, it is because it is trying to load before Common,
         // so the order needs to be adjusted
@@ -100,7 +101,8 @@ var plugin = {
         var Constants = globalState.get("constants");
         plugin.app = globalState.get("app");
 
-        plugin.commands.set("prbuttsignoreme", {
+        plugin.exports.actions.set("No more Butts", {
+            name: "No more Butts",
             description: "The bot won't butt you around any more.",
             handler: function (obj) {
                 var key = obj.target + stateKey + ".ignore";
@@ -113,20 +115,8 @@ var plugin = {
             }
         });
 
-        plugin.commands.set("prbuttsignore", {
-            description: "The bot won't butt you around any more.",
-            handler: function (obj) {
-                var key = obj.target + stateKey + ".ignore";
-
-                let idList = obj.chatBot.chatCommandManager.getCommandState(key);
-                idList.push(obj.context.userId);
-
-                obj.chatBot.chatCommandManager.setCommandState(key, idList);
-                return wordle.status();
-            }
-        });
-
-        plugin.commands.set("prbuttsme", {
+        plugin.exports.actions.set("More Butts", {
+            name: "More Butts",
             description: "The bot will give you butt.",
             handler: function (obj) {
                 var key = obj.target + stateKey + ".ignore";

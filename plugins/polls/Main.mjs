@@ -10,6 +10,9 @@ var plugin = {
     // "self": bool,
     // chatBot: Object<ChatBot>
     // }
+    exports: {
+        actions: null
+    },
     commands: new Map(),
     load: function (globalState) {
         const App = globalState.get("app");
@@ -20,58 +23,48 @@ var plugin = {
 
         // this function will be called by Main.js in the app
         //load whatever dependencies you need in here and do setup
-
         var Constants = globalState.get("constants");
 
-        plugin.commands.set("prsuggestoption", {
-            description: "suggest an option for a poll",
-            handler: function (obj) {
-                const key = obj.target + ":" + stateKey;
-                let option;
+        plugin.exports.actions = new Map();
 
-                if (obj.args) {
-                    option = obj.args.join(" ");
-                }
-
-                let optionsMap = obj.chatBot.chatCommandManager.getCommandState(key + "suggestedoptions") ?? new Map();
-                optionsMap.set(optionsMap.size, option);
-
-                FileRepository.log(`prsuggestoption option ` + option);
-
-                obj.chatBot.chatCommandManager.setCommandState(key + ":suggestedoptions", optionsMap);
-            }
-        });
-
-        plugin.commands.set("prpoll", {
+        plugin.exports.actions.set("Start Poll", {
+            name: "Start Poll",
+            defaultJson: `{"options": [""]}`,
             description: "start a poll, given a pipe delimited list of options",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 const key = obj.target + ":" + stateKey;
                 let list;
                 let optionsMap = new Map();
                 let votesMap = new Map();
 
-                if (obj.args && obj.args.length > 0) {
-                    FileRepository.log(`prpoll args ` + obj.args);
-                    list = obj.args.join(" ").split("|");
-                    list.forEach((x, i) => {
-                        optionsMap.set(i, x);
-                    });
+                if (json.options?.length > 0) {
+                    for (let i = 1; i < json.options.length; i++) {
+                        optionsMap.set(i, json.options[i]);
+                    }
                 } else {
+                    if (obj.args && obj.args.length > 0) {
+                        FileRepository.log(`prpoll args ` + obj.args);
+                        list = obj.args.join(" ").split("|");
+                        list.forEach((x, i) => {
+                            optionsMap.set(i, x);
+                        });
+                    // } else {
 
-                    if (obj.chatBot.chatCommandManager.hasCommandState(key + ":suggestedoptions")) {
+                        // if (App.chatBot.chatCommandManager.hasCommandState(key + ":suggestedoptions")) {
 
-                        optionsMap = obj.chatBot.chatCommandManager
-                            .getCommandState(key + ":suggestedoptions");
+                            // optionsMap = App.chatBot.chatCommandManager
+                                // .getCommandState(key + ":suggestedoptions");
 
-                        obj.chatBot.chatCommandManager
-                        .deleteCommandState(key + ":suggestedoptions");
+                            // App.chatBot.chatCommandManager
+                            // .deleteCommandState(key + ":suggestedoptions");
+                        // }
                     }
                 }
 
-                obj.chatBot.chatCommandManager
+                App.chatBot.chatCommandManager
                 .setCommandState(key + ":options", optionsMap);
 
-                obj.chatBot.chatCommandManager
+                App.chatBot.chatCommandManager
                 .setCommandState(key + ":votes", votesMap);
 
                 let message = getPollMessage(optionsMap, votesMap);
@@ -91,41 +84,43 @@ var plugin = {
             }
         });
 
-        plugin.commands.set("prpollranked", {
+        plugin.exports.actions.set("Start Ranked Poll", {
+            name: "Start Ranked Poll",
             description: "start a ranked poll, options being numbered 1 to n",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 FileRepository.log(`prpollranked`);
                 const key = obj.target + ":" + stateKey;
                 let list;
                 let votesMap = new Map();
 
                 FileRepository.log(`prpollranked setting command state`);
-                obj.chatBot.chatCommandManager
+                App.chatBot.chatCommandManager
                 .setCommandState(key + "ranked:votes", votesMap);
 
                 let message = "Type !prvoteranked # # # # # to submit your rankings, putting the numeric options in order of preference.";
 
-/*                 FileRepository.saveOBSTextSource(message);
+                /*                 FileRepository.saveOBSTextSource(message);
 
                 //use the overlay to display the options
                 OverlayWebSocket.send(JSON.stringify({
-                        text: message,
-                        data: {},
-                        type: "pollranked",
-                        images: [],
-                        sounds: []
-                    }));
- */
+                text: message,
+                data: {},
+                type: "pollranked",
+                images: [],
+                sounds: []
+                }));
+                 */
                 return message;
             }
         });
 
-        plugin.commands.set("prendpoll", {
+        plugin.exports.actions.set("End Poll", {
+            name: "End Poll",
             description: "end the current poll",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 const key = obj.target + ":" + stateKey;
-                let options = obj.chatBot.chatCommandManager.getCommandState(key + ":options");
-                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + ":votes");
+                let options = App.chatBot.chatCommandManager.getCommandState(key + ":options");
+                let votesMap = App.chatBot.chatCommandManager.getCommandState(key + ":votes");
                 let totals = new Map();
 
                 for (let vote of votesMap) {
@@ -149,8 +144,8 @@ var plugin = {
 
                 let returnMe = options.get(highestVote) + " was selected.";
 
-                obj.chatBot.chatCommandManager.deleteCommandState(key + ":options");
-                obj.chatBot.chatCommandManager.deleteCommandState(key + ":votes");
+                App.chatBot.chatCommandManager.deleteCommandState(key + ":options");
+                App.chatBot.chatCommandManager.deleteCommandState(key + ":votes");
 
                 FileRepository.saveOBSTextSource(returnMe);
 
@@ -167,13 +162,14 @@ var plugin = {
             }
         });
 
-        plugin.commands.set("prendpollranked", {
+        plugin.exports.actions.set("End Ranked Poll", {
+            name: "End Ranked Poll",
             description: "end the current ranked poll",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 // console.log("poll.prendpollranked");
                 const key = obj.target + ":" + stateKey;
 
-                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + "ranked:votes");
+                let votesMap = App.chatBot.chatCommandManager.getCommandState(key + "ranked:votes");
 
                 // console.log("poll.prendpollranked votes " + JSON.stringify(votesMap));
                 let out = new Set();
@@ -183,8 +179,8 @@ var plugin = {
 
                 while (winner === null && iterations < maxIterations) {
                     // console.log("poll.prendpollranked loop:  winner " +
-                        // winner +
-                        // " iterations: " + iterations);
+                    // winner +
+                    // " iterations: " + iterations);
                     let totalsMap = getTotals(votesMap, out);
                     let minKey = null;
                     let minVal = Infinity;
@@ -212,8 +208,14 @@ var plugin = {
 
                 let returnMe = (winner ?? "nothing") + " was selected.";
 
-                obj.chatBot.chatCommandManager.deleteCommandState(key + "ranked:options");
-                obj.chatBot.chatCommandManager.deleteCommandState(key + "ranked:votes");
+                App.chatBot.chatCommandManager.deleteCommandState(key + "ranked:options");
+                App.chatBot.chatCommandManager.deleteCommandState(key + "ranked:votes");
+
+                json.followOnActions?.forEach((x) => {
+                    x.json = {};
+                    x.json.message = returnMe;
+                   App.chatBot.chatCommandManager.doAction(obj, x);
+                });
 
                 FileRepository.saveOBSTextSource(returnMe);
 
@@ -230,9 +232,10 @@ var plugin = {
             }
         });
 
-        plugin.commands.set("prvote", {
+        plugin.exports.actions.set("Submit Vote", {
+            name: "Submit Vote",
             description: "vote on a specified poll option, !prvote #",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 const key = obj.target + ":" + stateKey;
                 let choice;
 
@@ -240,12 +243,12 @@ var plugin = {
                     choice = parseInt(obj.args);
                 }
 
-                let optionsMap = obj.chatBot.chatCommandManager.getCommandState(key + ":options");
-                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + ":votes");
+                let optionsMap = App.chatBot.chatCommandManager.getCommandState(key + ":options");
+                let votesMap = App.chatBot.chatCommandManager.getCommandState(key + ":votes");
 
                 if (optionsMap.has(choice)) {
                     votesMap.set(obj.context.username, choice);
-                    obj.chatBot.chatCommandManager.setCommandState(key + ":votes", votesMap);
+                    App.chatBot.chatCommandManager.setCommandState(key + ":votes", votesMap);
                 }
 
                 let message = getPollMessage(optionsMap, votesMap)
@@ -265,9 +268,10 @@ var plugin = {
             }
         });
 
-        plugin.commands.set("prvoteranked", {
+        plugin.exports.actions.set("Submit Ranked Vote", {
+            name: "Submit Ranked Vote",
             description: "vote on a specified poll option, !prvoteranked # # #",
-            handler: function (obj) {
+            handler: function (globalState, obj, json) {
                 const key = obj.target + ":" + stateKey;
                 let choice;
 
@@ -275,15 +279,14 @@ var plugin = {
                     choice = obj.args;
                 }
 
-                let votesMap = obj.chatBot.chatCommandManager.getCommandState(key + "ranked:votes");
-                
-                if(votesMap == null || votesMap == undefined)
-                {
+                let votesMap = App.chatBot.chatCommandManager.getCommandState(key + "ranked:votes");
+
+                if (votesMap == null || votesMap == undefined) {
                     return "A ranked poll has not been started. !prpollranked to start a poll";
                 }
-                
+
                 votesMap.set(obj.context.username, choice);
-                obj.chatBot.chatCommandManager.setCommandState(key + "ranked:votes", votesMap);
+                App.chatBot.chatCommandManager.setCommandState(key + "ranked:votes", votesMap);
             }
         });
 

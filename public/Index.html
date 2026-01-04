@@ -41,38 +41,70 @@ pointer-events: none;
             <v-dialog v-model="showChatCommandDialog" width="75%">
                 <v-card>
                     <v-card-text>
+                    {{currentChatCommandConfigItem}}
                         <v-row>
                             <v-col cols="4" sm="11">
-                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].key = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                <v-text-field 
                                 label="key" 
-                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].key"></v-text-field>
+                                v-model="currentChatCommandConfigItem.key"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="6">
-                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].currencyType = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                <v-text-field 
                                 label="Currency Type" 
-                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].currencyType"></v-text-field>
+                                v-model="currentChatCommandConfigItem.currencyType"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="6">
-                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].cost = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                <v-text-field 
                                 label="Cost" 
-                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].cost"></v-text-field>
+                                v-model="currentChatCommandConfigItem.cost"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="6">
-                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].cooldownSeconds = $event.target.value; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                <v-text-field 
                                 type="number" 
                                 label="cooldown (in seconds)" 
-                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].cooldownSeconds" ></v-text-field>
+                                v-model="currentChatCommandConfigItem.cooldownSeconds" ></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="6">
-                                <v-select @update:model-value="newValue => {chatCommandConfigDisplay[chatCommandEditingIndex].role = newValue; updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])}" 
-                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].role" 
+                                <v-select 
+                                v-model="currentChatCommandConfigItem.role" 
                                 :items="roles" 
                                 label="Role" ></v-select>
                             </v-col>
                             <v-col cols="12" sm="12">
-                                <v-text-field @change="chatCommandConfigDisplay[chatCommandEditingIndex].description = $event.target.value;updateChatCommandConfig(chatCommandConfigDisplay[chatCommandEditingIndex].key, chatCommandConfigDisplay[chatCommandEditingIndex])" 
+                                <v-text-field 
                                 label="description" 
-                                :model-value="chatCommandConfigDisplay[chatCommandEditingIndex].description"></v-text-field>
+                                v-model="currentChatCommandConfigItem.description"></v-text-field>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col>
+                                <v-label>Actions</v-label>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col cols="11">
+                                <v-combobox :items="availableActionsDisplay" v-model="newAction.key"></v-combobox>
+                            </v-col>
+                            <v-col cols="12" sm="12">
+                                <v-text-field 
+                                label="json" 
+                                :placeholder="newAction.defaultJSON"
+                                v-model="newAction.json"></v-text-field>
+                            </v-col>
+                            <v-col cols="1">
+                                <v-btn @click="currentChatCommandConfigItem.actions.push(newAction); newAction = {key: '', json: ''}" 
+                                    color="primary"><v-icon icon="mdi-plus-circle"></v-icon></v-btn>
+                            </v-col>
+                        </v-row>
+                        <v-row v-for="(action,j) in currentChatCommandConfigItem.actions" :key="j">
+                            <v-col cols="11">
+                                <v-label>{{action.key}}</v-label>
+                            </v-col>
+                            <v-col cols="1">
+                                <v-btn @click="currentChatCommandConfigItem?.actions?.splice(j,1)" color="error"><v-icon icon="mdi-delete"></v-icon></v-btn>
+                            </v-col>
+                            <v-col cols="12">
+                                <div>{{action.json}}</div>
                             </v-col>
                         </v-row>
                     </v-card-text>
@@ -86,11 +118,69 @@ pointer-events: none;
                 </v-card>
             </v-dialog>
 
+            <v-dialog v-model="showVariableDialog" width="75%">
+                <v-card>
+                    <v-card-text>
+                        <v-row>
+                            <v-col cols="4" sm="12">
+                                <v-text-field 
+                                label="key" 
+                                v-model="currentVariable.name"></v-text-field>
+                            </v-col>
+                            <v-col cols="8" sm="12">
+                                <v-text-field 
+                                label="Currency Type" 
+                                v-model="currentVariable.value"></v-text-field>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      text="Close Dialog"
+                      @click="showVariableDialog = false"
+                    ></v-btn>
+                  </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <v-dialog v-model="showCurrencyDialog" width="75%">
+                <v-card>
+                    <v-card-text>
+                        <v-row>
+                            <v-col cols="4" sm="12">
+                                <v-text-field 
+                                label="Name" 
+                                v-model="currentCurrency.name"></v-text-field>
+                            </v-col>
+                            <v-col cols="4" sm="12">
+                                <v-text-field 
+                                label="Min" 
+                                v-model="currentCurrency.min"></v-text-field>
+                            </v-col>
+                            <v-col cols="4" sm="12">
+                                <v-text-field 
+                                label="Max" 
+                                v-model="currentCurrency.max"></v-text-field>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      text="Close Dialog"
+                      @click="showCurrencyDialog = false"
+                    ></v-btn>
+                  </v-card-actions>
+                </v-card>
+            </v-dialog>
 
 			<v-app-bar title="Popular Rhinoceros Twitch Bot"></v-app-bar>
 			<v-main>
 				<v-tabs v-model="currentTab">
 					<v-tab value="chat">Chat</v-tab>
+					<v-tab value="variables">Variables</v-tab>
+					<v-tab value="currencies">Currencies</v-tab>
 					<v-tab value="api">Twitch API</v-tab>
 					<v-tab value="users">Users</v-tab>
 					<v-tab value="events">Events</v-tab>
@@ -132,8 +222,6 @@ pointer-events: none;
 									<v-btn style="width: calc(20% - 2em);" color="error" id="btnLeaveChannel" @click="leaveChannel()">Leave Channel</v-btn>
 								</v-card-actions>
 							</v-card>
-
-
 							<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
@@ -214,17 +302,37 @@ pointer-events: none;
 								<v-expansion-panel>
 									<v-expansion-panel-title>
                                         <v-col cols="1">
-                                            <v-btn style="margin-right: 2em;" color="primary" @click="saveChatCommandConfig">Save</v-btn>
+                                            <v-icon 
+                                            icon="mdi-content-save" 
+                                            color="primary" 
+                                            @click="saveChatCommandConfig"
+                                            style="margin-right: 2em;" 
+                                            size="x-large"></v-icon>
+                                        </v-col>
+                                        <v-col cols="1">
+                                            <v-icon 
+                                            icon="mdi-plus-circle" 
+                                            color="primary" 
+                                            @click="newChatCommandConfigItem_Onclick"
+                                            style="margin-right: 2em;" 
+                                            size="x-large"></v-icon>
                                         </v-col>
                                         <v-col cols="3">
-                                            <v-checkbox label="Toggle Commands" @click.stop="toggleCommands" v-model="chatCommandsEnabled"/>
+                                            <v-switch
+                                                @click.stop="toggleCommands" 
+                                                v-model="chatCommandsEnabled"
+                                                color="primary"
+                                                hide-details
+                                            ></v-switch>
                                         </v-col>
                                         <v-col>
                                             Chat Command Config ./data/commandconfig.json
                                         </v-col>
-										<v-text-field placeholder="Search" 
-											@click="searchClickHandler"
-											v-model="searchChatCommandConfig"></v-text-field>
+                                        <v-col>
+                                            <v-text-field placeholder="Search" 
+                                                @click="searchClickHandler"
+                                                v-model="searchChatCommandConfig"></v-text-field>
+                                        </v-col>
 									</v-expansion-panel-title>
 									<v-expansion-panel-text>
                                     <v-container fill-height>
@@ -244,12 +352,12 @@ pointer-events: none;
                                                 {{item.description}}
                                             </v-col>
                                             <v-col cols="1" sm="1" align-self="center">
-                                                <v-btn variant="text" @click="chatCommandEditingIndex = i; showChatCommandDialog = true">
+                                                <v-btn variant="text" @click="currentChatCommandConfigItem = chatCommandConfig.get(item.key); showChatCommandDialog = true">
                                                     <v-icon icon="mdi-pencil" color="primary" size="x-large"></v-icon>
                                                 </v-btn>
                                             </v-col>
                                             <v-col cols="1" sm="1" align-self="center">
-                                                <v-btn variant="text" @click="chatCommands.delete(item.key)">
+                                                <v-btn variant="text" @click="chatCommandConfig.delete(item.key)">
                                                     <v-icon icon="mdi-delete" color="error" size="x-large"></v-icon>
                                                 </v-btn>
                                             </v-col>
@@ -258,6 +366,118 @@ pointer-events: none;
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 							</v-expansion-panels>
+						</v-container>
+					</v-window-item>
+					<v-window-item value="variables">
+						<v-container>
+						<v-card>
+						<v-card-title>
+							<v-row>
+  								<v-col cols="2" sm="2" align-self="center">
+                                    Variables
+								</v-col>
+								<v-col cols="8" sm="8" align-self="center">
+                                    <v-text-field placeholder="Search" 
+                                        @click="searchClickHandler"
+                                        v-model="searchVariables"></v-text-field>
+								</v-col>
+								<v-col cols="1" sm="1" align-self="center">
+                                    <v-icon icon="mdi-plus-circle" 
+                                        @click="addVariable" 
+                                        color="primary"></v-icon>
+								</v-col>
+								<v-col cols="1" sm="1" align-self="center">
+                                    <v-icon icon="mdi-content-save" 
+                                        @click="saveVariables" 
+                                        color="primary" 
+                                        style="margin-right: 2em;" 
+                                        size="x-large"></v-icon>
+								</v-col>
+							</v-row>
+						</v-card-title>
+						<v-card-subtitle>
+							Entries here are saved to "./data/variables.json"
+                        </v-card-subtitle>
+						<v-card-text>
+							<v-row>
+								<v-col cols="4" sm="4">Name</v-col>
+								<v-col cols="7" sm="7">Value</v-col>
+							</v-row>
+							
+							<v-row v-for="(item, i) in variablesDisplay" :key="i">
+								<v-col cols="4" sm="4">
+									{{item.name}}
+								</v-col>
+								<v-col cols="7" sm="7">
+									{{item.value}}
+								</v-col>
+								<v-col cols="1" sm="1">
+                                        <v-icon icon="mdi-delete" 
+                                            @click="deleteVariable(item.name)" 
+                                            color="error"/>
+								</v-col>
+							</v-row>
+
+						</v-card-text>
+						</v-card>
+							
+						</v-container>
+					</v-window-item>
+					<v-window-item value="currencies">
+						<v-container>
+                            <v-card>
+                                <v-card-title>
+                                    <v-row>
+                                        <v-col cols="2" sm="2" align-self="center">
+                                            Currencies
+                                        </v-col>
+                                        <v-col cols="8" sm="8" align-self="center">
+                                            <v-text-field placeholder="Search" 
+                                                @click="searchClickHandler"
+                                                v-model="searchCurrencies"></v-text-field>
+                                        </v-col>
+                                        <v-col cols="1" sm="1" align-self="center">
+                                            <v-icon icon="mdi-plus-circle"
+                                                @click="addCurrency" 
+                                                color="primary"></v-icon>
+                                        </v-col>
+                                        <v-col cols="1" sm="1" align-self="center">
+                                            <v-icon icon="mdi-content-save" 
+                                                color="primary" 
+                                                @click="saveCurrencies" 
+                                                style="margin-right: 2em;" 
+                                                size="x-large"></v-icon>
+                                        </v-col>
+                                    </v-row>
+                                </v-card-title>
+                                <v-card-subtitle>
+                                    Entries here are saved to "./data/currencies.json"
+                                </v-card-subtitle>
+                                <v-card-text>
+                                
+                                    <v-row>
+                                        <v-col cols="7" sm="7">Name</v-col>
+                                        <v-col cols="2" sm="2">Min</v-col>
+                                        <v-col cols="3" sm="3">Max</v-col>
+                                    </v-row>
+                                    
+                                    <v-row v-for="(item, i) in currenciesDisplay" :key="i">
+                                        <v-col cols="7" sm="7">
+                                            {{item.name}}
+                                        </v-col>
+                                        <v-col cols="2" sm="2">
+                                            {{item.min}}
+                                        </v-col>
+                                        <v-col cols="2" sm="2">
+                                            {{item.max}}
+                                        </v-col>
+                                        <v-col cols="1" sm="1">
+                                            <v-icon icon="mdi-delete" @click="deleteCurrency(item.name)" color="error" ></v-icon>
+                                        </v-col>
+                                    </v-row>
+
+                                </v-card-text>
+                            </v-card>
 						</v-container>
 					</v-window-item>
 					<v-window-item value="api">
@@ -388,7 +608,6 @@ pointer-events: none;
 								</v-expansion-panels>
 						</v-container>
 					</v-window-item>
-
 					<v-window-item value="events">
 						<v-container>
 							<v-card title="Event Subscriptions">
@@ -444,7 +663,8 @@ pointer-events: none;
 											</v-col>
 											<v-col cols="12" v-for="(action,j) in item.actions" :key="j">
                                                 <v-combobox :items="availableActions" v-model="action.name"></v-combobox>
-                                                <v-btn @click="removeActionFromEventSubscription(item.subKey, j)" color="error"><v-icon icon="mdi-delete"></v-btn>                                            
+                                                <v-btn @click="removeActionFromEventSubscription(item.subKey, j)" 
+                                                    color="error"><v-icon icon="mdi-delete"></v-icon></v-btn>
                                             </v-col>
 										</v-row>
 									</v-expansion-panel-text>
@@ -545,36 +765,26 @@ pointer-events: none;
 						</v-container>
 					</v-window-item>
 				</v-window>					
-
-
 			</v-main>
 			
 			<v-footer>
-				<v-col>
-					id:  
-					{{botUserInfo["id"]}}
-				</v-col>
-				<v-col>
-					login:  
-					{{botUserInfo["login"]}}
-				</v-col>
+				<v-col>id:  {{botUserInfo["id"]}}</v-col>
+				<v-col>login:  {{botUserInfo["login"]}}</v-col>
 
 			 <v-snackbar v-model="snackbar"
-				  :timeout="snackbarTimeout"
-			 >
+				  :timeout="snackbarTimeout">
 				{{ snackbarText }}
 
 			  <template v-slot:actions>
 				<v-btn
 				  color="primary"
 				  variant="text"
-				  @click="snackbar = false"
-				>
+				  @click="snackbar = false">
 				  Close
 				</v-btn>
 			  </template>
 			</v-snackbar>
-			<v-footer>
+			</v-footer>
 		</v-app>
 	</div>
 </body>

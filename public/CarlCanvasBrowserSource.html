@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>Canvas tutorial</title>
+    <style>
+      canvas {
+        position: absolute;
+        top:0;
+        left:0;
+      }
+    </style>
+  </head>
+  <body>
+  <div>
+    <input id="txt" type="text"></input>
+    <button onclick="processCommand()" id="btn">process</button>
+  </div>
+  <div>
+    <canvas id="canvas"></canvas>
+  </div>
+    <script>
+
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d", {alpha: true});
+        scaleCanvas(canvas);
+
+        const commandsMap = new Map();
+        commandsMap.set("rect", function (args) {
+            //rect x y width height
+            ctx.strokeRect(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]), 
+                getWidthFraction(args[2]), 
+                getHeightFraction(args[3]));
+        });
+
+        commandsMap.set("fillrect", function (args) {
+            //fillrect x y width height
+            ctx.fillRect(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]), 
+                getWidthFraction(args[2]), 
+                getHeightFraction(args[3]));
+        });
+
+        commandsMap.set("arc", function (args) {
+            //arc x y radius startDegrees endDegrees counterclockwiseBool
+            console.log("arc args", args);
+            console.log("arc args", getWidthFraction(args[0]));
+            ctx.beginPath();
+            ctx.arc(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]), 
+                getAspectFraction(args[2]), 
+                degreesToRadians(args[3]), 
+                degreesToRadians(args[4]), 
+                args[5]);
+            ctx.stroke();
+        });
+
+        commandsMap.set("fillarc", function (args) {
+            //fillarc x y radius startDegrees endDegrees counterclockwiseBool
+            ctx.beginPath();
+            ctx.arc(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]), 
+                getAspectFraction(args[2]), 
+                degreesToRadians(args[3]), 
+                degreesToRadians(args[4]), 
+                args[5]);
+            ctx.fill();
+        });
+
+        commandsMap.set("line", function (args) {
+            //line x y x2 y2
+            ctx.beginPath();
+            ctx.moveTo(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]));
+            ctx.lineTo(
+                getWidthFraction(args[2]), 
+                getHeightFraction(args[3]));
+            ctx.stroke();
+        });
+
+        commandsMap.set("quadraticcurve", function (args) {
+            //quadraticcurve x y x2 y2
+            ctx.moveTo(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]));
+            ctx.quadraticCurveTo(
+                getWidthFraction(args[2]), 
+                getHeightFraction(args[3]), 
+                getWidthFraction(args[4]), 
+                getHeightFraction(args[5]));
+            ctx.stroke();
+        });
+
+        commandsMap.set("beziercurve", function (args) {
+            //beziercurve x y dx dy dx2 dy2 x2 y2
+            ctx.moveTo(
+                getWidthFraction(args[0]), 
+                getHeightFraction(args[1]));
+            ctx.bezierCurveTo(
+                getWidthFraction(args[2]), 
+                getHeightFraction(args[3]), 
+                getWidthFraction(args[4]), 
+                getHeightFraction(args[5]), 
+                getWidthFraction(args[6]), 
+                getHeightFraction(args[7]));
+            ctx.stroke();
+        });
+
+        commandsMap.set("setcolors", function (args) {
+            //setcolors strokeColor fillColor
+            ctx.strokeStyle = args[0];
+            ctx.fillStyle = args[1];
+        });
+
+        commandsMap.set("setline", function (args) {
+            //setlinewidth number capString [butt, round, square], joinString [round bevel miter] 
+            ctx.lineWidth = args[0];
+
+            if(ctx.lineWidth < 1)
+            {
+                ctx.lineWidth = 1;
+            }
+        });
+
+        commandsMap.set("path", function (args) {
+            //path CSSPathString
+            console.log("path", args);
+            const p = new Path2D(args.join(" "));
+            ctx.stroke(p);
+        });
+
+        commandsMap.set("pathfill", function (args) {
+            //pathfill CSSPathString
+            const p = new Path2D(args.join(" "));
+            ctx.fill(p);
+        });
+
+        commandsMap.set("clearcanvas", function (args) {
+            //clearcanvas
+            const rect = canvas.getBoundingClientRect()
+            ctx.clearRect(0, 0, rect.width, rect.height);
+        });
+
+        function getAspectFraction(val)
+        {
+            const v = parseFloat(val);
+            if(v < 1)
+            {
+                return Math.min(
+                    Math.floor(v * canvas.width),
+                    Math.floor(v * canvas.height)
+                ).toString();
+            }
+            else
+            {
+                return val;
+            }
+        }
+
+        function getWidthFraction(val)
+        {
+            const v = parseFloat(val);
+            if(v < 1)
+            {
+                return Math.floor(v * canvas.width).toString();
+            }
+            else
+            {
+                return val;
+            }
+        }
+
+        function getHeightFraction(val)
+        {
+            const v = parseFloat(val);
+            if(v < 1)
+            {
+                return Math.floor(v * canvas.height).toString();
+            }
+            else
+            {
+                return val;
+            }
+        }
+
+        function degreesToRadians(val) {
+            console.log("degreesToRadians", val);
+            const degrees = parseInt(val);
+            return (Math.PI / 180) * degrees;
+        }
+
+        function processCommand(e)
+        {
+            console.log("processCommand", e);
+            const regex = /!(\w+)\s+(\d*)/;
+            const input = document.querySelector("#txt");
+            let split = input.value.split(" ");
+            let commandName = split.shift();
+            
+            if(commandsMap.has(commandName))
+            {
+                const command = commandsMap.get(commandName);
+                command(split);
+            }
+        }
+    
+        function setupWebSocket() {
+            // Create WebSocket connection.
+            const socket = new WebSocket("ws://localhost:8080");
+
+            // Connection opened
+            socket.addEventListener("open", (event) => {
+                socket.send("Hello Server!");
+            });
+
+            // Listen for messages
+            socket.addEventListener("message", (event) => {
+                console.log("Message from server ", event.data);
+                processCommand(event.data);
+            });
+        }
+
+        function scaleCanvas(canvas) {
+            const canvasWidth = window.innerWidth;
+            const canvasHeight = window.innerHeight;
+        
+            const scaleX = window.innerWidth / canvas.width;
+            const scaleY = window.innerHeight / canvas.height;
+
+            const scaleToFit = Math.min(scaleX, scaleY);
+            const scaleToCover = Math.max(scaleX, scaleY);
+
+            // Get the DPR and size of the canvas
+            const dpr = window.devicePixelRatio;
+            const rect = canvas.getBoundingClientRect();
+
+            // Set the "actual" size of the canvas
+            //canvas.width = rect.width * dpr;
+            //canvas.height = rect.height * dpr;
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+            // Scale the context to ensure correct drawing operations
+            //ctx.scale(dpr, dpr);
+
+            // Set the "drawn" size of the canvas
+            //canvas.style.width = `${rect.width}px`;
+            //canvas.style.height = `${rect.height}px`;
+
+            canvas.style.width = canvasWidth + `px`;
+            canvas.style.height = canvasHeight + `px`;
+
+            //canvas.style.transformOrigin = "0 0"; // Scale from top left
+            //canvas.style.transform = `scale(${scaleToCover})`;
+
+        }
+        
+        </script>
+  </body>
+</html>
