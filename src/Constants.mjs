@@ -21,7 +21,8 @@ export const Constants = {
         viewer: "viewer",
         subscriber: "subscriber",
         moderator: "moderator",
-        broadcaster: "broadcaster"
+        broadcaster: "broadcaster",
+        vip: "vip"
     },
 
     //match \code=word

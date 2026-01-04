@@ -168,7 +168,7 @@ export default class VoicemodApi extends HandlerMap {
                 const key = mappedMemes[i][0];
                 const fileName = mappedMemes[i][1];
 
-                // console.log(key);
+                console.log(key);
 
                 if (self.soundsMap.has(key)) {
                     let fileNameArray = self.soundsMap.get(key);

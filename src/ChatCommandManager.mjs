@@ -259,6 +259,7 @@ export default class ChatCommandManager {
 
                 message += actionObj.handler(self.app.globalState, chatMessage, json) ?? "";
 
+                
                 // if (!!json.followOnAction) {
                 // FileRepository.log("json.followOnAction", json.followOnAction);
                 // message += " \r\n" + self.doAction(chatMessage, json.followOnAction, message);
@@ -267,6 +268,8 @@ export default class ChatCommandManager {
         } else {
             FileRepository.log("doAction action not found:  " + actionName);
         }
+        
+        return message;
     }
 
     payForCommand(chatMessage, commandConfig) {
