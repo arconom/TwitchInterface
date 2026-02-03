@@ -56,6 +56,30 @@ var plugin = {
             }
         });
 
+        plugin.exports.actions.set("Set Voice", {
+            description: "set voice",
+            defaultJson: `{"voiceId": ""}`,
+            handler: function (globalState, obj, json) {
+                const FileRepository = globalState.get("filerepository");
+                FileRepository.log("VoicemodAPI.SetVoice" + " \r\n " + JSON.stringify(json));
+                
+                let key = json.voiceId;
+                
+                if(!key)
+                {
+                    key = obj?.msg?.split(" ")[1] ?? "";
+                }
+
+                try {
+                    FileRepository.log("prsound loading voice " + key);
+                    plugin.exports.VoicemodApi.LoadVoice(key);
+                } catch (e) {
+                    FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
+                         + "VoicemodAPI encountered an error" + " \r\n " + e);
+                }
+            }
+        });
+
         FileRepository.readFileAsync(configFilePath)?.then(function (data) {
 
             FileRepository.log("voicemod.load" + data);

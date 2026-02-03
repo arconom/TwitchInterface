@@ -129,3 +129,4 @@ data/*
 src/EnglishDefinitions.mjs
 plugins/wordgenerator/src/EnglishDefinitions.mjs
 api/getChatters.json
+plugins/common/src/EnglishDefinitions.mjs

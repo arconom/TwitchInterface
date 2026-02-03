@@ -1155,9 +1155,9 @@ pluginDragOver:function(e){
                         title: key,
                         value: data[key]
                     });
-                    if (!data.tmi || data.tmi?.length === 0) {
-                        self.currentTab = "secrets";
-                    }
+                    // if (!data.tmi || data.tmi?.length === 0) {
+                        // self.currentTab = "secrets";
+                    // }
                 });
             }
         });

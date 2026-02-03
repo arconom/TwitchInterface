@@ -30,12 +30,14 @@ export default class VoicemodApi extends HandlerMap {
         this.onErrorHandlers = [];
 
         this.soundsMap = new Map();
+        this.voicesMap = new Map();
 
         this.onopen = (e) => {
             const self = this;
 
             self.onMessageOnceHandlers.push(function (message) {
                 self.GetSounds();
+                self.GetVoices();
             });
 
             self.SendMessage("registerClient", {
@@ -55,9 +57,16 @@ export default class VoicemodApi extends HandlerMap {
 
             if (m?.data?.indexOf("getMemes") > -1) {
                 let memeList = self.ProcessMemes(m);
-				fileRepository.log("Voicemod.constructor meme list\r\n" + Array.from(memeList).reduce(function(a,c,i){
-					return a + c + "\r\n";
-				}, ""));
+                fileRepository.log("Voicemod.constructor meme list\r\n" + Array.from(memeList).reduce(function (a, c, i) {
+                        return a + c + "\r\n";
+                    }, ""));
+            }
+
+            if (m?.data?.indexOf("getVoices") > -1) {
+                let voiceList = self.ProcessVoices(m);
+                fileRepository.log("Voicemod.constructor voice list\r\n" + Array.from(voiceList).reduce(function (a, c, i) {
+                        return a + c + "\r\n";
+                    }, ""));
             }
         };
         this.onerror = (e) => {
@@ -122,9 +131,23 @@ export default class VoicemodApi extends HandlerMap {
     }
 
     LoadVoice(id) {
-        this.SendMessage("loadVoice", {
-            "voiceID": id
-        });
+
+        if (this.voicesMap.has(id)) {
+            let index = 0;
+            let arr = this.voicesMap.get(id);
+
+            if (arr.length > 1) {
+                index = Math.floor(Math.random() * arr.length);
+            }
+
+            this.SendMessage("loadVoice", {
+                "voiceID": arr[index]
+            });
+        }
+    }
+
+    GetVoices(id) {
+        this.SendMessage("getVoices", {});
     }
 
     GetSounds() {
@@ -135,7 +158,7 @@ export default class VoicemodApi extends HandlerMap {
         // console.log("ProcessMemes");
         let memes = null;
         const self = this;
-		let returnMe = new Set();
+        let returnMe = new Set();
 
         if (message.data) {
             memes = JSON.parse(message.data);
@@ -168,7 +191,7 @@ export default class VoicemodApi extends HandlerMap {
                 const fileName = mappedMemes[i][1];
 
                 // console.log(key);
-				returnMe.add(key);
+                returnMe.add(key);
 
                 if (self.soundsMap.has(key)) {
                     let fileNameArray = self.soundsMap.get(key);
@@ -184,8 +207,98 @@ export default class VoicemodApi extends HandlerMap {
         } catch (e) {
             console.log(e);
         }
-		
-		return returnMe;
+
+        return returnMe;
+    }
+
+    ProcessVoices(message) {
+        // console.log("ProcessVoices");
+        let voices = null;
+        const self = this;
+        let returnMe = new Set();
+
+        if (message.data) {
+            voices = JSON.parse(message.data);
+        }
+
+        try {
+            // console.log("processing Voicemod sounds");
+
+            /*
+        {
+            "id": "100",
+            "action": "getVoices",
+            "payload": {
+            "voices": [
+        {
+            "id": "2x1",
+            "friendlyName": "2x1",
+            "enabled": true,
+            "isCustom": false,
+            "favorited": false,
+            "isNew": false,
+            "bitmapChecksum": "177b8d4e8cf4b4a089b8ab70734e9e1d",
+            "isPurchased": false
+            },
+
+            //....
+            ],
+            "currentVoice": "claudia"
+            },
+            "actionType": "getVoices",
+            "actionObject": {
+            "voices": [
+        {
+            "id": "2x1",
+            "friendlyName": "2x1",
+            "enabled": true,
+            "isCustom": false,
+            "favorited": false,
+            "isNew": false,
+            "bitmapChecksum": "177b8d4e8cf4b4a089b8ab70734e9e1d",
+            "isPurchased": false
+            },
+
+            //....
+            ],
+            "currentVoice": "claudia"
+            }
+            }
+             */
+
+            let mappedVoices = voices?.actionObject.voices.map(x => {
+                return [x.friendlyName.toLowerCase().replaceAll(/[^\w]/g, ""), x.id];
+            }).sort((a, b) => {
+                return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0
+            });
+
+            //we make a map containing a list of filenames for each unique key
+            //the keys are the names of the sounds in Voicemod
+            //this means that several sounds that are named the same
+            //will be put into a pool for random selection
+            for (let i = 0; i < mappedVoices?.length; i++) {
+                const key = mappedVoices[i][0];
+                const id = mappedVoices[i][1];
+
+                // console.log(key);
+                returnMe.add(key);
+
+                if (self.voicesMap.has(key)) {
+                    let fileNameArray = self.voicesMap.get(key);
+                    fileNameArray.push(id);
+                    self.voicesMap.set(key, fileNameArray);
+                } else {
+                    self.voicesMap.set(key, [id]);
+                }
+            }
+
+            self.ExecuteHandlers("voicesGot", self.voicesMap);
+
+        } catch (e) {
+            console.log(e);
+        }
+
+        return returnMe;
     }
 
     PlaySound(key) {
