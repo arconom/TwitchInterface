@@ -57,16 +57,19 @@ export default class OscManager {
 
     }
 
-    send(message, args) {
-        FileRepository.log("OSCManager.send " + message + " " + args);
+    send(message, args, force) {
+        FileRepository.log("OSCManager.send " + 
+            "address " + this.clientAddress + 
+            "port " + this.clientPort + 
+            message + " " + [...args]);
         var self = this;
         if (!args.length) {
             args = [args];
         }
 
-        if (self.events.get(message)) {
+        if (force || self.events.get(message)) {
             FileRepository.log("OSCManager.sending");
-            self.oscClient.send(message, [...args], () => {});
+            self.oscClient.send(message, args, () => {});
         }
     }
 

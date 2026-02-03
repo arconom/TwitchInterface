@@ -1,24 +1,11 @@
 import fs from "fs";
 import http from "http";
 import open from "open";
-import {
-    createHttpTerminator
-}
-from "http-terminator";
-import {
-    Constants
-}
-from "./Constants.mjs";
+import { createHttpTerminator } from "http-terminator";
+import { Constants } from "./Constants.mjs";
 
-import {
-    querystringToMap,
-    querystringToObject
-}
-from "./Utility.mjs";
-import {
-    FileRepository
-}
-from "./FileRepository.mjs";
+import { querystringToMap, querystringToObject } from "./Utility.mjs";
+import { FileRepository } from "./FileRepository.mjs";
 
 export default class WebServer {
 
@@ -52,7 +39,7 @@ export default class WebServer {
                         // FileRepository.log("WebServer.start end request " + req.url);
                         res.end();
                     });
-                } else if (req.url.indexOf("overlay") > -1 ){
+                } else if (req.url.indexOf("overlay") > -1) {
                     FileRepository.log("WebServer.start overlay.html");
                     //root, serve index
                     fs.readFile("./public/overlay.html", function (error, data) {
@@ -141,15 +128,19 @@ export default class WebServer {
                 });
 
                 req.on("end", function () {
-                    // FileRepository.log("WebServer.start request.end " + body);
+                    FileRepository.log("WebServer.start request.end " + body);
 
                     var b;
 
-                    //todo figure out why null shows up at the end of the object
-                    try {
-                        b = JSON.parse(body.substr(0, body.length - 4));
-                    } catch (e) {
-                        FileRepository.log("error parsing response:  " + e);
+                    if (body === null || body === "null") {
+                        b = "";
+                    } else {
+                        //todo figure out why null shows up at the end of the object
+                        try {
+                            b = JSON.parse(body.substr(0, body.length - 4));
+                        } catch (e) {
+                            FileRepository.log("error parsing response:  " + e);
+                        }
                     }
 
                     //routes passed from main look like this
@@ -167,25 +158,24 @@ export default class WebServer {
                     },
                     });
                      */
-					 
-					 try{
-                    self.routes.get(req.url)[req.method](b).then(function (data) {
 
-                        res.statusCode = 200;
-                        res.setHeader("Content-Type", "application/json");
-                        if (data) {
-                            // FileRepository.log("WebServer.start writing data to the request" + data);
-                            res.write(JSON.stringify(data))
-                        }
-                        // FileRepository.log("WebServer.start end request " + req.url);
-                        res.end();
+                    try {
+                        self.routes.get(req.url)[req.method](b).then(function (data) {
 
-                    });
-					 }
-					 catch(e){
-						 FileRepository.log("Route " + req.url + ":" + req.method + " created an error: " + e);
-					 }
-					
+                            res.statusCode = 200;
+                            res.setHeader("Content-Type", "application/json");
+                            if (data) {
+                                // FileRepository.log("WebServer.start writing data to the request" + data);
+                                res.write(JSON.stringify(data))
+                            }
+                            // FileRepository.log("WebServer.start end request " + req.url);
+                            res.end();
+
+                        });
+                    } catch (e) {
+                        FileRepository.log("Route " + req.url + ":" + req.method + " created an error: " + e);
+                    }
+
                 });
             }
 
