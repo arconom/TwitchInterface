@@ -25,6 +25,13 @@ from "./FileRepository.mjs";
 export default class OAuthProvider extends HandlerMap {
 
     constructor(redirectUri, port, secretsConfig, preferredBrowser, scopes) {
+		FileRepository.log("OAuthProvider.constructor" + 
+		"\r\nredirectUri:  " + redirectUri +
+		"\r\nport:  " + port +
+		"\r\nsecretsConfig:  " + JSON.stringify(secretsConfig) +
+		"\r\npreferredBrowser:  " + preferredBrowser +
+		"\r\nscopes:  " + scopes);
+		
         super();
         var secrets = new Secrets(secretsConfig);
         this.port = port;
@@ -64,14 +71,15 @@ export default class OAuthProvider extends HandlerMap {
                     FileRepository.log("setupListener code", match[1]);
                     self.oAuthToken = match[1];
                     self.getAccessToken(function (x) {
+						FileRepository.log("OAuthProvider.getAccessToken response: \r\n" + x);
                         self.ExecuteHandlers("authorize", self);
                         self.inProgress = false;
                     });
                 } else {
-                    FileRepository.log("no code found in response url", req.url);
+                    FileRepository.log("no code found in response url:  " + req.url);
                 }
             } else {
-                FileRepository.log("no url found in response", req, res);
+                FileRepository.log("no url found in response:  " + "\r\n" + req + "\r\n" + res);
             }
 
             res.write('Response');

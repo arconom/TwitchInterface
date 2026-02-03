@@ -74,7 +74,7 @@ var plugin = {
 
             plugin.exports.VoicemodApi =
                 new VoicemodApi(config.uri,
-                    config.clientKey);
+                    config.clientKey, FileRepository);
 
             // plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
             plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));

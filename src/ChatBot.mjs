@@ -1,30 +1,12 @@
 import Crypto from "crypto";
 import tmi from 'tmi.js';
 import HandlerMap from "./HandlerMap.mjs";
-import {
-    Constants
-}
-from './Constants.mjs';
-import {
-    Secrets
-}
-from './Secrets.mjs';
-import {
-    TwitchChatMessageContext
-}
-from './TwitchChatMessageContext.mjs';
-import {
-    FileRepository
-}
-from "./FileRepository.mjs";
-import {
-    ChatCommand
-}
-from "./ChatCommand.mjs";
-import {
-    ChatCommands
-}
-from "./ChatCommands.mjs";
+import { Constants } from './Constants.mjs';
+import { Secrets } from './Secrets.mjs';
+import { TwitchChatMessageContext } from './TwitchChatMessageContext.mjs';
+import { FileRepository } from "./FileRepository.mjs";
+import { ChatCommand } from "./ChatCommand.mjs";
+import { ChatCommands } from "./ChatCommands.mjs";
 import User from "./User.mjs";
 import RepeatingMessage from "./RepeatingMessage.mjs";
 import ChatCommandManager from "./ChatCommandManager.mjs";
@@ -34,7 +16,7 @@ export default class ChatBot extends HandlerMap {
         super();
         var self = this;
         self.app = app;
-        self.twitchAPIProvider = app.twitchAPIProvider;
+        // self.twitchAPIProvider = app.twitchAPIProvider;
         self.config = app.config;
         self.oscManager = app.oscManager;
         self.username = app.config.botName;
@@ -42,7 +24,7 @@ export default class ChatBot extends HandlerMap {
         self.tmiOptions = {
             identity: {
                 username: app.config.botName,
-                password: app.secrets.tmi
+                password: app.oAuthProvider.oAuthToken
             },
             options: {
                 skipMembership: false
@@ -70,69 +52,82 @@ export default class ChatBot extends HandlerMap {
         return this.client?.server.length > 0;
     }
 
-    connect() {
-
+    async connect() {
         var self = this;
+        FileRepository.log("ChatBot.connect");
 
-        // Create a client with our options
-        self.client = new tmi.client(self.tmiOptions);
+        let authResult = await self.app.twitchAPIProvider.oAuthProvider.authorize(function (res) {
+            self.tmiOptions.identity.password = "oauth:" + res.token.access_token;
+            FileRepository.log("ChatBot.connect twitchAPIProvider.authorize callback \r\n" + 
+				JSON.stringify(res) + "\r\n" +
+				JSON.stringify(self.tmiOptions));
+			
+			self.app.twitchAPIProvider.oAuthProvider.getAccessToken(function(res2){
+				FileRepository.log("res2", res2);
+			});
 
-        // Register our event handlers (defined below)
-        self.client.on('message', function (target, context, msg, isSelf) {
-            //todo parse args here?
-            self.onMessageHandler.call(self, target, context, msg, isSelf);
-        });
+            // Create a client with our options
+            self.client = new tmi.client(self.tmiOptions);
 
-        self.client.on('join', joinHandler);
-        self.client.on('part', partHandler);
+            // Register our event handlers (defined below)
+            self.client.on('message', function (target, context, msg, isSelf) {
+                //todo parse args here?
+                self.onMessageHandler.call(self, target, context, msg, isSelf);
+            });
 
-        self.AddHandler("message", function (x) {
-            try {
-                var commandMessage = self.chatCommandManager.getCommandResult(x);
+            self.client.on('join', joinHandler);
+            self.client.on('part', partHandler);
 
-                if (commandMessage) {
+            self.AddHandler("message", function (x) {
+                try {
+                    var commandMessage = self.chatCommandManager.getCommandResult(x);
 
-                    if (typeof commandMessage === "string" && commandMessage?.length > 0) {
-                        //send one message
-                        // console.log("string message: ", commandMessage);
-                        self.sendMessage(x.target.substr(1), commandMessage);
-                    } else if (typeof commandMessage === "object" && commandMessage?.length > 0) {
-                        //loop through the array and send a separate message for each item
-                        // console.log("array message: ", commandMessage);
-                        self.sendMessages(x.target.substr(1), commandMessage);
-                    } else if (commandMessage.then) {
-                        //wait until the promise fulfils and then send a message
-                        // console.log("promise message: ", commandMessage);
-                        commandMessage.then(function (message) {
-                            if (message) {
-                                //console.log(message);
+                    if (commandMessage) {
+
+                        if (typeof commandMessage === "string" && commandMessage?.length > 0) {
+                            //send one message
+                            // console.log("string message: ", commandMessage);
+                            self.sendMessage(x.target.substr(1), commandMessage);
+                        } else if (typeof commandMessage === "object" && commandMessage?.length > 0) {
+                            //loop through the array and send a separate message for each item
+                            // console.log("array message: ", commandMessage);
+                            self.sendMessages(x.target.substr(1), commandMessage);
+                        } else if (commandMessage.then) {
+                            //wait until the promise fulfils and then send a message
+                            // console.log("promise message: ", commandMessage);
+                            commandMessage.then(function (message) {
+                                if (message) {
+                                    //console.log(message);
+                                    self.sendMessage(x.target.substr(1), message);
+                                }
+                            });
+                        } else if (typeof commandMessage === "function") {
+                            //pass in a callback because the command will run more than once
+                            // console.log("function message: ", commandMessage);
+                            commandMessage(function (message) {
                                 self.sendMessage(x.target.substr(1), message);
-                            }
-                        });
-                    } else if (typeof commandMessage === "function") {
-                        //pass in a callback because the command will run more than once
-                        // console.log("function message: ", commandMessage);
-                        commandMessage(function (message) {
-                            self.sendMessage(x.target.substr(1), message);
-                        });
+                            });
+                        }
                     }
+                } catch (e) {
+                    FileRepository.log(new Date(Date.now()).toISOString() + " \r\n " + e);
                 }
-            } catch (e) {
-                FileRepository.log(new Date(Date.now()).toISOString() + " \r\n " + e);
-            }
-        }, true);
-        self.client.on('connected', function (address, port, connection) {
-            FileRepository.log("Chatbot.connected handler " +
-                JSON.stringify(address) +
-                JSON.stringify(port) +
-                JSON.stringify(self.client));
-            self.onConnectedHandler.call(self, address, port);
+            }, true);
+            self.client.on('connected', function (address, port, connection) {
+                FileRepository.log("Chatbot.connected handler " +
+                    JSON.stringify(address) +
+                    JSON.stringify(port) +
+                    JSON.stringify(self.client));
+                self.onConnectedHandler.call(self, address, port);
 
-            // connection.sendUTF('CAP REQ :twitch.tv/tags twitch.tv/commands');
+                // connection.sendUTF('CAP REQ :twitch.tv/tags twitch.tv/commands');
+            });
+
+            // Connect to Twitch:
+            self.client.connect();
         });
 
-        // Connect to Twitch:
-        self.client.connect();
+		FileRepository.log("ChatBot.connect authResult\r\n" + JSON.stringify(authResult));
 
         function joinPartHandler(channel, username, isSelf, action) {
             const obj = {
@@ -155,12 +150,19 @@ export default class ChatBot extends HandlerMap {
         }
     }
 
+    // login()
+    // {
+    // FileRepository.log("ChatBot.login");
+    // }
+
     joinChannel(name) {
+        FileRepository.log("ChatBot.joinChannel", name);
         let self = this;
 
         return self.app.twitchAPIProvider.getUserInfo({
             login: name
         }, function (res) {
+            FileRepository.log("ChatBot.joinChannel got user info");
             let user;
 
             if (res.data) {
@@ -175,7 +177,10 @@ export default class ChatBot extends HandlerMap {
             });
         })
         .then(function () {
-            self.client.join(name);
+            FileRepository.log("ChatBot.joinChannel gonna join channel");
+            self.client.join(name).catch(function (e) {
+                FileRepository.log("error joining channel\r\n" + e);
+            });
         })
         .catch(function (e) {
             FileRepository.log(e);
@@ -287,15 +292,14 @@ export default class ChatBot extends HandlerMap {
                         "\r\n" +
                         err);
                 });
-            } catch (e) 
-            {
-                    FileRepository.log(
-                        "error trying to say: \"" +
-                        text +
-                        "\" in channel: " +
-                        channel +
-                        "\r\n" +
-                        e);
+            } catch (e) {
+                FileRepository.log(
+                    "error trying to say: \"" +
+                    text +
+                    "\" in channel: " +
+                    channel +
+                    "\r\n" +
+                    e);
             }
         }
     }

@@ -1,8 +1,5 @@
 import WebSocket from "ws";
-import {
-    v4 as uuidv4
-}
-from "uuid";
+import { v4 as uuidv4 } from "uuid";
 import HandlerMap from "../../../src/HandlerMap.mjs";
 
 const ports = ["59129", "20000", "39273", "42152", "43782", "46667", "35679", "37170", "38501", "33952", "30546"];
@@ -14,7 +11,7 @@ const voices = {
 };
 
 export default class VoicemodApi extends HandlerMap {
-    constructor(uri = "ws://127.0.0.1", clientKey) {
+    constructor(uri = "ws://127.0.0.1", clientKey, fileRepository) {
         super();
         var self = this;
         this.webSocket = null;
@@ -36,7 +33,7 @@ export default class VoicemodApi extends HandlerMap {
 
         this.onopen = (e) => {
             const self = this;
-            
+
             self.onMessageOnceHandlers.push(function (message) {
                 self.GetSounds();
             });
@@ -57,7 +54,10 @@ export default class VoicemodApi extends HandlerMap {
             });
 
             if (m?.data?.indexOf("getMemes") > -1) {
-                self.ProcessMemes(m);
+                let memeList = self.ProcessMemes(m);
+				fileRepository.log("Voicemod.constructor meme list\r\n" + Array.from(memeList).reduce(function(a,c,i){
+					return a + c + "\r\n";
+				}, ""));
             }
         };
         this.onerror = (e) => {
@@ -85,7 +85,6 @@ export default class VoicemodApi extends HandlerMap {
         if (this.currentPortIndex === 0) {
             this.connectionAttempts++;
         }
-
 
         if (this.connectionAttempts > this.maxConnectionAttempts) {
             return;
@@ -133,26 +132,26 @@ export default class VoicemodApi extends HandlerMap {
     }
 
     ProcessMemes(message) {
-            console.log("ProcessMemes");
+        // console.log("ProcessMemes");
         let memes = null;
         const self = this;
+		let returnMe = new Set();
 
         if (message.data) {
             memes = JSON.parse(message.data);
         }
 
         try {
-            console.log("processing Voicemod sounds");
+            // console.log("processing Voicemod sounds");
 
-        /*
-            voicemod sound
-            {
-                FileName: "",
-                Image: "",
-                Name: "",
-                Type: ""
+            /*
+            voicemod sound{
+            FileName: "",
+            Image: "",
+            Name: "",
+            Type: ""
             }
-        */
+             */
 
             let mappedMemes = memes?.actionObject.listOfMemes.map(x => {
                 return [x.Name.toLowerCase().replaceAll(/[^\w]/g, ""), x.FileName];
@@ -168,7 +167,8 @@ export default class VoicemodApi extends HandlerMap {
                 const key = mappedMemes[i][0];
                 const fileName = mappedMemes[i][1];
 
-                console.log(key);
+                // console.log(key);
+				returnMe.add(key);
 
                 if (self.soundsMap.has(key)) {
                     let fileNameArray = self.soundsMap.get(key);
@@ -178,12 +178,14 @@ export default class VoicemodApi extends HandlerMap {
                     self.soundsMap.set(key, [fileName]);
                 }
             }
-            
+
             self.ExecuteHandlers("memesGot", self.soundsMap);
-            
+
         } catch (e) {
             console.log(e);
         }
+		
+		return returnMe;
     }
 
     PlaySound(key) {

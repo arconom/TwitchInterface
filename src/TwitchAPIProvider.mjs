@@ -271,7 +271,7 @@ export default class TwitchAPIProvider {
         return self.requestJson(url, requestOptions, callback);
     }
 
-    login(args, callback) {
+    login() {
         FileRepository.log("login");
         var self = this;
         var url = `https://www.twitch.tv/login`;

@@ -477,9 +477,9 @@ class App {
 
     static loadVariables() {
 
-        FileRepository.log("App.loadVariables");
+        // FileRepository.log("App.loadVariables");
         return FileRepository.loadVariables().then(function (data) {
-            console.log("App.loadVariables", data);
+            // console.log("App.loadVariables", data);
             var d = null;
             try {
                 d = new Map(JSON.parse(data).value);
@@ -488,7 +488,7 @@ class App {
                 console.log(e);
             }
             App.variables = d;
-            console.log("App.loadVariables App.variables", App.variables);
+            // console.log("App.loadVariables App.variables", App.variables);
         });
     }
 
@@ -1229,7 +1229,7 @@ class App {
                 throw "method not allowed";
             },
             "PUT": function (args) {
-                FileRepository.log("/app/oauth args " + args);
+                // FileRepository.log("/app/oauth args " + args);
                 // FileRepository.log("TwitchAPIProvider[args.key]", twitchAPIProvider[args.key]);
                 return new Promise(function (resolve, reject) {
                     App.initOAuthProvider();
@@ -1313,6 +1313,7 @@ class App {
     }
 
     static initChatBot() {
+		// console.log("Init.initChatBot");
 
         if (App.chatBot.isConnected()) {
             return Promise.resolve();
@@ -1561,17 +1562,17 @@ class App {
         return App.wallets.get(key);
     }
 
-    // ], ["984802343", {
-            // "id": "984802343",
-            // "login": "littlemiscakes",
-            // "username": "LittleMiscakes",
-            // "type": "",
-            // "broadcasterType": "",
-            // "description": "",
-            // "profileImageUrl": "",
-            // "offlineImageUrl": "",
-            // "viewCount": 0,
-            // "createdAt": "1970-01-01T00:00:00Z"
+	// ["984802343", {
+	// "id": "984802343",
+	// "login": "littlemiscakes",
+	// "username": "LittleMiscakes",
+	// "type": "",
+	// "broadcasterType": "",
+	// "description": "",
+	// "profileImageUrl": "",
+	// "offlineImageUrl": "",
+	// "viewCount": 0,
+	// "createdAt": "1970-01-01T00:00:00Z"
 
     static async getUserByLogin(query)
     {
