@@ -46,9 +46,9 @@ commonActions.set("Set Timer", {
         const notifyUser = json?.notifyUser ?? obj.args[0] === "true";
         const name = json?.name ?? obj.args[1] ?? "noname";
         const seconds = json?.seconds ?? parseInt(obj.args[2]) ?? 60;
-        const repeat = json?.repeat ?? 
+        const repeat = json?.repeat ??
             (obj.args[3] == "repeat" || obj.args[3] == "true")
-            ? true : false;
+             ? true : false;
         const maxIterations = json?.maxIterations ?? parseInt(obj.args[4]) ?? 1;
         const key = obj.target + stateKey;
         let iterations = 0;
@@ -63,12 +63,12 @@ commonActions.set("Set Timer", {
         });
 
         // FileRepository.log("Set Timer "  +
-            // " seconds " + seconds +
-            // " repeat " + repeat +
-            // " notifyUser " + notifyUser +
-            // " name " + name +
-            // " iterations " + iterations +
-            // " maxIterations " + maxIterations
+        // " seconds " + seconds +
+        // " repeat " + repeat +
+        // " notifyUser " + notifyUser +
+        // " name " + name +
+        // " iterations " + iterations +
+        // " maxIterations " + maxIterations
         // );
 
         if (repeat) {
@@ -88,8 +88,7 @@ commonActions.set("Set Timer", {
                     message = "Timer " + state.name + " tick " + state.iterations + " of " + state.maxIterations + ".  \r\n";
                     // FileRepository.log("timer tick " + name);
 
-                    if (state.iterations >= state.maxIterations) 
-                    {
+                    if (state.iterations >= state.maxIterations) {
                         clearInterval(interval);
                         App.chatBot.chatCommandManager.deleteCommandState(key + state.name);
                         // handler (`Timer ${name} has expired ${notifyUser}`);
@@ -97,17 +96,17 @@ commonActions.set("Set Timer", {
                         message += "Timer " + state.name + " has expired";
                         // FileRepository.log("repeating timer has expired " + name);
                     }
+
+                    json.followOnActions?.forEach((x) => {
+                        if (!x.json) {
+                            x.json = {};
+                        }
+                        x.json.message = message;
+                        FileRepository.log("x.json " + x.json);
+                        App.chatBot.chatCommandManager.doAction(obj, x);
+                    });
                 }
 
-                json.followOnActions?.forEach((x) => {
-                    if (!x.json) {
-                        x.json = {};
-                    }
-                    x.json.message = message;
-                    
-                    FileRepository.log("x.json " + x.json);
-                    App.chatBot.chatCommandManager.doAction(obj, x);
-                });
             }, seconds * 1000);
 
             if (intervalMap.has(key + name)) {
@@ -237,6 +236,14 @@ commonActions.set("Give Currency To A Chatter", {
             " chatterId " + chatterId + " " +
             " currency " + JSON.stringify(currency));
 
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "Gave user:  " + chatterId + " " + currencyAmount + " " + currencyName;
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
+        });
     }
 });
 
@@ -277,6 +284,15 @@ commonActions.set("Remove Currency From A Chatter", {
 
         let wallet = App.getWallet(chatterId, obj.target);
         wallet.subtractCurrency(currency);
+
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "Removed " + currencyAmount + " " + currencyName + " from user " +  + chatterId;
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
+        });
     }
 });
 
@@ -306,32 +322,44 @@ commonActions.set("Remove Currency From Current User", {
 
         let wallet = App.getWallet(chatterId, obj.target);
         wallet.subtractCurrency(currency);
+
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "Removed " + currencyAmount + " " + currencyName + " from user " +  + chatterId;
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
+        });
     }
 });
 
 commonActions.set("Get Currency Value", {
     name: "Get Currency Value",
-    description: "Returns the value of the specified Currency",
+    description: "Returns the value of the specified Currency in the current user's wallet",
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
 
         let channel = obj.target.trim().substr(1);
+        let chatterId = obj.context.userId;
 
-        App.chatBot.getChannelChatters(channel)
-        .then(function (chatters) {
+        let currencyName = json.currencyName;
+        if (!currencyName) {
+            currencyName = obj?.args[0] ?? "";
+        }
 
-            // let chatterCount = chatters.length;
+        let wallet = App.getWallet(chatterId, obj.target);
+        let currency = wallet.getCurrency(currency);
 
-            chatters.forEach(function (chatter) {
-                // add currency to each chatter's wallet
-                let currency = new Currency(App.currencies.get(key));
-                currency.add(1);
-
-                let wallet = App.getWallet(chatter.id, obj.target);
-                wallet.addCurrency(currency);
-            });
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "You have " + currency.value + " " + currency.name + " currency";
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
         });
     }
 });
@@ -353,6 +381,15 @@ commonActions.set("Random Message", {
         }
         const message = json.messages[Math.floor(Math.random() * json.messages.length)];
         App.chatBot.sendMessage(obj.target, message.replace("${name}", name));
+
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "";
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
+        });
     }
 });
 
@@ -370,6 +407,45 @@ commonActions.set("Say", {
             name = getNickname();
         }
         App.chatBot.sendMessage(obj.target, json.message?.replace("${name}", name));
+
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "";
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
+        });
+    }
+});
+
+commonActions.set("Send OBS Message", {
+    name: "Send OBS Message",
+    description: "Send a message to OBS web socket",
+    defaultJson: `{"message": "", "data": ""}`,
+    handler: function (globalState, obj, json) {
+        const FileRepository = globalState.get("filerepository");
+        const Constants = globalState.get("constants");
+        const App = globalState.get("app");
+        FileRepository.log("SendOBSMessage" + JSON.stringify(json));
+        let message = obj.args[0];
+
+        if (!message) {
+            message = json.message;
+        }
+
+        App.ObsManager.send(message, json.data).then(function (res) {
+            FileRepository.log("response for message " + message + ":  \r\n" + res);
+        });
+
+        json.followOnActions?.forEach((x) => {
+            if (!x.json) {
+                x.json = {};
+            }
+            x.json.message = "";
+            FileRepository.log("x.json " + x.json);
+            App.chatBot.chatCommandManager.doAction(obj, x);
+        });
     }
 });
 

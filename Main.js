@@ -1330,6 +1330,7 @@ class App {
         });
 
         App.chatBot.AddHandler("message", function (x) {
+            // FileRepository.log("message", x);
             //todo this might be a bit too expensive to run this often
             // console.log("chatbot message", x);
             var chatMessage = JSON.stringify({

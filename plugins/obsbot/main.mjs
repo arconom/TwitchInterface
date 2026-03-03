@@ -1,31 +1,6 @@
 import { spawn, fork } from "child_process";
 import process from 'node:process';
 
-
-// "q             quit!" << endl;
-// "p             printf device info!" << endl;
-// "s             select device!" << endl;
-// "1              set status callback!" << endl;
-// "2              set event notify callback!" << endl;
-// "3              wakeup or sleep!" << endl;
-// "4              control the gimbal to move to the specified angle!" << endl;
-// "5              control the gimbal to move by the specified speed!" << endl;
-// "6              set the boot initial position and zoom ratio and move to the preset position!" << endl;
-// "7              set the preset position and move to the preset positions!" << endl;
-// "8              set ai mode!" << endl;
-// "9              cancel ai mode!" << endl;
-// "10             set ai tracking type!" << endl;
-// "11             set the absolute zoom level!" << endl;
-// "12             set the absolute zoom level and speed!" << endl;
-// "13             set fov of the camera!" << endl;
-// "14             set media mode!" << endl;
-// "15             set hdr!" << endl;
-// "16             set face focus!" << endl;
-// "17             set the manual focus value!" << endl;
-// "18             set the white balance!" << endl;
-// "19             start or stop taking photos!" << endl;
-// "21             download file!" << endl;
-
 const directionMap = new Map();
 directionMap.set("up", "/OBSBOT/WebCam/General/SetGimbalUp");
 directionMap.set("down", "/OBSBOT/WebCam/General/SetGimbalDown");

@@ -17,11 +17,14 @@ var plugin = {
     },
     commands: new Map(),
     load: function (globalState) {
+        const App = globalState.get("app");
+        const Constants = globalState.get("constants");
+        const ChatCommandManager = App?.chatBot?.chatCommandManager;
         const FileRepository = globalState.get("filerepository");
+        const stateKey = "wordGenerator";
         FileRepository.log("wordgenerator.load");
 
         const Common = globalState.get("common");
-        const Constants = globalState.get("constants");
 
         try {
             plugin.exports.wordGenerator = new WordGenerator(Common.commonEnglishWords, Common.englishDefinitions);
@@ -36,6 +39,17 @@ var plugin = {
             description: "Generate an acronym using common words, pass the word to acronymize",
             handler: function (globalState, obj, json) {
                 var msg = plugin.exports.wordGenerator.getCommonAcronym(obj.args[0].toLowerCase());
+
+                json.followOnActions?.forEach((x) => {
+                    if (!x.json) {
+                        x.json = {};
+                    }
+                    x.json.message = msg;
+                    
+                    FileRepository.log("x.json " + x.json);
+                    ChatCommandManager.doAction(obj, x);
+                });
+
                 return msg;
             }
         });

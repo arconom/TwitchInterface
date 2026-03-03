@@ -181,16 +181,16 @@ export default class ChatCommandManager {
                         for (let action of commandConfig?.actions) {
                             let result = self.doAction(chatMessage, action);
 
-                            if (!!result) {
-                                message += result + "\r\n";
-                            }
+                            // if (!!result) {
+                                // message += result + "\r\n";
+                            // }
                         }
 
                         commandState.executionCount = (commandState.executionCount ?? 0) + 1;
                         commandState.lastExecution = Date.now();
                         self.setCommandState(key, commandState);
 
-                        return message;
+                        return;
                     } catch (e) {
                         FileRepository.log("getCommandResult failed while executing command: " + commandName);
                         FileRepository.log(e);
@@ -222,12 +222,18 @@ export default class ChatCommandManager {
         let pluginName = pluginAction[0];
         let actionName = pluginAction[1];
 
+
+
+        FileRepository.log("doAction plugin name:  " + pluginName);
+        FileRepository.log("doAction action name:  " + actionName);
+
+
         const plugin = self.app.globalState.get(pluginName);
-        const actionObj = plugin.actions?.get(actionName);
+        const actionObj = plugin?.actions?.get(actionName);
 
 
         FileRepository.log("doAction actions available:  " +
-            JSON.stringify(plugin.actions));
+            JSON.stringify(plugin?.actions));
 
 
         if (!!actionObj) {

@@ -58,13 +58,13 @@ export default class ChatBot extends HandlerMap {
 
         let authResult = await self.app.twitchAPIProvider.oAuthProvider.authorize(function (res) {
             self.tmiOptions.identity.password = "oauth:" + res.token.access_token;
-            FileRepository.log("ChatBot.connect twitchAPIProvider.authorize callback \r\n" + 
-				JSON.stringify(res) + "\r\n" +
-				JSON.stringify(self.tmiOptions));
-			
-			self.app.twitchAPIProvider.oAuthProvider.getAccessToken(function(res2){
-				FileRepository.log("res2", res2);
-			});
+            FileRepository.log("ChatBot.connect twitchAPIProvider.authorize callback \r\n" +
+                JSON.stringify(res) + "\r\n" +
+                JSON.stringify(self.tmiOptions));
+
+            self.app.twitchAPIProvider.oAuthProvider.getAccessToken(function (res2) {
+                FileRepository.log("res2", res2);
+            });
 
             // Create a client with our options
             self.client = new tmi.client(self.tmiOptions);
@@ -92,10 +92,10 @@ export default class ChatBot extends HandlerMap {
                             //loop through the array and send a separate message for each item
                             // console.log("array message: ", commandMessage);
                             self.sendMessages(x.target.substr(1), commandMessage);
-                        } else if (commandMessage.then) {
+                        } else if (commandMessage?.then) {
                             //wait until the promise fulfils and then send a message
                             // console.log("promise message: ", commandMessage);
-                            commandMessage.then(function (message) {
+                            commandMessage?.then(function (message) {
                                 if (message) {
                                     //console.log(message);
                                     self.sendMessage(x.target.substr(1), message);
@@ -127,7 +127,7 @@ export default class ChatBot extends HandlerMap {
             self.client.connect();
         });
 
-		FileRepository.log("ChatBot.connect authResult\r\n" + JSON.stringify(authResult));
+        FileRepository.log("ChatBot.connect authResult\r\n" + JSON.stringify(authResult));
 
         function joinPartHandler(channel, username, isSelf, action) {
             const obj = {
@@ -156,7 +156,7 @@ export default class ChatBot extends HandlerMap {
     // }
 
     joinChannel(name) {
-        FileRepository.log("ChatBot.joinChannel", name);
+        FileRepository.log("ChatBot.joinChannel " + name);
         let self = this;
 
         return self.app.twitchAPIProvider.getUserInfo({
@@ -178,12 +178,13 @@ export default class ChatBot extends HandlerMap {
         })
         .then(function () {
             FileRepository.log("ChatBot.joinChannel gonna join channel");
-            self.client.join(name).catch(function (e) {
+
+            self?.client?.join(name).catch(function (e) {
                 FileRepository.log("error joining channel\r\n" + e);
             });
         })
         .catch(function (e) {
-            FileRepository.log(e);
+            FileRepository.log("ChatBot.joinChannel error \r\n" + e);
         });
     }
 
@@ -305,7 +306,11 @@ export default class ChatBot extends HandlerMap {
     }
 
     action(channel, text) {
-        return this.client.action(channel, text);
+        if (!this.client) {
+            this.connect();
+        }
+
+        return this.client?.action(channel, text);
     }
 
     sendMessages(channel, messages) {

@@ -111,7 +111,14 @@ var plugin = {
                 idList.push(obj.context.userId);
 
                 obj.chatBot.chatCommandManager.setCommandState(key, idList);
-                return wordle.status();
+                
+				let message = wordle.status();
+				
+                json.followOnActions?.forEach((x) => {
+                    x.json = {};
+                    x.json.message = message;
+                   App.chatBot.chatCommandManager.doAction(obj, x);
+                });
             }
         });
 
@@ -127,7 +134,13 @@ var plugin = {
                 idList.splice(index, 1);
 
                 obj.chatBot.chatCommandManager.setCommandState(key, idList);
-                return wordle.status();
+				let message = wordle.status();
+				
+                json.followOnActions?.forEach((x) => {
+                    x.json = {};
+                    x.json.message = message;
+                   App.chatBot.chatCommandManager.doAction(obj, x);
+                });
             }
         });
 
