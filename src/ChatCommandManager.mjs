@@ -222,12 +222,6 @@ export default class ChatCommandManager {
         let pluginName = pluginAction[0];
         let actionName = pluginAction[1];
 
-
-
-        FileRepository.log("doAction plugin name:  " + pluginName);
-        FileRepository.log("doAction action name:  " + actionName);
-
-
         const plugin = self.app.globalState.get(pluginName);
         const actionObj = plugin?.actions?.get(actionName);
 
@@ -256,7 +250,8 @@ export default class ChatCommandManager {
                     // "-  globalstate: " + JSON.stringify(self.app.globalState) +
                     // " message: " + Object.keys(chatMessage).join(", ") +
                     // " target: " + chatMessage.target +
-                    // " msg: " + chatMessage.msg +
+                    "\r\n display name: " + actionObj.displayName +
+                    "\r\n msg: " + chatMessage.msg +
                     // " context: " + JSON.stringify(chatMessage.context) +
                     // " self: " + chatMessage.self +
                     // " chatbot: " + chatMessage.chatBot +

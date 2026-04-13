@@ -18,11 +18,12 @@ var plugin = {
     },
     commands: new Map(),
     load: function (globalState) {
+        // this function will be called by Main.js in the app
+        //load whatever dependencies you need in here and do setup
         const FileRepository = globalState.get("filerepository");
         FileRepository.log("voicemod.load");
         const App = globalState.get("app");
         const OverlayWebSocket = App.overlayWebSocket;
-        const ObsManager = App.ObsManager;
         const Constants = globalState.get("constants");
         const stateKey = "voicemod";
         const configFilePath = `./plugins/voicemod/data/config.json`;
@@ -35,14 +36,12 @@ var plugin = {
         plugin.exports.actions.set("Play Sound", {
             description: "play a sound",
             defaultJson: `{"soundName": ""}`,
-            handler: function (globalState, obj, json) {
-                const FileRepository = globalState.get("filerepository");
-                FileRepository.log("VoicemodAPI.PlaySound" + " \r\n " + JSON.stringify(json));
-                
+            handler: async function (globalState, obj, json) {
+                FileRepository.log("VoicemodAPI.Play Sound" + " \r\n " + JSON.stringify(json));
+
                 let key = json.soundName;
-                
-                if(!key)
-                {
+
+                if (!key) {
                     key = obj?.msg?.split(" ")[1] ?? "";
                 }
 
@@ -52,6 +51,11 @@ var plugin = {
                 } catch (e) {
                     FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
                          + "VoicemodAPI encountered an error" + " \r\n " + e);
+
+                    await init().then(function (result) {
+						FileRepository.log("VoicemodAPI.PlaySound");
+                        plugin.exports.VoicemodApi.PlaySound(key);
+                    });
                 }
             }
         });
@@ -59,14 +63,12 @@ var plugin = {
         plugin.exports.actions.set("Set Voice", {
             description: "set voice",
             defaultJson: `{"voiceId": ""}`,
-            handler: function (globalState, obj, json) {
-                const FileRepository = globalState.get("filerepository");
+            handler: async function (globalState, obj, json) {
                 FileRepository.log("VoicemodAPI.SetVoice" + " \r\n " + JSON.stringify(json));
-                
+
                 let key = json.voiceId;
-                
-                if(!key)
-                {
+
+                if (!key) {
                     key = obj?.msg?.split(" ")[1] ?? "";
                 }
 
@@ -76,58 +78,60 @@ var plugin = {
                 } catch (e) {
                     FileRepository.log(new Date(Date.now()).toISOString() + " \r\n "
                          + "VoicemodAPI encountered an error" + " \r\n " + e);
+
+                    await init().then(function (result) {
+                        plugin.exports.VoicemodApi.LoadVoice(key);
+                    });
                 }
             }
         });
 
-        FileRepository.readFileAsync(configFilePath)?.then(function (data) {
+        function init() {
+            return FileRepository.readFileAsync(configFilePath)?.then(function (data) {
+                FileRepository.log("voicemod.load" + data);
 
-            FileRepository.log("voicemod.load" + data);
+                if (data) {
+                    var obj = JSON.parse(data);
+                    config.uri = obj.uri;
+                    config.clientKey = obj.clientKey;
+                } else {
+                    FileRepository.writeFileAsync(configFilePath, config, true);
+                }
 
-            if (data) {
-                var obj = JSON.parse(data);
-                config.uri = obj.uri;
-                config.clientKey = obj.clientKey;
-            } else {
-                FileRepository.writeFileAsync(configFilePath, config, true);
-            }
+                plugin.exports.VoicemodApi =
+                    new VoicemodApi(config.uri,
+                        config.clientKey, FileRepository);
 
-            // this function will be called by Main.js in the app
-            //load whatever dependencies you need in here and do setup
+                // plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
+                plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));
+                plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log("Voicemod API error:  " + e));
 
+            })
+            .catch((e) => {
+                FileRepository.log("voicemod.load error " + e);
+            });
+        }
 
-            plugin.exports.VoicemodApi =
-                new VoicemodApi(config.uri,
-                    config.clientKey, FileRepository);
-
-            // plugin.exports.VoicemodApi.AddHandler("memesGot", getActions);
-            plugin.exports.VoicemodApi.onMessageHandlers.push(msg => FileRepository.log("Voicemod API response: " + msg));
-            plugin.exports.VoicemodApi.onErrorHandlers.push(e => FileRepository.log("Voicemod API error:  " + e));
-
-        })
-        .catch((e) => {
-            FileRepository.log("voicemod.load error " + e);
-        });
-        return Promise.resolve();
+        return init();
     }
 };
 
 /* function getActions(soundsMap) {
-    console.log("trying to map voicemod actions ");
-    let returnMe = new Map();
+console.log("trying to map voicemod actions ");
+let returnMe = new Map();
 
-    for (let kvp of soundsMap) {
-        // console.log("voicemod.action " + kvp[0]);
+for (let kvp of soundsMap) {
+// console.log("voicemod.action " + kvp[0]);
 
-        returnMe.set(kvp[0], {
-            handler: () => {
-                plugin.exports.VoicemodApi.PlaySound(kvp[0])
-            }
-        });
-    }
+returnMe.set(kvp[0], {
+handler: () => {
+plugin.exports.VoicemodApi.PlaySound(kvp[0])
+}
+});
+}
 
-    plugin.exports.actions = returnMe;
-    // console.log("this should be a map full of sounds ", Array.from(plugin.exports.actions.keys()));
+plugin.exports.actions = returnMe;
+// console.log("this should be a map full of sounds ", Array.from(plugin.exports.actions.keys()));
 }
  */
 export default plugin;

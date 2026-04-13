@@ -240,6 +240,9 @@ export default class dataAccess {
     getRepeatingMessages() {
         return this.getFile("/chat/repeatingmessages");
     }
+    getChatMessageTriggers() {
+        return this.getFile("/chat/messagetriggers");
+    }
     getFile(path)
     {
         var self = this;
@@ -275,6 +278,20 @@ export default class dataAccess {
         }
 
         return fetch(this.hostname + "/chat/repeatingmessages", {
+            method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(list) // body data type must match "Content-Type" header
+        });
+    }
+
+    putChatMessageTriggers(list) {
+        if (!list) {
+            return;
+        }
+
+        return fetch(this.hostname + "/chat/messagetriggers", {
             method: 'PUT', // *GET, POST, PUT, DELETE, etc.
             headers: {
                 'Content-Type': 'application/json'

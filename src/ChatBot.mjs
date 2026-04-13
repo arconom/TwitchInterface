@@ -48,13 +48,33 @@ export default class ChatBot extends HandlerMap {
     }
 
     isConnected() {
-        // console.log("this.client", this.client);
+        // const self = this;
+        // if (self.client) {
+            // FileRepository.log("ChatBot.client " + Object.keys(this.client).reduce(function (a, c, i) {
+                    // return a + "\r\n" + c + ":  " + self.client[c];
+                // }, ""));
+        // }
+		// else
+		// {
+			// FileRepository.log("ChatBot.client undefined");
+		// }
         return this.client?.server.length > 0;
     }
 
     async connect() {
+
+
         var self = this;
-        FileRepository.log("ChatBot.connect");
+
+        if (self.isConnected()) {
+            return Promise.resolve();
+        }
+
+        FileRepository.log("ChatBot.connect" + 
+			"\r\noptions:  " + JSON.stringify(self.tmiOptions) +
+			"\r\nusername:  " + self.username + 
+			"\r\nconfig:  " + JSON.stringify(self.config)
+		);
 
         let authResult = await self.app.twitchAPIProvider.oAuthProvider.authorize(function (res) {
             self.tmiOptions.identity.password = "oauth:" + res.token.access_token;
@@ -63,11 +83,12 @@ export default class ChatBot extends HandlerMap {
                 JSON.stringify(self.tmiOptions));
 
             self.app.twitchAPIProvider.oAuthProvider.getAccessToken(function (res2) {
-                FileRepository.log("res2", res2);
+                FileRepository.log("ChatBot.connect getAccessToken", res2);
             });
 
             // Create a client with our options
             self.client = new tmi.client(self.tmiOptions);
+            FileRepository.log("ChatBot.connect should have a client now");
 
             // Register our event handlers (defined below)
             self.client.on('message', function (target, context, msg, isSelf) {
@@ -116,8 +137,7 @@ export default class ChatBot extends HandlerMap {
             self.client.on('connected', function (address, port, connection) {
                 FileRepository.log("Chatbot.connected handler " +
                     JSON.stringify(address) +
-                    JSON.stringify(port) +
-                    JSON.stringify(self.client));
+                    JSON.stringify(port));
                 self.onConnectedHandler.call(self, address, port);
 
                 // connection.sendUTF('CAP REQ :twitch.tv/tags twitch.tv/commands');
@@ -127,7 +147,20 @@ export default class ChatBot extends HandlerMap {
             self.client.connect();
         });
 
-        FileRepository.log("ChatBot.connect authResult\r\n" + JSON.stringify(authResult));
+        // FileRepository.log("ChatBot.connect authResult\r\n" + JSON.stringify(authResult));
+
+        if (!self.isConnected()) {
+            FileRepository.log("ChatBot.connect failed");
+
+            return new Promise(function (resolve, reject) {
+                setTimeout(function () {
+                    resolve(self.connect());
+                }, 2000);
+            });
+        } else {
+            FileRepository.log("ChatBot.connect success");
+            return Promise.resolve();
+        }
 
         function joinPartHandler(channel, username, isSelf, action) {
             const obj = {
@@ -155,9 +188,13 @@ export default class ChatBot extends HandlerMap {
     // FileRepository.log("ChatBot.login");
     // }
 
-    joinChannel(name) {
+    async joinChannel(name) {
         FileRepository.log("ChatBot.joinChannel " + name);
         let self = this;
+
+        if (!self.client) {
+            await self.connect();
+        }
 
         return self.app.twitchAPIProvider.getUserInfo({
             login: name
@@ -176,10 +213,14 @@ export default class ChatBot extends HandlerMap {
                 broadcasterId: user.id
             });
         })
-        .then(function () {
+        .then(async function () {
             FileRepository.log("ChatBot.joinChannel gonna join channel");
 
-            self?.client?.join(name).catch(function (e) {
+            if (!self.client) {
+                await self.connect();
+            }
+
+            self.client.join(name).catch(function (e) {
                 FileRepository.log("error joining channel\r\n" + e);
             });
         })

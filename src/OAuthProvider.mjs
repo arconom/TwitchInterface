@@ -71,7 +71,7 @@ export default class OAuthProvider extends HandlerMap {
                     FileRepository.log("setupListener code", match[1]);
                     self.oAuthToken = match[1];
                     self.getAccessToken(function (x) {
-						FileRepository.log("OAuthProvider.getAccessToken response: \r\n" + x);
+						FileRepository.log("OAuthProvider.getAccessToken response: \r\n" + JSON.stringify(x));
                         self.ExecuteHandlers("authorize", self);
                         self.inProgress = false;
                     });
@@ -128,9 +128,15 @@ export default class OAuthProvider extends HandlerMap {
         });
     }
 
-    authorize(callback) {
-        FileRepository.log("OAuthProvider.authorize");
+    async authorize(callback) {
         var self = this;
+        FileRepository.log("OAuthProvider.authorize \r\n" + 
+			"clientId " + this.clientId + "\r\n" + 
+			"forceVerify " + this.forceVerify + "\r\n" + 
+			"redirectUri " + this.redirectUri + "\r\n" + 
+			"scope " + this.scope + "\r\n" + 
+			"state " + this.state + "\r\n"
+		);
         this.AddHandler("authorize", callback, false);
 
         if (this.inProgress) {
@@ -138,6 +144,7 @@ export default class OAuthProvider extends HandlerMap {
         }
 
         this.state = this.getState();
+
 
         var url = "https://id.twitch.tv/oauth2/authorize?" +
             "client_id=" + encodeURIComponent(this.clientId) +
@@ -157,11 +164,32 @@ export default class OAuthProvider extends HandlerMap {
 
         this.inProgress = true;
         FileRepository.log("authorize opening " + url);
-        return open(url, {
+		
+		let result = await open(url, {
             app: {
                 name: self.preferredBrowser
             }
         });
+
+		FileRepository.log("authorize result: " + JSON.stringify(result));
+		
+		// if(!result)
+		// {
+			// FileRepository.log("authorize result undefined.  retrying");
+			// this.inProgress = false;
+			
+			// let p = new Promise(function(resolve, reject){
+				// setTimeout(async function(){
+					// resolve(await this.authorize(callback));
+				// }, 5000);
+			// });
+			
+			// return await p;
+		// }
+		// else
+		// {
+			return result;
+		// }
     }
 
     getAccessToken(callback) {

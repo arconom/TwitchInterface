@@ -141,7 +141,7 @@ class App {
             FileRepository.log("App.init before getUserInfo");
 
             App.twitchAPIProvider
-            .getUserInfo(App.config.botName,
+            .getUserInfo({login:App.config.botName},
                 function (res) {
                 if (res && res.length > 0) {
                     App.botUserInfo = res[0];
@@ -203,7 +203,7 @@ class App {
             return FileRepository.loadPlugins(orderedMap)
             .then(function (plugins) {
                 FileRepository.log("this should be visible");
-                App.loadPlugins(plugins.map(x=>x.value), orderedMap);
+                App.loadPlugins(plugins.map(x => x.value), orderedMap);
                 return Promise.resolve();
             })
             .catch(function (err) {
@@ -267,7 +267,7 @@ class App {
             }
         });
 
-        FileRepository.log("getPluginsInOrder returning " + Array.from(orderedMap.entries()).sort((a,b) => a[0] - b[0]).join("\r\n"));
+        FileRepository.log("getPluginsInOrder returning " + Array.from(orderedMap.entries()).sort((a, b) => a[0] - b[0]).join("\r\n"));
         return orderedMap;
     }
 
@@ -307,22 +307,23 @@ class App {
                     // console.log("globalstate at plugin load", Array.from(App.globalState.keys()));
                     // console.log("loading plugin", pluginToLoad.default.name);
                     pluginToLoad.default.load(App.globalState)
-/*                     ?.then(function (loadedPlugin) {
+                    /*                     ?.then(function (loadedPlugin) {
 
-                        FileRepository.log("plugin commands " + Array.from(pluginToLoad.default.commands.keys()));
+                    FileRepository.log("plugin commands " + Array.from(pluginToLoad.default.commands.keys()));
 
-                        for (var command of pluginToLoad?.default .commands?.entries()) {
-                                FileRepository.log("loading plugin function " + command[0]);
-                                App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
+                    for (var command of pluginToLoad?.default .commands?.entries()) {
+                    FileRepository.log("loading plugin function " + command[0]);
+                    App.chatBot.chatCommandManager.setCommand(command[0], command[1]);
 
-                                if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
-                                    App.chatBot.chatCommandManager.setCommandConfig(command[0], {
-                                        key: command[0]
-                                    });
-                                }
-                            }
+                    if (!App.chatBot.chatCommandManager.getCommandConfig(command[0])) {
+                    App.chatBot.chatCommandManager.setCommandConfig(command[0], {
+                    key: command[0]
                     });
- */                }
+                    }
+                    }
+                    });
+                     */
+                }
                 else {
                     FileRepository.log("plugin has no load function " + pluginToLoad.default.name);
                 }
@@ -343,12 +344,11 @@ class App {
         let keys = App.globalState.keys();
         let returnMe = [];
 
-
         for (let key of keys) {
             FileRepository.log("getActions key " + key);
             let actionKeys = App.globalState.get(key).actions?.keys();
             // returnMe = returnMe.concat(Array.from(actionKeys ?? [])
-                    // .map(x => key + "." + x));
+            // .map(x => key + "." + x));
             returnMe = returnMe.concat(Array.from(actionKeys ?? [])
                     .map(x => {
                         let action = App.globalState.get(key).actions.get(x);
@@ -900,9 +900,9 @@ class App {
 
                     // var vals = App.users.values();
                     // for (let i = 0; i < vals.length; i++) {
-                        // if (vals[i].id === args) {
-                            // return vals[i];
-                        // }
+                    // if (vals[i].id === args) {
+                    // return vals[i];
+                    // }
                     // }
                 } else if (args?.login) {
                     FileRepository.log("getting user by login");
@@ -910,9 +910,9 @@ class App {
 
                     // var vals = App.users.values();
                     // for (let i = 0; i < vals.length; i++) {
-                        // if (vals[i].login === args.login) {
-                            // return vals[i];
-                        // }
+                    // if (vals[i].login === args.login) {
+                    // return vals[i];
+                    // }
                     // }
                 } else {
                     FileRepository.log("getting all users" + JSON.stringify(App.users));
@@ -953,7 +953,7 @@ class App {
                     }
                 } else {
                     var entries = Array.from(App.currencies?.entries() ?? [])
-                    return Promise.resolve(entries);
+                        return Promise.resolve(entries);
                 }
             },
             "POST": function (args) {
@@ -965,7 +965,7 @@ class App {
                 //update currency
                 var map = new Map(args);
                 App.currencies = map;
-                console.log("App.currencies after PUT", App.currencies);
+                FileRepository.log("App.currencies after PUT", App.currencies);
                 return FileRepository.saveCurrencies(App.currencies);
             },
             "DELETE": function (args) {
@@ -989,8 +989,8 @@ class App {
                         }
                     }
                 } else {
-                    var entries = Array.from(App.variables?.entries()?? [])
-                    return Promise.resolve(entries);
+                    var entries = Array.from(App.variables?.entries() ?? [])
+                        return Promise.resolve(entries);
                 }
             },
             "POST": function (args) {
@@ -1000,10 +1000,10 @@ class App {
             },
             "PUT": function (args) {
                 //update currency
-                console.log("variables.put", args);
+                FileRepository.log("variables.put", args);
                 var map = new Map(args);
                 App.variables = map;
-                console.log("App.variables after PUT", App.variables);
+                FileRepository.log("App.variables after PUT", App.variables);
                 return FileRepository.saveVariables(App.variables);
             },
             "DELETE": function (args) {
@@ -1174,6 +1174,24 @@ class App {
 
         });
 
+        Controller.set("/chat/messagetriggers", {
+            "GET": function (args) {
+                return Promise.resolve(App.chatMessageTriggers);
+            },
+            "POST": function (args) {
+                throw "method not allowed";
+            },
+            "PUT": function (args) {
+                App.chatMessageTriggers = args;
+
+                return FileRepository.saveChatMessageTriggers(App.chatMessageTriggers);
+            },
+            "DELETE": function (args) {
+                throw "method not allowed";
+            },
+
+        });
+
         Controller.set("/plugin", {
             "GET": function (args) {
                 return Promise.resolve(Array.from(App.pluginList));
@@ -1313,7 +1331,7 @@ class App {
     }
 
     static initChatBot() {
-		// console.log("Init.initChatBot");
+        // console.log("Init.initChatBot");
 
         if (App.chatBot.isConnected()) {
             return Promise.resolve();
@@ -1390,6 +1408,39 @@ class App {
         App.pluginChatHandlers.forEach(function (handler) {
             App.chatBot.AddHandler("message", handler, true);
         });
+
+		FileRepository.log("main.js getting message triggers");
+		FileRepository.readChatMessageTriggers().then(function (result) {
+			FileRepository.log("main.js message triggers callback");
+			if(result)
+			{
+				App.chatMessageTriggers = JSON.parse(result);
+				FileRepository.log("main.js message triggers loaded " + JSON.stringify(App.chatMessageTriggers));
+			}
+			else 
+			{
+				App.chatMessageTriggers = [];
+				FileRepository.log("main.js message triggers not found, creating new");
+			}
+        });
+
+        App.chatBot.AddHandler("message", function (message) {
+				FileRepository.log("main.js message triggers callbacks " + App.chatMessageTriggers.length);
+            App.chatMessageTriggers?.forEach(function (trigger) {
+				FileRepository.log("main.js message triggers callback " + JSON.stringify(trigger));
+				FileRepository.log("main.js message triggers match \r\n" +
+				"message" + message.msg + "\r\n" +
+				"match" + message.msg.match(new RegExp(trigger.regex, "gi")));
+                if (message.msg.match(trigger.regex)) {
+					FileRepository.log("main.js message triggers regex found ");
+					FileRepository.log("main.js message trigger actions " + trigger.actions.length);
+
+                    trigger.actions.forEach(function(action){
+						App.doAction(action, message);
+					});
+                }
+            });
+        }, true);
 
         //example object passed to command
         /* {
@@ -1473,39 +1524,23 @@ class App {
                 const eventSubConfig = App.eventSubscriptionConfig.get(obj.metadata.subscription_type)[0];
                 FileRepository.log("eventSubConfig " + JSON.stringify(eventSubConfig));
 
+				//todo maybe replace event.data with message
                 eventSubConfig?.actions?.forEach(function (action) {
-                    FileRepository.log("action" + JSON.stringify(action));
-                    const pluginName = action.name.substr(0, action.name.indexOf("."));
-                    const actionName = action.name.substr(action.name.indexOf(".") + 1);
-                    const plugin = App.globalState.get(pluginName);
-
-                    if (plugin !== null && plugin !== undefined) {
-                        // FileRepository.log("plugin " + pluginName + " actions " + JSON.stringify(plugin));
-                        FileRepository.log("plugin " + pluginName + " actions " + Array.from(plugin.actions.keys()));
-                        FileRepository.log("actionName " + actionName);
-                        const actionObject = plugin.actions.get(actionName);
-                        FileRepository.log("actionObject" + JSON.stringify(actionObject));
-                        actionObject?.handler(event.data);
-                    } else {
-                        const plugins = Array.from(App.globalState.keys());
-
-                        FileRepository.log("Main.js could not find plugin " + pluginName);
-                        FileRepository.log("plugin list " + plugins);
-                    }
+					App.doAction(action.name, event.data);
                 });
+				
                 App.oscManager.send("/" + obj.metadata.subscription_type, JSON.stringify(event.data));
             }
         }, true);
         return Promise.resolve(); //App.eventSubListener.connect());
     }
 
+    /*     static doAction(key, scope) {
+    // scope is globalState
 
-/*     static doAction(key, scope) {
-        // scope is globalState
-
-        actions.get(key)(scope, perhaps the chat message);
+    actions.get(key)(scope, perhaps the chat message);
     }
- */
+     */
     static endPubSub() {
         App.isPubSubRunning = false;
         App.pubSubListener.close();
@@ -1563,34 +1598,34 @@ class App {
         return App.wallets.get(key);
     }
 
-	// ["984802343", {
-	// "id": "984802343",
-	// "login": "littlemiscakes",
-	// "username": "LittleMiscakes",
-	// "type": "",
-	// "broadcasterType": "",
-	// "description": "",
-	// "profileImageUrl": "",
-	// "offlineImageUrl": "",
-	// "viewCount": 0,
-	// "createdAt": "1970-01-01T00:00:00Z"
+    // ["984802343", {
+    // "id": "984802343",
+    // "login": "littlemiscakes",
+    // "username": "LittleMiscakes",
+    // "type": "",
+    // "broadcasterType": "",
+    // "description": "",
+    // "profileImageUrl": "",
+    // "offlineImageUrl": "",
+    // "viewCount": 0,
+    // "createdAt": "1970-01-01T00:00:00Z"
 
-    static async getUserByLogin(query)
-    {
-        const login = query.replace("@",'');
+    static async getUserByLogin(query) {
+        const login = query.replace("@", '');
         let users = Array.from(App.users.values());
         let user = users.find((x) => x.login === login);
-        
+
         FileRepository.log("App.getUserByLogin" + " " + login);
-        
-        if (!!user)
-        {
+
+        if (!!user) {
             await App.twitchAPIProvider
-            .getUserInfo({login:login},
+            .getUserInfo({
+                login: login
+            },
                 function (res) {
-                    
+
                 FileRepository.log("App.getUserByLogin res \r\n" + JSON.stringify(res));
-                    
+
                 if (res && res.length > 0) {
                     user = res[0];
                 }
@@ -1604,15 +1639,15 @@ class App {
         return user;
     }
 
-    static async getUserById(query)
-    {
+    static async getUserById(query) {
         FileRepository.log("App.getUserById" + " " + query);
         let user = users.get(query);
-        
-        if (!!user)
-        {
+
+        if (!!user) {
             return await App.twitchAPIProvider
-            .getUserInfo({id: query},
+            .getUserInfo({
+                id: query
+            },
                 function (res) {
                 if (res && res.length > 0) {
                     user = res[0];
@@ -1621,13 +1656,33 @@ class App {
             .catch(function (e) {
                 FileRepository.log("App.getUserByLogin error getting user info " + e);
             });
-        }
-        else
-        {
+        } else {
             return user;
         }
     }
 
+
+	static doAction(action, message)
+	{
+		FileRepository.log("doAction " + JSON.stringify(action));
+		const pluginName = action.key.substr(0, action.key.indexOf("."));
+		const actionName = action.key.substr(action.key.indexOf(".") + 1);
+		const plugin = App.globalState.get(pluginName);
+
+		if (plugin !== null && plugin !== undefined) {
+			// FileRepository.log("plugin " + pluginName + " actions " + JSON.stringify(plugin));
+			// FileRepository.log("plugin " + pluginName + " actions " + Array.from(plugin.actions.keys()));
+			// FileRepository.log("actionName " + actionName);
+			const actionObject = plugin.actions.get(actionName);
+			// FileRepository.log("actionObject" + JSON.stringify(actionObject));
+			actionObject?.handler(App.globalState, message, JSON.parse(action.json));
+		// } else {
+			// const plugins = Array.from(App.globalState.keys());
+
+			// FileRepository.log("Main.js could not find plugin " + pluginName);
+			// FileRepository.log("plugin list " + plugins);
+		}
+	}
 
 }
 

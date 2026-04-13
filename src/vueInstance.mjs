@@ -1,18 +1,19 @@
 import DataAccess from "./dataAccess.mjs";
-import {ChatRoles} from './ChatRoles.mjs';
-import {Constants} from "./Constants.mjs";
-import {ChatCommandConfigItem} from "./ChatCommandConfigItem.mjs";
+import { ChatRoles } from './ChatRoles.mjs';
+import { Constants } from "./Constants.mjs";
+import { ChatCommandConfigItem } from "./ChatCommandConfigItem.mjs";
 import Variable from "./Variable.mjs";
 import Currency from "./Currency.mjs";
 import User from "./User.mjs";
 import RepeatingMessage from "./RepeatingMessage.mjs";
+import MessageTrigger from "./messagetrigger.mjs";
 
 const dataAccess = new DataAccess();
 
 export const vueInstance = {
     data() {
         return {
-            
+
             activeChannels: [],
             apiScopes: new Map(),
             availableActions: [],
@@ -26,8 +27,10 @@ export const vueInstance = {
             chatCommandState: new Map(),
             chatCommands: new Map(),
             chatCommandsEnabled: true,
+            chatMessageTriggers: [],
             config: [],
             cost: 0,
+            currentChatMessageTrigger: new MessageTrigger(),
             currentChatCommandConfigItem: null,
             currentChannel: 0,
             currentVariable: null,
@@ -40,18 +43,20 @@ export const vueInstance = {
             message: "",
             newAction: {},
             newVariableJSON: "",
+            newRepeatingMessage: new RepeatingMessage(),
+			// newChatMessageTrigger: new MessageTrigger(),
             variables: new Map(),
             oscMappings: new Map(),
             pluginConfig: new Map(),
             pubsubSubscriptions: [],
             repeatingMessages: new Map(),
-            newRepeatingMessage: new RepeatingMessage(),
             savedChannels: new Set(),
             searchChatCommandState: "",
             searchChatCommandConfig: "",
             searchRepeatingMessages: "",
             searchApiScopes: "",
             searchConfig: "",
+            searchChatMessageTriggers: "",
             searchEvents: "",
             searchOscMappings: "",
             searchUsers: "",
@@ -62,6 +67,7 @@ export const vueInstance = {
             selectedEndpointKey: "",
             selectedEventSubscriptionKey: "channel.follow",
             selectedOscMappingKey: "/eventsub.message",
+            showChatMessageTriggerDialog: false,
             showChatCommandDialog: false,
             showVariableDialog: false,
             showCurrencyDialog: false,
@@ -73,114 +79,35 @@ export const vueInstance = {
             webSocket: null
         }
     },
-    watch:{
-        showChatCommandDialog(newVal, oldVal)
-        {
+    watch: {
+        showChatCommandDialog(newVal, oldVal) {
             console.log("vueInstance.watch.showChatCommandDialog");
-            if(!this.showChatCommandDialog)
-            {
+            if (!this.showChatCommandDialog) {
                 this.chatCommandConfig.set(this.currentChatCommandConfigItem.key, this.currentChatCommandConfigItem);
                 this.chatCommandConfigVersion++;
             }
         },
-        showVariableDialog(newVal, oldVal)
-        {
-            if(!this.showVariableDialog)
-            {
+        showVariableDialog(newVal, oldVal) {
+            if (!this.showVariableDialog) {
                 this.saveCurrentVariable();
             }
         },
-        showCurrencyDialog(newVal, oldVal)
-        {
-            if(!this.showCurrencyDialog)
-            {
+        showCurrencyDialog(newVal, oldVal) {
+            if (!this.showCurrencyDialog) {
                 this.saveCurrentCurrency();
             }
         },
-        "newAction.key"(newVal, oldVal)
-        {
-            this.newAction = {key: "", json: ""};
+        "newAction.key"(newVal, oldVal) {
+            this.newAction = {
+                key: "",
+                json: ""
+            };
             const action = this.availableActions.find((x) => x.displayName === newVal);
             this.newAction.key = action?.displayName ?? "";
             this.newAction.json = action?.defaultJSON ?? "";
         }
-   },
+    },
     methods: {
-        newChatCommandConfigItem_Onclick()
-        {
-            this.currentChatCommandConfigItem = new ChatCommandConfigItem(); 
-            this.showChatCommandDialog = true;
-        },
-        addVariable()
-        {
-            this.currentVariable = new Variable();
-            // this.variables.set(new Date().getTime(), new Variable());
-            this.showVariableDialog = true;
-        },
-        saveCurrentVariable()
-        {
-            let overwrite = true;
-            
-            if(this.variables.has(this.currentVariable.name))
-            {
-                overwrite = confirm("You want to overwrite this variable?");
-            }
-            
-            if(overwrite)
-            {
-                this.variables.set(this.currentVariable.name, this.currentVariable);
-            }
-        },
-        saveVariables: function () {
-            var self = this;
-
-            return dataAccess.putVariables(
-                Array.from(self.variables.entries())
-                .map((x) => {
-                    x[0] = x[1].name;
-                    return x;
-                })
-            )
-            .then(function (data) {
-                self.snackbar = true;
-                self.snackbarText = "Variables saved";
-            });
-        },
-        addCurrency()
-        {
-            this.currentCurrency = new Currency();
-            // this.currencies.set(new Date().getTime(), new Currency());
-            this.showCurrencyDialog = true;
-        },
-        saveCurrentCurrency()
-        {
-            let overwrite = true;
-            
-            if(this.currencies?.has(this.currentCurrency.name))
-            {
-                overwrite = confirm("You want to overwrite this variable?");
-            }
-            
-            if(overwrite)
-            {
-                this.currencies?.set(this.currentCurrency.name, this.currentCurrency);
-            }
-        },
-        saveCurrencies: function () {
-            var self = this;
-
-            return dataAccess.putCurrencies(
-                Array.from(self.currencies.entries())
-                .map((x) => {
-                    x[0] = x[1].name;
-                    return x;
-                })
-            )
-            .then(function (data) {
-                self.snackbar = true;
-                self.snackbarText = "Currencies saved";
-            });
-        },
         addActionToEventSubscription: function (name, key) {
             let subs = this.eventSubscriptions.get(name);
 
@@ -196,335 +123,51 @@ export const vueInstance = {
                 name: ""
             });
         },
-        removeActionFromEventSubscription: function (name, index) {
-            let sub = this.eventSubscriptions.get(name);
-
-            if (!sub?.actions) {
-                return;
-            }
-
-            sub.actions.splice(index);
-        },
-        toggleCommands: function () {
-            var self = this;
-            self.chatCommandsEnabled = !self.chatCommandsEnabled;
-            dataAccess.toggleChatCommands();
-        },
-        toggleRepeatingMessage: function (id) {
-            var self = this;
-            let rm = self.repeatingMessages.get(id);
-            rm.enabled = !rm.enabled;
-
-            dataAccess.toggleRepeatingMessage(id, rm);
-        },
-        isRepeatingMessageValid: function (repeatingMessage) {
-            return repeatingMessage.channel.length > 0 &&
-            repeatingMessage.message.length > 0 &&
-            repeatingMessage.intervalSeconds > 60;
-        },
-        authenticate: function () {
-            dataAccess.putOauth();
-        },
-        getRowColor: function (index) {
-            if (index % 2 === 0) {
-                // return "grey-darken-3";
-                return "row-even";
-            }
-            // return "grey-darken-4";
-            return "row-odd";
-        },
-        searchClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-        },
-        saveApiScopesClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-            this.saveApiScopes();
-        },
-        refreshChatCommandStateClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-            this.getChatCommandState();
-        },
-        saveChatCommandStateClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-            this.saveChatCommandState();
-        },
-        savePluginConfigClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-            this.savePluginConfig();
-        },
-        saveEventSubscriptionsClickHandler: function (event) {
-            this.saveEventSubscriptions();
-        },
-        saveOscMappingsClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-            this.saveOscMappings();
-        },
-        saveChatCommandConfigClickHandler: function (event) {
-            event.stopPropagation();
-            event.preventDefault();
-            this.saveChatCommandConfig();
-        },
-        toggleChatCommandConfig: function (key) {
-            // console.log("toggleChatCommandConfig", key);
-            var item = this.chatCommandConfig.get(key);
-            item.enabled = !item.enabled;
-            this.chatCommandConfig.set(key, item);
-        },
-        updateChatCommandConfig: function (key, value) {
-            console.log("updateChatCommandConfig", key, value);
-            this.chatCommandConfig.set(key, value);
-            this.chatCommandConfigVersion++;
-        },
-        getChatCommandState: function () {
-            var self = this;
-            return dataAccess.getChatCommandState()
-            .then(function (data) {
-                var temp = self.chatCommandState;
-                if (data?.length > 0) {
-                    data.forEach(function (x) {
-                        temp.set(x[0], x[1]);
-                    });
-                }
-            })
-            .catch(function (err) {
-                console.log(err);
-            });
-
-        },
-        saveChatCommandState: function () {
-            var self = this;
-
-            dataAccess.putChatCommandState(
-                Array.from(self.chatCommandState.entries()))
-            .then(function (data) {
-                self.snackbar = true;
-                self.snackbarText = "Chat command state saved";
-            });
-        },
-        getChatCommandConfig: function () {
-            var self = this;
-            return dataAccess.getChatCommandConfig()
-            .then(function (data) {
-                var temp = self.chatCommandConfig;
-                if (data?.length > 0) {
-                    data.forEach(function (x) {
-                        //console.log("chatCommandConfig", x);
-                        // this needs to be a number, so the v-select displays the string
-                        x[1].role = parseInt(x[1].role);
-                        temp.set(x[0], x[1]);
-                    });
-                }
-                self.chatCommandConfig = temp;
-            })
-            .then(function () {
-                self.getChatCommandState();
-            })
-            .catch(function (err) {
-                console.log(err);
-            });
-        },
-        saveChatCommandConfig: function () {
-            var self = this;
-
-            return dataAccess.putChatCommandConfig(
-                Array.from(self.chatCommandConfig.entries()))
-            .then(function (data) {
-                self.snackbar = true;
-                self.snackbarText = "Chat command config saved";
-            });
-        },
-        getEventSubCost: function () {
-            var self = this;
-            dataAccess.getEventSubCost().then(function (data) {
-                self.cost = data?.cost;
-                self.maxCost = data?.maxCost;
-            });
-        },
-        deleteUser: function (key) {
-            this.users.delete(key);
-            this.snackbar = true;
-            this.snackbarText = "User removed";
-        },
-        deleteCurrency: function (key) {
-            this.currencies.delete(key);
-            this.snackbar = true;
-            this.snackbarText = "Currency removed";
-        },
-        deleteVariable: function (key) {
-            this.variables.delete(key);
-            this.snackbar = true;
-            this.snackbarText = "Variables removed";
-        },
-        copyUser: function (key) {
-            navigator.clipboard.writeText(key);
-            this.snackbar = true;
-            this.snackbarText = "Id copied";
-        },
-        saveApiScopes: function () {
-            var self = this;
-            var arr = [];
-
-            for (const [key, value] of self.apiScopes.entries()) {
-
-                if (value.value) {
-                    arr.push(key);
-                }
-            }
-
-            dataAccess.putActiveApiScopes(arr)
-            .then(function (data) {
-                self.snackbar = true;
-                self.snackbarText = "Api scopes saved";
-            });
-        },
-        saveChatScopes: function () {
-            var self = this;
-            var arr = [];
-
-            for (const [key, value] of self.chatScopes.entries()) {
-
-                if (value.value) {
-                    arr.push(key);
-                }
-            }
-
-            dataAccess.putActiveChatScopes(arr)
-            .then(function (data) {
-                self.snackbar = true;
-                self.snackbarText = "Chat scopes saved";
-            });
-        },
-        submitApiRequest: function () {
-            var self = this;
-            self.selectedEndpoint.key = this.selectedEndpointKey;
-
-            const keys = Object.keys(self.selectedEndpoint.args);
-            
-            keys.forEach(function(key){
-                if(self.selectedEndpoint.args[key] == ""){
-                    delete self.selectedEndpoint.args[key];
-                }
-            });
-
-            if (self.selectedEndpoint.args.choices) {
-                self.selectedEndpoint.args.choices = self.selectedEndpoint.args.choices.replace('\"', '"');
-            }
-
-            dataAccess.useEndpoint(self.selectedEndpoint)
-            .then(function (data) {
-                if (self.selectedEndpoint.key === "getUserInfo") {
-                    self.users.set(data[0].id, new User(data[0]));
-                }
-                self.snackbar = true;
-                self.snackbarText = "API result: " + JSON.stringify(data);
-            });
-        },
-        deleteConfig: function (index) {
-            this.config.splice(index, 1);
-        },
-        updateConfig: function (index, item) {
-            this.config[index] = {
-                title: item.title,
-                value: item.value
-            };
-        },
-        saveConfig: function () {
-            dataAccess.putConfig(this.config);
-        },
         addChannel: function (channel) {
             this.savedChannels.add(channel);
             dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
         },
-        removeChannel: function (channel) {
-            this.savedChannels.delete(channel);
-            dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
-        },
         addConfig: function (item) {
             console.log("addConfig", item);
-            this.config.unshift({"title": "new item", "value": "value"});
+            this.config.unshift({
+                "title": "new item",
+                "value": "value"
+            });
         },
-        deleteSecret: function (index) {
-            this.secrets.splice(index, 1);
+        addCurrency() {
+            this.currentCurrency = new Currency();
+            // this.currencies.set(new Date().getTime(), new Currency());
+            this.showCurrencyDialog = true;
         },
-        updateSecret: function (index, item) {
-            this.secrets[index] = {
-                title: item.title,
-                value: item.value
-            };
+        addEventSubscription: function () {
+            this.selectedEventSubscriptionType.enabled = true;
+
+            if (this.eventSubscriptions.has(this.selectedEventSubscriptionType.name)) {
+                var list = this.eventSubscriptions.get(this.selectedEventSubscriptionType.name);
+                list.push(this.selectedEventSubscriptionType);
+                this.eventSubscriptions.set(this.selectedEventSubscriptionType.name, list);
+            } else {
+                this.eventSubscriptions.set(this.selectedEventSubscriptionType.name, [this.selectedEventSubscriptionType]);
+            }
+
+            this.saveEventSubscriptions();
         },
-        saveSecrets: function () {
-            dataAccess.putSecrets(this.secrets);
+        addRepeatingMessage: function (e) {
+            var self = this;
+            this.repeatingMessages.set(new Date().getTime(), self.newRepeatingMessage);
+            e.preventDefault();
+            e.stopPropagation();
         },
         addSecret: function (item) {
             this.secrets.push(item);
         },
-        startEventSub: function () {
-            var self = this;
-            dataAccess.getStartEventSub()
-            .then(function (data) {
-                setTimeout(function () {
-                    self.getEventSubCost();
-                }, 1000);
-                self.eventSubStarted = true;
-                self.snackbar = true;
-                self.snackbarText = "Event Sub started";
-            });
+        addVariable() {
+            this.currentVariable = new Variable();
+            // this.variables.set(new Date().getTime(), new Variable());
+            this.showVariableDialog = true;
         },
-        endEventSub: function () {
-            var self = this;
-            dataAccess.getEndEventSub()
-            .then(function (data) {
-                self.eventSubStarted = false;
-                self.snackbar = true;
-                self.snackbarText = "Event Sub ended";
-            });
-        },
-        startChat: function () {
-            var self = this;
-
-            if (!self.chatConnected) {
-                return dataAccess.getStartChat()
-                .then(function () {
-                    self.chatConnected = true;
-                })
-                .then(function () {
-                    setTimeout(function () {
-                        self.savedChannels.forEach(function (x) {
-                            self.joinChannel(x);
-                        });
-                    }, 1000);
-                })
-            }
-        },
-        leaveChannel: function () {
-            var self = this;
-            dataAccess.leaveChannel(self.activeChannels[self.currentChannel]).then(x => {
-                self.snackbarText = "Left channel " + self.activeChannels[self.currentChannel];
-                self.snackbar = true;
-                self.activeChannels.splice(self.currentChannel, 1);
-                self.currentChannel = 0;
-            });
-        },
-        joinCurrentChannel: function () {
-            this.joinChannel(this.channel);
-        },
-        joinChannel: function (channel) {
-            var self = this;
-            if (self.activeChannels.indexOf(channel) === -1) {
-                dataAccess.joinChannel(channel).then(function (result) {
-                    self.activeChannels.push(channel);
-                    self.snackbarText = "Joined channel " + channel;
-                    self.snackbar = true;
-                }).catch(function (err) {
-                    console.log('joinChannel err', err);
-                });
-            }
+        authenticate: function () {
+            dataAccess.putOauth();
         },
         createWebSocket: function () {
             var self = this;
@@ -562,95 +205,167 @@ export const vueInstance = {
                 }
             });
         },
-        saveOscMappings: function () {
-            var arr = Array.from(this.oscMappings);
-
-            return dataAccess.putOscEvents(arr)
-            .then(function () {
-                self.snackbarText = "OSC settings saved";
+        copyUser: function (key) {
+            navigator.clipboard.writeText(key);
+            this.snackbar = true;
+            this.snackbarText = "Id copied";
+        },
+        deleteConfig: function (index) {
+            this.config.splice(index, 1);
+        },
+        deleteCurrency: function (key) {
+            this.currencies.delete(key);
+            this.snackbar = true;
+            this.snackbarText = "Currency removed";
+        },
+        deleteRepeatingMessage: function (id) {
+            dataAccess.deleteRepeatingMessage(id);
+            this.repeatingMessages.delete(id);
+        },
+        deleteSecret: function (index) {
+            this.secrets.splice(index, 1);
+        },
+        deleteUser: function (key) {
+            this.users.delete(key);
+            this.snackbar = true;
+            this.snackbarText = "User removed";
+        },
+        deleteVariable: function (key) {
+            this.variables.delete(key);
+            this.snackbar = true;
+            this.snackbarText = "Variables removed";
+        },
+        endEventSub: function () {
+            var self = this;
+            dataAccess.getEndEventSub()
+            .then(function (data) {
+                self.eventSubStarted = false;
                 self.snackbar = true;
+                self.snackbarText = "Event Sub ended";
             });
         },
-        saveRepeatingMessages: function (e) {
-            var arr = Array.from(this.repeatingMessages.entries());
-            e.preventDefault();
-            e.stopPropagation();
-
-            return dataAccess.putRepeatingMessages(arr)
-            .then(function () {
-                self.snackbarText = "Repeating Messages saved";
-                self.snackbar = true;
-            });
-
+        getChannelTabClass: function (i) {
+            return "background-color: " +
+            this.currentChannel === i ? "primary" : "secondary";
         },
-        saveEventSubscriptions: function () {
-            return dataAccess.updateSubscriptions(Array.from(this.eventSubscriptions.entries()))
-            .then(function () {
-                self.snackbarText = "Event subscriptions saved";
-                self.snackbar = true;
-            });
-        },
-        savePluginConfig: function () {
-            return dataAccess.putPluginConfig(Array.from(this.pluginConfig.entries()))
-            .then(function () {
-                self.snackbarText = "Plugin Config saved.  Restart the bot to see the changes.";
-                self.snackbar = true;
-            });
-        },
-        setApiScopes: function (name, value) {
-            var temp = this.apiScopes;
-            var val = temp.get(name);
-            val.value = value;
-            this.apiScopes = temp;
-        },
-        setChatScopes: function (name, value) {
-            var temp = this.chatScopes;
-            var val = temp.get(name);
-            val.value = value;
-            this.chatScopes = temp;
-        },
-        setOscEvent: function (name, value) {
-            var temp = this.oscMappings;
-            temp.set(name, value);
-            this.oscMappings = temp;
-        },
-        setPluginConfig: function (name, value) {
-            var temp = this.pluginConfig;
-            
-            let item = temp.get(name);
-            item.active = value;
-            temp.set(name, item);
-
-            this.pluginConfig = temp;
-        },
-        addEventSubscription: function () {
-            this.selectedEventSubscriptionType.enabled = true;
-
-            if (this.eventSubscriptions.has(this.selectedEventSubscriptionType.name)) {
-                var list = this.eventSubscriptions.get(this.selectedEventSubscriptionType.name);
-                list.push(this.selectedEventSubscriptionType);
-                this.eventSubscriptions.set(this.selectedEventSubscriptionType.name, list);
-            } else {
-                this.eventSubscriptions.set(this.selectedEventSubscriptionType.name, [this.selectedEventSubscriptionType]);
-            }
-
-            this.saveEventSubscriptions();
-        },
-        setEventSubscription: function (key, index, value) {
-            //because of the way we are rendering the list and storing the data,
-            //the index doesn't point to the array index within the key,
-            //so we have to count from the beginning until we reach the index.
-            var counter = 0;
-
-            for (var key of this.eventSubscriptions.keys()) {
-                var list = this.eventSubscriptions.get(key);
-                if (counter + list.length > index) {
-                    list[index - counter].enabled = value;
-                    return;
-                } else {
-                    counter += list.length;
+        getChatCommandConfig: function () {
+            var self = this;
+            return dataAccess.getChatCommandConfig()
+            .then(function (data) {
+                var temp = self.chatCommandConfig;
+                if (data?.length > 0) {
+                    data.forEach(function (x) {
+                        //console.log("chatCommandConfig", x);
+                        // this needs to be a number, so the v-select displays the string
+                        x[1].role = parseInt(x[1].role);
+                        temp.set(x[0], x[1]);
+                    });
                 }
+                self.chatCommandConfig = temp;
+            })
+            .then(function () {
+                self.getChatCommandState();
+            })
+            .catch(function (err) {
+                console.log(err);
+            });
+        },
+        getChatCommandState: function () {
+            var self = this;
+            return dataAccess.getChatCommandState()
+            .then(function (data) {
+                var temp = self.chatCommandState;
+                if (data?.length > 0) {
+                    data.forEach(function (x) {
+                        temp.set(x[0], x[1]);
+                    });
+                }
+            })
+            .catch(function (err) {
+                console.log(err);
+            });
+
+        },
+        getEventSubCost: function () {
+            var self = this;
+            dataAccess.getEventSubCost().then(function (data) {
+                self.cost = data?.cost;
+                self.maxCost = data?.maxCost;
+            });
+        },
+        getMessageDisplay: function (item) {
+            return item.context.username + ' : ' + item.msg;
+        },
+        getRoleDisplay: function (role) {
+            var roleMap = new Map();
+
+            roleMap.set(0, "viewer");
+            roleMap.set(1, "vip");
+            roleMap.set(2, "subscriber");
+            roleMap.set(3, "moderator");
+            roleMap.set(4, "broadcaster");
+
+            return roleMap.get(role.toLowerCase());
+
+        },
+        getRowColor: function (index) {
+            if (index % 2 === 0) {
+                // return "grey-darken-3";
+                return "row-even";
             }
+            // return "grey-darken-4";
+            return "row-odd";
+        },
+        isRepeatingMessageValid: function (repeatingMessage) {
+            return repeatingMessage.channel.length > 0 &&
+            repeatingMessage.message.length > 0 &&
+            repeatingMessage.intervalSeconds > 60;
+        },
+        joinCurrentChannel: function () {
+            this.joinChannel(this.channel);
+        },
+        joinChannel: function (channel) {
+            var self = this;
+            if (self.activeChannels.indexOf(channel) === -1) {
+                dataAccess.joinChannel(channel).then(function (result) {
+                    self.activeChannels.push(channel);
+                    self.snackbarText = "Joined channel " + channel;
+                    self.snackbar = true;
+                }).catch(function (err) {
+                    console.log('joinChannel err', err);
+                });
+            }
+        },
+        leaveChannel: function () {
+            var self = this;
+            dataAccess.leaveChannel(self.activeChannels[self.currentChannel]).then(x => {
+                self.snackbarText = "Left channel " + self.activeChannels[self.currentChannel];
+                self.snackbar = true;
+                self.activeChannels.splice(self.currentChannel, 1);
+                self.currentChannel = 0;
+            });
+        },
+        newChatCommandConfigItem_Onclick() {
+            this.currentChatCommandConfigItem = new ChatCommandConfigItem();
+            this.showChatCommandDialog = true;
+        },
+        refreshChatCommandStateClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.getChatCommandState();
+        },
+        removeActionFromEventSubscription: function (name, index) {
+            let sub = this.eventSubscriptions.get(name);
+
+            if (!sub?.actions) {
+                return;
+            }
+
+            sub.actions.splice(index);
+        },
+        removeChannel: function (channel) {
+            this.savedChannels.delete(channel);
+            dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
         },
         removeEventSubscription: function (index) {
             //because of the way we are rendering the list and storing the data,
@@ -671,38 +386,356 @@ export const vueInstance = {
                 }
             }
         },
+        saveApiScopesClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveApiScopes();
+        },
+        saveApiScopes: function () {
+            var self = this;
+            var arr = [];
+
+            for (const [key, value] of self.apiScopes.entries()) {
+
+                if (value.value) {
+                    arr.push(key);
+                }
+            }
+
+            dataAccess.putActiveApiScopes(arr)
+            .then(function (data) {
+                self.snackbar = true;
+                self.snackbarText = "Api scopes saved";
+            });
+        },
+        saveChatScopes: function () {
+            var self = this;
+            var arr = [];
+
+            for (const [key, value] of self.chatScopes.entries()) {
+
+                if (value.value) {
+                    arr.push(key);
+                }
+            }
+
+            dataAccess.putActiveChatScopes(arr)
+            .then(function (data) {
+                self.snackbar = true;
+                self.snackbarText = "Chat scopes saved";
+            });
+        },
+        saveChatCommandConfig: function () {
+            var self = this;
+
+            return dataAccess.putChatCommandConfig(
+                Array.from(self.chatCommandConfig.entries()))
+            .then(function (data) {
+                self.snackbar = true;
+                self.snackbarText = "Chat command config saved";
+            });
+        },
+        saveChatCommandState: function () {
+            var self = this;
+
+            dataAccess.putChatCommandState(
+                Array.from(self.chatCommandState.entries()))
+            .then(function (data) {
+                self.snackbar = true;
+                self.snackbarText = "Chat command state saved";
+            });
+        },
+        saveChatCommandStateClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveChatCommandState();
+        },
+        saveChatCommandConfigClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveChatCommandConfig();
+        },
+        saveConfig: function () {
+            dataAccess.putConfig(this.config);
+        },
+        saveCurrencies: function () {
+            var self = this;
+
+            return dataAccess.putCurrencies(
+                Array.from(self.currencies.entries())
+                .map((x) => {
+                    x[0] = x[1].name;
+                    return x;
+                }))
+            .then(function (data) {
+                self.snackbar = true;
+                self.snackbarText = "Currencies saved";
+            });
+        },
+        saveCurrentCurrency() {
+            let overwrite = true;
+
+            if (this.currencies?.has(this.currentCurrency.name)) {
+                overwrite = confirm("You want to overwrite this variable?");
+            }
+
+            if (overwrite) {
+                this.currencies?.set(this.currentCurrency.name, this.currentCurrency);
+            }
+        },
+        saveCurrentVariable() {
+            let overwrite = true;
+
+            if (this.variables.has(this.currentVariable.name)) {
+                overwrite = confirm("You want to overwrite this variable?");
+            }
+
+            if (overwrite) {
+                this.variables.set(this.currentVariable.name, this.currentVariable);
+            }
+        },
+        saveEventSubscriptionsClickHandler: function (event) {
+            this.saveEventSubscriptions();
+        },
+        saveOscMappingsClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.saveOscMappings();
+        },
+        savePluginConfigClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.savePluginConfig();
+        },
+        saveSecrets: function () {
+            dataAccess.putSecrets(this.secrets);
+        },
+        saveVariables: function () {
+            var self = this;
+
+            return dataAccess.putVariables(
+                Array.from(self.variables.entries())
+                .map((x) => {
+                    x[0] = x[1].name;
+                    return x;
+                }))
+            .then(function (data) {
+                self.snackbar = true;
+                self.snackbarText = "Variables saved";
+            });
+        },
+        saveOscMappings: function () {
+            var arr = Array.from(this.oscMappings);
+
+            return dataAccess.putOscEvents(arr)
+            .then(function () {
+                self.snackbarText = "OSC settings saved";
+                self.snackbar = true;
+            });
+        },
+        saveRepeatingMessages: function (e) {
+			console.log("saveRepeatingMessages");
+            var arr = Array.from(this.repeatingMessages.entries());
+            e.preventDefault();
+            e.stopPropagation();
+
+            return dataAccess.putRepeatingMessages(arr)
+            .then(function () {
+                self.snackbarText = "Repeating Messages saved";
+                self.snackbar = true;
+            });
+
+        },
+        saveChatMessageTriggers: function (e) {
+			console.log("saveChatMessageTriggers");
+            e.preventDefault();
+            e.stopPropagation();
+
+            return dataAccess.putChatMessageTriggers(this.chatMessageTriggers)
+            .then(function () {
+                self.snackbarText = "Message Triggers saved";
+                self.snackbar = true;
+            });
+        },
+        saveEventSubscriptions: function () {
+            return dataAccess.updateSubscriptions(Array.from(this.eventSubscriptions.entries()))
+            .then(function () {
+                self.snackbarText = "Event subscriptions saved";
+                self.snackbar = true;
+            });
+        },
+        savePluginConfig: function () {
+            return dataAccess.putPluginConfig(Array.from(this.pluginConfig.entries()))
+            .then(function () {
+                self.snackbarText = "Plugin Config saved.  Restart the bot to see the changes.";
+                self.snackbar = true;
+            });
+        },
         say: function () {
             dataAccess.say(this.activeChannels[this.currentChannel], this.message);
         },
-        getChannelTabClass: function (i) {
-            return "background-color: " +
-            this.currentChannel === i ? "primary" : "secondary";
+        setApiScopes: function (name, value) {
+            var temp = this.apiScopes;
+            var val = temp.get(name);
+            val.value = value;
+            this.apiScopes = temp;
         },
-        getMessageDisplay: function (item) {
-            return item.context.username + ' : ' + item.msg;
-        },
-        getRoleDisplay: function (role) {
-            var roleMap = new Map();
-
-            roleMap.set(0, "viewer");
-            roleMap.set(1, "vip");
-            roleMap.set(2, "subscriber");
-            roleMap.set(3, "moderator");
-            roleMap.set(4, "broadcaster");
-
-            return roleMap.get(role.toLowerCase());
-
-        },
-        deleteRepeatingMessage: function (id) {
-            dataAccess.deleteRepeatingMessage(id);
-            this.repeatingMessages.delete(id);
-        },
-        addRepeatingMessage: function (e) {
+        setChatMessageTrigger: function () {
+			console.log("addChatMessageTrigger");
             var self = this;
-            this.repeatingMessages.set(new Date().getTime(), self.newRepeatingMessage);
-            e.preventDefault();
-            e.stopPropagation();
+			
+			if(!self.chatMessageTriggers)
+			{
+				self.chatMessageTriggers = [];
+			}
+			
+			let hasId = false;
+			
+			for ( let i = 0; i < self.chatMessageTriggers.length; i++)
+			{
+				if(self.chatMessageTriggers[i].id == self.currentChatMessageTrigger.id)
+				{
+					hasId = true;
+					self.chatMessageTriggers[i] = self.currentChatMessageTrigger;
+				}
+			}
+
+			if(!hasId)
+			{
+				self.chatMessageTriggers.push(self.currentChatMessageTrigger);
+			}
         },
+        setChatScopes: function (name, value) {
+            var temp = this.chatScopes;
+            var val = temp.get(name);
+            val.value = value;
+            this.chatScopes = temp;
+        },
+        setEventSubscription: function (key, index, value) {
+            //because of the way we are rendering the list and storing the data,
+            //the index doesn't point to the array index within the key,
+            //so we have to count from the beginning until we reach the index.
+            var counter = 0;
+
+            for (var key of this.eventSubscriptions.keys()) {
+                var list = this.eventSubscriptions.get(key);
+                if (counter + list.length > index) {
+                    list[index - counter].enabled = value;
+                    return;
+                } else {
+                    counter += list.length;
+                }
+            }
+        },
+        setOscEvent: function (name, value) {
+            var temp = this.oscMappings;
+            temp.set(name, value);
+            this.oscMappings = temp;
+        },
+        setPluginConfig: function (name, value) {
+            var temp = this.pluginConfig;
+
+            let item = temp.get(name);
+            item.active = value;
+            temp.set(name, item);
+
+            this.pluginConfig = temp;
+        },
+        searchClickHandler: function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        },
+        startChat: function () {
+            var self = this;
+
+            if (!self.chatConnected) {
+                return dataAccess.getStartChat()
+                .then(function () {
+                    self.chatConnected = true;
+                })
+                .then(function () {
+                    setTimeout(function () {
+                        self.savedChannels.forEach(function (x) {
+                            self.joinChannel(x);
+                        });
+                    }, 1000);
+                })
+            }
+        },
+        startEventSub: function () {
+            var self = this;
+            dataAccess.getStartEventSub()
+            .then(function (data) {
+                setTimeout(function () {
+                    self.getEventSubCost();
+                }, 1000);
+                self.eventSubStarted = true;
+                self.snackbar = true;
+                self.snackbarText = "Event Sub started";
+            });
+        },
+        submitApiRequest: function () {
+            var self = this;
+            self.selectedEndpoint.key = this.selectedEndpointKey;
+
+            const keys = Object.keys(self.selectedEndpoint.args);
+
+            keys.forEach(function (key) {
+                if (self.selectedEndpoint.args[key] == "") {
+                    delete self.selectedEndpoint.args[key];
+                }
+            });
+
+            if (self.selectedEndpoint.args.choices) {
+                self.selectedEndpoint.args.choices = self.selectedEndpoint.args.choices.replace('\"', '"');
+            }
+
+            dataAccess.useEndpoint(self.selectedEndpoint)
+            .then(function (data) {
+                if (self.selectedEndpoint.key === "getUserInfo") {
+                    self.users.set(data[0].id, new User(data[0]));
+                }
+                self.snackbar = true;
+                self.snackbarText = "API result: " + JSON.stringify(data);
+            });
+        },
+        toggleCommands: function () {
+            var self = this;
+            self.chatCommandsEnabled = !self.chatCommandsEnabled;
+            dataAccess.toggleChatCommands();
+        },
+        toggleRepeatingMessage: function (id) {
+            var self = this;
+            let rm = self.repeatingMessages.get(id);
+            rm.enabled = !rm.enabled;
+
+            dataAccess.toggleRepeatingMessage(id, rm);
+        },
+        toggleChatCommandConfig: function (key) {
+            // console.log("toggleChatCommandConfig", key);
+            var item = this.chatCommandConfig.get(key);
+            item.enabled = !item.enabled;
+            this.chatCommandConfig.set(key, item);
+        },
+        updateChatCommandConfig: function (key, value) {
+            console.log("updateChatCommandConfig", key, value);
+            this.chatCommandConfig.set(key, value);
+            this.chatCommandConfigVersion++;
+        },
+        updateConfig: function (index, item) {
+            this.config[index] = {
+                title: item.title,
+                value: item.value
+            };
+        },
+        updateSecret: function (index, item) {
+            this.secrets[index] = {
+                title: item.title,
+                value: item.value
+            };
+        },
+
+        //todo did I start doing something here and not finish
         pluginDrag: function (index) {
             console.log("pluginDrag");
             this.draggingPluginIndex = index;
@@ -724,26 +757,25 @@ export const vueInstance = {
             this.draggingPluginIndex = null;
             event.target.classList.remove("drag-target");
         },
-        
-//todo did I start doing something here and not finish        
-pluginDragEnter:function(e){
-    e.target.classList.add("drag-target");
-    e.preventDefault();
-},
-pluginDragLeave:function(e){
-    e.target.classList.remove("drag-target");
-},
 
-pluginDragOver:function(e){
-    e.preventDefault();
-},
+        pluginDragEnter: function (e) {
+            e.target.classList.add("drag-target");
+            e.preventDefault();
+        },
+        pluginDragLeave: function (e) {
+            e.target.classList.remove("drag-target");
+        },
 
+        pluginDragOver: function (e) {
+            e.preventDefault();
+        },
 
-        
-        
     },
     computed: {
-        availableActionsDisplay: function(){
+        chatMessageTriggersDisplay: function () {
+            return this.chatMessageTriggers.filter((x) => x.regex.indexOf(this.searchChatMessageTriggers) > -1);
+        },
+        availableActionsDisplay: function () {
             return this.availableActions.map((x) => x.displayName);
         },
         areRepeatingMessagesValid: function () {
@@ -765,17 +797,16 @@ pluginDragOver:function(e){
             return true;
         },
         configDisplay: function () {
-            
+
             var self = this;
             console.log("configDisplay", self?.config);
-            
+
             return self.config.filter(function (x) {
-                
-                if(!x?.title)
-                {
+
+                if (!x?.title) {
                     return false;
                 }
-                
+
                 const titleMatch = x?.title?.indexOf(self.searchConfig) > -1;
 
                 let val;
@@ -794,12 +825,11 @@ pluginDragOver:function(e){
         variablesDisplay: function () {
             var self = this;
             console.log("variablesDisplay", self?.variables);
-            
-            if(!self.variables)
-            {
+
+            if (!self.variables) {
                 return [];
             }
-            
+
             return Array.from(self.variables.values()).filter(function (x) {
                 const titleMatch = x?.name?.indexOf(self.searchVariables) > -1;
                 return titleMatch;
@@ -809,9 +839,8 @@ pluginDragOver:function(e){
         currenciesDisplay: function () {
             var self = this;
             console.log("currenciesDisplay", self?.currencies);
-            
-            if(!self.currencies)
-            {
+
+            if (!self.currencies) {
                 return [];
             }
 
@@ -827,7 +856,7 @@ pluginDragOver:function(e){
                 Object.values(x).some((v) => typeof v === "string" ?
                     v.indexOf(this.searchPlugins) > -1
                      : false))
-                    .sort((a,b)=>a[1].order - b[1].order);
+            .sort((a, b) => a[1].order - b[1].order);
         },
         roles: function () {
             return Array.from(ChatRoles.entries()).map(x => {
@@ -940,37 +969,37 @@ pluginDragOver:function(e){
 
             // commented because this seems always truthy
             // if (this.chatCommandConfigVersion) {
-                var ret = Array.from(self.chatCommandConfig.keys())
-                    .map((x) => {
-                        let returnMe = self.chatCommandConfig.get(x);
-                        returnMe.key = x;
-                        return returnMe;
-                    })
-                    .filter((x) =>
-                        Object.values(x).some((v) => typeof v === "string" &&
-                            v.indexOf(this.searchChatCommandConfig) > -1))
-                    .sort((a, b) => {
-                        if (a.key < b.key) {
-                            return -1;
-                        } else if (a.key > b.key) {
-                            return 1;
-                        } else if (a.key == b.key) {
-                            return 0;
-                        }
-                    })
-                    .sort((a, b) => {
-                        if (a.enabled & !b.enabled) {
-                            return -1;
-                        } else if (!a.enabled & b.enabled) {
-                            return 1;
-                        } else if (a.enabled == b.enabled) {
-                            return 0;
-                        }
-                    });
+            var ret = Array.from(self.chatCommandConfig.keys())
+                .map((x) => {
+                    let returnMe = self.chatCommandConfig.get(x);
+                    returnMe.key = x;
+                    return returnMe;
+                })
+                .filter((x) =>
+                    Object.values(x).some((v) => typeof v === "string" &&
+                        v.indexOf(this.searchChatCommandConfig) > -1))
+                .sort((a, b) => {
+                    if (a.key < b.key) {
+                        return -1;
+                    } else if (a.key > b.key) {
+                        return 1;
+                    } else if (a.key == b.key) {
+                        return 0;
+                    }
+                })
+                .sort((a, b) => {
+                    if (a.enabled & !b.enabled) {
+                        return -1;
+                    } else if (!a.enabled & b.enabled) {
+                        return 1;
+                    } else if (a.enabled == b.enabled) {
+                        return 0;
+                    }
+                });
 
-                console.log("chatCommandConfigDisplay", ret);
+            console.log("chatCommandConfigDisplay", ret);
 
-                return ret;
+            return ret;
             // }
         },
         apiScopesDisplay: function () {
@@ -1156,7 +1185,7 @@ pluginDragOver:function(e){
                         value: data[key]
                     });
                     // if (!data.tmi || data.tmi?.length === 0) {
-                        // self.currentTab = "secrets";
+                    // self.currentTab = "secrets";
                     // }
                 });
             }
@@ -1206,7 +1235,7 @@ pluginDragOver:function(e){
         dataAccess.getAvailableActions()
         .then(function (data) {
             console.log("mounted dataAccess.getAvailableActions", data);
-            if(data.length > 0){
+            if (data.length > 0) {
                 self.availableActions = data;
             }
         })
@@ -1226,6 +1255,19 @@ pluginDragOver:function(e){
         .catch(function (err) {
             console.log(err);
         });
+
+		setTimeout(function(){
+			dataAccess.getChatMessageTriggers()
+			.then(function (data) {
+				console.log("getChatMessageTriggers", data);
+				if (data?.length > 0) {
+					self.chatMessageTriggers = data;
+				}
+			})
+			.catch(function (err) {
+				console.log(err);
+			});
+		}, 5000);
 
         dataAccess.getChatScopes()
         .then(function (data) {

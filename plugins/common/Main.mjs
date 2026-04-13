@@ -176,7 +176,7 @@ commonActions.set("Give Currency To All Chatters", {
 
         App.chatBot.getChannelChatters(channel)
         .then(function (chatters) {
-            chatters.forEach(function (chatter) {
+            chatters?.forEach(function (chatter) {
                 FileRepository.log("Adding Currency to chatter" + JSON.stringify(chatter));
                 // add currency to each chatter's wallet
                 let currency = new Currency(App.currencies.get(json.currencyName));
@@ -373,12 +373,13 @@ commonActions.set("Random Message", {
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
 
-        FileRepository.log("Random Message " + JSON.stringify(json));
+        // FileRepository.log("Random Message json " + json);
 
         let name = obj.args[0];
         if (!name) {
             name = getNickname();
         }
+		
         const message = json.messages[Math.floor(Math.random() * json.messages.length)];
         App.chatBot.sendMessage(obj.target, message.replace("${name}", name));
 

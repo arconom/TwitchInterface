@@ -175,8 +175,62 @@ pointer-events: none;
                 </v-card>
             </v-dialog>
 
-			<v-app-bar title="Popular Rhinoceros Twitch Bot"></v-app-bar>
-			<v-main>
+
+            <v-dialog v-model="showChatMessageTriggerDialog" width="75%">
+                <v-card>
+                    <v-card-text>
+						<v-row>
+							<v-col cols="12" sm="12">
+								<v-text-field 
+								label="Regex" 
+								v-model="currentChatMessageTrigger.regex"></v-text-field>
+							</v-col>
+						</v-row>
+
+						<v-row>
+							<v-col>
+								<v-label>Actions</v-label>
+							</v-col>
+						</v-row>
+						<v-row>
+							<v-col cols="11">
+								<v-combobox :items="availableActionsDisplay" v-model="newAction.key"></v-combobox>
+							</v-col>
+							<v-col cols="12" sm="12">
+								<v-text-field 
+								label="json" 
+								:placeholder="newAction.defaultJSON"
+								v-model="newAction.json"></v-text-field>
+							</v-col>
+							<v-col cols="1">
+								<v-btn @click="currentChatMessageTrigger.actions.push(newAction); newAction = {key: '', json: ''}" 
+									color="primary"><v-icon icon="mdi-plus-circle"></v-icon></v-btn>
+							</v-col>
+						</v-row>
+						<v-row v-for="(action,j) in currentChatMessageTrigger?.actions" :key="j">
+							<v-col cols="11">
+								<v-label>{{action.key}}</v-label>
+							</v-col>
+							<v-col cols="1">
+								<v-btn @click="currentChatMessageTrigger?.actions?.splice(j,1)" color="error"><v-icon icon="mdi-delete"></v-icon></v-btn>
+							</v-col>
+							<v-col cols="12">
+								<div>{{action.json}}</div>
+							</v-col>
+						</v-row>
+                    </v-card-text>
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      text="Close Dialog"
+                      @click.stop.prev="function(e){setChatMessageTrigger(); showChatMessageTriggerDialog = false;}"
+                    >Close</v-btn>
+                  </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+
+			<v-app-bar title="Popular Rhinoceros Twitch Bot">
 				<v-tabs v-model="currentTab">
 					<v-tab value="chat">Chat</v-tab>
 					<v-tab value="variables">Variables</v-tab>
@@ -189,6 +243,8 @@ pointer-events: none;
 					<v-tab value="config">Config</v-tab>
 					<v-tab value="secrets">Secrets</v-tab>
 				</v-tabs>
+			</v-app-bar>
+			<v-main>
 				<v-window v-model="currentTab">
 					<v-window-item value="chat">
 						<v-container>
@@ -226,7 +282,7 @@ pointer-events: none;
 								<v-expansion-panel>
 									<v-expansion-panel-title>
 													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveRepeatingMessages" :disabled="areRepeatingMessagesValid">Save</v-btn>
-													<v-btn style="margin-right: 2em;" color="primary" @click.stop="addRepeatingMessage">Add</v-btn>1
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="addRepeatingMessage">Add</v-btn>
 												Repeating Messages
 												"./data/repeatingMessages.json"
 									</v-expansion-panel-title>
@@ -259,6 +315,34 @@ pointer-events: none;
 												<v-text-field label="Message" v-model="item.message"></v-text-field>
 											</v-col>
 										</v-row>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveChatMessageTriggers" >Save</v-btn>
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="showChatMessageTriggerDialog = true">Add</v-btn>
+												Chat Message Triggers
+												"./data/chatmessagetriggers.json"
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+
+
+										<v-text-field placeholder="Search" 
+											@click="searchClickHandler"
+											v-model="searchChatMessageTriggers"></v-text-field>
+										
+										<v-row v-for="(item, i) in chatMessageTriggersDisplay">
+											<v-col sm="10">
+												<v-text-field label="Regex" v-model="item.regex"></v-text-field>
+											</v-col>
+											<v-col sm="1">
+												<v-btn style="margin-right: 2em;" color="primary" @click="function(e){showChatMessageTriggerDialog = true; currentChatMessageTrigger = item;}"><v-icon icon="mdi-pencil" /></v-btn>
+											</v-col>
+											<v-col sm="1">
+												<v-btn style="margin-right: 2em;" color="error" @click="deleteChatMessageTrigger(item.id)"><v-icon icon="mdi-delete" /></v-btn>
+											</v-col>
+										</v-row>
+
 									</v-expansion-panel-text>
 								</v-expansion-panel>
 								<v-expansion-panel>

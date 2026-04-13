@@ -80,6 +80,14 @@ export const FileRepository = {
         return this.readFileAsync("./data/commandConfig.json");
     },
 
+    saveChatMessageTriggers: function (state) {
+        return this.writeJsonFileAsync("./data/chatmessagetriggers.json", state);
+    },
+
+    readChatMessageTriggers: function () {
+        return this.readFileAsync("./data/chatmessagetriggers.json");
+    },
+
     savePluginConfig: function (state) {
         return this.writeJsonFileAsync("./data/pluginConfig.json", state);
     },
