@@ -72,6 +72,7 @@ export default class OAuthProvider extends HandlerMap {
                     self.oAuthToken = match[1];
                     self.getAccessToken(function (x) {
 						FileRepository.log("OAuthProvider.getAccessToken response: \r\n" + JSON.stringify(x));
+						FileRepository.log("OAuthProvider.getAccessToken set inprogress false");
                         self.ExecuteHandlers("authorize", self);
                         self.inProgress = false;
                     });
@@ -130,6 +131,15 @@ export default class OAuthProvider extends HandlerMap {
 
     async authorize(callback) {
         var self = this;
+        this.AddHandler("authorize", callback, false);
+
+        if (this.inProgress) {
+			FileRepository.log("authorize skipping because there is already a connection in progress ");
+           return Promise.resolve();
+        }
+
+        this.state = this.getState();
+
         FileRepository.log("OAuthProvider.authorize \r\n" + 
 			"clientId " + this.clientId + "\r\n" + 
 			"forceVerify " + this.forceVerify + "\r\n" + 
@@ -137,14 +147,6 @@ export default class OAuthProvider extends HandlerMap {
 			"scope " + this.scope + "\r\n" + 
 			"state " + this.state + "\r\n"
 		);
-        this.AddHandler("authorize", callback, false);
-
-        if (this.inProgress) {
-            return Promise.resolve();
-        }
-
-        this.state = this.getState();
-
 
         var url = "https://id.twitch.tv/oauth2/authorize?" +
             "client_id=" + encodeURIComponent(this.clientId) +
@@ -172,6 +174,10 @@ export default class OAuthProvider extends HandlerMap {
         });
 
 		FileRepository.log("authorize result: " + JSON.stringify(result));
+		
+		setTimeout(function(){
+			self.inProgress = false;
+		}, 5000);
 		
 		// if(!result)
 		// {

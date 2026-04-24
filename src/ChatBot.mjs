@@ -62,8 +62,6 @@ export default class ChatBot extends HandlerMap {
     }
 
     async connect() {
-
-
         var self = this;
 
         if (self.isConnected()) {
@@ -77,7 +75,13 @@ export default class ChatBot extends HandlerMap {
 		);
 
         let authResult = await self.app.twitchAPIProvider.oAuthProvider.authorize(function (res) {
-            self.tmiOptions.identity.password = "oauth:" + res.token.access_token;
+            
+			if(self.tmiOptions.identity.password?.length > 0)
+			{
+				return;
+			}
+			
+			self.tmiOptions.identity.password = "oauth:" + res.token.access_token;
             FileRepository.log("ChatBot.connect twitchAPIProvider.authorize callback \r\n" +
                 JSON.stringify(res) + "\r\n" +
                 JSON.stringify(self.tmiOptions));
@@ -100,6 +104,7 @@ export default class ChatBot extends HandlerMap {
             self.client.on('part', partHandler);
 
             self.AddHandler("message", function (x) {
+				FileRepository.log("Chatbot.onmessage " + x.msg);
                 try {
                     var commandMessage = self.chatCommandManager.getCommandResult(x);
 

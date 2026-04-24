@@ -373,7 +373,6 @@ commonActions.set("Random Message", {
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
 
-        // FileRepository.log("Random Message json " + json);
 
         let name = obj.args[0];
         if (!name) {
@@ -381,6 +380,7 @@ commonActions.set("Random Message", {
         }
 		
         const message = json.messages[Math.floor(Math.random() * json.messages.length)];
+        FileRepository.log("Random Message " + message);
         App.chatBot.sendMessage(obj.target, message.replace("${name}", name));
 
         json.followOnActions?.forEach((x) => {

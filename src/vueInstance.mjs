@@ -319,7 +319,7 @@ export const vueInstance = {
         isRepeatingMessageValid: function (repeatingMessage) {
             return repeatingMessage.channel.length > 0 &&
             repeatingMessage.message.length > 0 &&
-            repeatingMessage.intervalSeconds > 60;
+            repeatingMessage.intervalSeconds > 30;
         },
         joinCurrentChannel: function () {
             this.joinChannel(this.channel);
@@ -1262,6 +1262,21 @@ export const vueInstance = {
 				console.log("getChatMessageTriggers", data);
 				if (data?.length > 0) {
 					self.chatMessageTriggers = data;
+				}
+				else
+				{
+					setTimeout(function(){
+						dataAccess.getChatMessageTriggers()
+						.then(function (data) {
+							console.log("getChatMessageTriggers again", data);
+							if (data?.length > 0) {
+								self.chatMessageTriggers = data;
+							}
+						})
+						.catch(function (err) {
+							console.log(err);
+						});
+					}, 5000);
 				}
 			})
 			.catch(function (err) {

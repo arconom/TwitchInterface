@@ -107,6 +107,12 @@ export default class ChatCommandManager {
         FileRepository.saveCommandState(Array.from(this.commandState.entries()));
     }
 
+	isCooldownFinished(commandState, commandConfig){
+	    return ((commandState.lastExecution ?? -Infinity) + 
+			(commandConfig.cooldownSeconds * 1000) <= Date.now())
+	}
+
+
     async getCommandResult(chatMessage) {
         //obj = {
         // target: String,
@@ -123,7 +129,7 @@ export default class ChatCommandManager {
         FileRepository.log("getCommandResult:  " + commandName);
 
         if (match?.index === 0 && match[1]?.length > 0) {
-            FileRepository.log("getCommandResult match found");
+            // FileRepository.log("getCommandResult match found");
             // we are removing this in favour of using the config to store the actions
             // const chatCommand = self.commands.get(match[1]);
             const commandConfig = self.commandConfig.get(match[1]);
@@ -132,8 +138,8 @@ export default class ChatCommandManager {
                 return;
             }
 
-            FileRepository.log("getCommandResult   commandConfig:  " + JSON.stringify(commandConfig));
-            FileRepository.log("getCommandResult   commandConfig:  " + JSON.stringify(Array.from(self.commandConfig.entries())));
+            // FileRepository.log("getCommandResult   commandConfig:  " + JSON.stringify(commandConfig));
+            // FileRepository.log("getCommandResult   commandConfig:  " + JSON.stringify(Array.from(self.commandConfig.entries())));
 
             // ["prroll", {
             // "key": "prroll",
@@ -152,8 +158,8 @@ export default class ChatCommandManager {
             let isMod = self.hasRole(chatMessage.context, Constants.chatRoles.moderator);
             let canPay = self.payForCommand(chatMessage, commandConfig);
             
-            FileRepository.log("isMod " + isMod);
-            FileRepository.log("canPay " + canPay);
+            // FileRepository.log("isMod " + isMod);
+            // FileRepository.log("canPay " + canPay);
             
             if (!isMod && !canPay) {
                 return "not enough currency of type:  " + commandConfig.currencyType;
@@ -173,8 +179,9 @@ export default class ChatCommandManager {
             let message = "";
 
             if (self.hasRole(chatMessage.context, roleToCheck)) {
-                FileRepository.log("getCommandResult permission granted");
-                if ((commandState.lastExecution ?? -Infinity) + (commandConfig.cooldownSeconds * 1000) < Date.now()) {
+                // FileRepository.log("getCommandResult permission granted");
+				
+                if (self.isCooldownFinished(commandState, commandConfig)) {
                     try {
                         FileRepository.log("getCommandResult executing command name: " + commandName);
                         // await chatCommand.handler(chatMessage);
@@ -216,8 +223,8 @@ export default class ChatCommandManager {
         let message = "";
         const self = this;
         FileRepository.log("doAction " + JSON.stringify(action));
-        FileRepository.log("doAction globalState:  " +
-            JSON.stringify(Array.from(self.app.globalState.keys())));
+        // FileRepository.log("doAction globalState:  " +
+            // JSON.stringify(Array.from(self.app.globalState.keys())));
         let pluginAction = action.key.split(".");
         let pluginName = pluginAction[0];
         let actionName = pluginAction[1];
@@ -243,7 +250,7 @@ export default class ChatCommandManager {
                         json = JSON.parse(action.json ?? actionObj.defaultJSON);
                     } catch (e) {
                         json = {};
-                        // FileRepository.log("doAction error while parsing json:  \r\n" + e);
+                        FileRepository.log("doAction error while parsing json:  \r\n" + e);
                     }
                 }
                 FileRepository.log(actionObj.name +

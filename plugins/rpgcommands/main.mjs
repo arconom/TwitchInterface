@@ -47,7 +47,16 @@ var plugin = {
                         doExplode: match[7]
                     }
 
-                    return getDiceResult(options);
+				let result = getDiceResult(options);
+
+				json.followOnActions?.forEach((x) => {
+					if (!x.json) {
+						x.json = {};
+					}
+					x.json.message = result;
+					App.chatBot.chatCommandManager.doAction(obj, x);
+				});
+
                 } else {
                     return "Incorrectly formatted command";
                 }
@@ -89,9 +98,25 @@ var plugin = {
                         }, 2000);
                     }
 
-                    return "@" + obj.context.username + ", Your " + currencyValue + " points have been added to the Tilt";
+                    let message = "@" + obj.context.username + ", Your " + currencyValue + " points have been added to the Tilt";
+
+					json.followOnActions?.forEach((x) => {
+						if (!x.json) {
+							x.json = {};
+						}
+						x.json.message = message;
+						App.chatBot.chatCommandManager.doAction(obj, x);
+					});
                 } else {
-                    return "@" + obj.context.username + " not enough currency";
+                    let message = "@" + obj.context.username + " not enough currency";
+
+					json.followOnActions?.forEach((x) => {
+						if (!x.json) {
+							x.json = {};
+						}
+						x.json.message = message;
+						App.chatBot.chatCommandManager.doAction(obj, x);
+					});
                 }
             }
         });

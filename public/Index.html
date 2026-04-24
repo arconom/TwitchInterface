@@ -294,7 +294,7 @@ pointer-events: none;
 										<v-row v-for="(item, i) in repeatingMessagesDisplay">
 											<v-col sm="1">
 												<v-checkbox  
-												:disabled="isRepeatingMessageValid(item)"
+												:disabled="!isRepeatingMessageValid(item)"
 												:key="i" 
 												@click="toggleRepeatingMessage(item.id)" 
 												v-model="item.enabled" />
@@ -320,7 +320,7 @@ pointer-events: none;
 								<v-expansion-panel>
 									<v-expansion-panel-title>
 													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveChatMessageTriggers" >Save</v-btn>
-													<v-btn style="margin-right: 2em;" color="primary" @click.stop="showChatMessageTriggerDialog = true">Add</v-btn>
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="currentChatMessageTrigger.id = new Date().getTime(); showChatMessageTriggerDialog = true">Add</v-btn>
 												Chat Message Triggers
 												"./data/chatmessagetriggers.json"
 									</v-expansion-panel-title>
@@ -336,7 +336,7 @@ pointer-events: none;
 												<v-text-field label="Regex" v-model="item.regex"></v-text-field>
 											</v-col>
 											<v-col sm="1">
-												<v-btn style="margin-right: 2em;" color="primary" @click="function(e){showChatMessageTriggerDialog = true; currentChatMessageTrigger = item;}"><v-icon icon="mdi-pencil" /></v-btn>
+												<v-btn style="margin-right: 2em;" color="primary" @click="function(e){currentChatMessageTrigger.id = item.id; showChatMessageTriggerDialog = true; currentChatMessageTrigger = item;}"><v-icon icon="mdi-pencil" /></v-btn>
 											</v-col>
 											<v-col sm="1">
 												<v-btn style="margin-right: 2em;" color="error" @click="deleteChatMessageTrigger(item.id)"><v-icon icon="mdi-delete" /></v-btn>
