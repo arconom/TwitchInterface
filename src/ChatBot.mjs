@@ -31,6 +31,8 @@ export default class ChatBot extends HandlerMap {
             }
         };
 
+		self.cooldown = 3000;
+		self.lastMessageSent = 0;
         self.channels = new Map();
         self.chatCommandManager = new ChatCommandManager(self.app);
 
@@ -104,7 +106,12 @@ export default class ChatBot extends HandlerMap {
             self.client.on('part', partHandler);
 
             self.AddHandler("message", function (x) {
-				FileRepository.log("Chatbot.onmessage " + x.msg);
+				FileRepository.log("Chatbot.onmessage"  +
+					"\r\nchannel" + x.target +
+					"\r\nmessage" + x.msg);
+					
+				let channel = self.trimChannelName(x.target);
+					
                 try {
                     var commandMessage = self.chatCommandManager.getCommandResult(x);
 
@@ -113,25 +120,25 @@ export default class ChatBot extends HandlerMap {
                         if (typeof commandMessage === "string" && commandMessage?.length > 0) {
                             //send one message
                             // console.log("string message: ", commandMessage);
-                            self.sendMessage(x.target.substr(1), commandMessage);
+                            self.sendMessage(channel, commandMessage);
                         } else if (typeof commandMessage === "object" && commandMessage?.length > 0) {
                             //loop through the array and send a separate message for each item
                             // console.log("array message: ", commandMessage);
-                            self.sendMessages(x.target.substr(1), commandMessage);
+                            self.sendMessages(channel, commandMessage);
                         } else if (commandMessage?.then) {
                             //wait until the promise fulfils and then send a message
                             // console.log("promise message: ", commandMessage);
                             commandMessage?.then(function (message) {
                                 if (message) {
                                     //console.log(message);
-                                    self.sendMessage(x.target.substr(1), message);
+                                    self.sendMessage(channel, message);
                                 }
                             });
                         } else if (typeof commandMessage === "function") {
                             //pass in a callback because the command will run more than once
                             // console.log("function message: ", commandMessage);
                             commandMessage(function (message) {
-                                self.sendMessage(x.target.substr(1), message);
+                                self.sendMessage(channel, message);
                             });
                         }
                     }
@@ -188,7 +195,15 @@ export default class ChatBot extends HandlerMap {
         }
     }
 
-    // login()
+	trimChannelName(target) {
+	    if (target.indexOf("#") === 0) {
+	        return target.substring(1);
+	    } else {
+	        return target;
+	    }
+	}
+
+	// login()
     // {
     // FileRepository.log("ChatBot.login");
     // }
@@ -203,8 +218,8 @@ export default class ChatBot extends HandlerMap {
 
         return self.app.twitchAPIProvider.getUserInfo({
             login: name
-        }, function (res) {
-            FileRepository.log("ChatBot.joinChannel got user info");
+        }, async function (res) {
+            FileRepository.log("ChatBot.joinChannel got broadcaster user info");
             let user;
 
             if (res.data) {
@@ -214,9 +229,22 @@ export default class ChatBot extends HandlerMap {
                 user = new User(res[0]);
             }
 
-            self.channels.set(name, {
-                broadcasterId: user.id
-            });
+			return user;				
+        })
+        .then(async function (user) {
+            FileRepository.log("ChatBot.joinChannel getting channel settings for:  " + user.id);
+			let args = {"broadcaster_id": user.id};
+			return self.app.twitchAPIProvider.getChatSettings(args, function(result){
+				FileRepository.log("ChatBot.joinChannel after getting channel settings :  \r\n" + JSON.stringify(result));
+				
+				self.channels.set(name, {
+					broadcasterId: user.id,
+					cooldown: result[0].slow_mode_wait_time ?? 0,
+					lastMessageSent: 0
+				});
+				
+				FileRepository.log("ChatBot.joinChannel new channel: " + JSON.stringify(self.channels.get(name)));
+			});
         })
         .then(async function () {
             FileRepository.log("ChatBot.joinChannel gonna join channel");
@@ -320,15 +348,44 @@ export default class ChatBot extends HandlerMap {
         });
     }
 
+    isCooledDown(channel){
+		const cooldown = parseInt(channel.cooldown) * 1000;
+		return Date.now() > (channel.lastMessageSent + cooldown);
+	}
+
     sendMessage(channel, text) {
-        FileRepository.log(`sendMessage ` + channel + " " + text + " " + JSON.stringify(text));
-        if (!this.client) {
+		channel = this.trimChannelName(channel);
+		
+/*         FileRepository.log(`ChatBot.sendMessage \r\n` + 
+			"channel" + channel + " \r\n" + 
+			"text" + text + " \r\n" + 
+			"text length" + text.length + " \r\n" + 
+			JSON.stringify(text));
+ */        
+		if (!this.client) {
+			// FileRepository.log(`ChatBot.sendMessage not connected`);
             this.connect();
         }
 
+		let channelObj = this.channels.get(channel);
+
+		if(channelObj == null)
+		{
+			// FileRepository.log(`ChatBot.sendMessage channel is null`);
+			return;
+		}
+
+		if(!this.isCooledDown(channelObj))
+		{
+			// FileRepository.log(`ChatBot.sendMessage cooldown`);
+			return;
+		}
+
         if (text && text.length > 0) {
             try {
-
+				channelObj.lastMessageSent = Date.now();
+				this.channels.set(channel, channelObj);
+				// this.lastMessageSent = Date.now();
                 return this.client?.say(channel, text)
                 .catch(function (err) {
                     FileRepository.log(
@@ -446,8 +503,11 @@ export default class ChatBot extends HandlerMap {
         rm.enabled = !rm.enabled;
         rm.iterations = 0;
 
-        if (rm.enabled) {
+		// console.log("toggleRepeatingMessage", JSON.stringify(rm));
+        
+		if (rm.enabled) {
             let interval = setInterval(function () {
+				console.log("rm.channel", rm.channel);
                 self.sendMessage(rm.channel, rm.message);
                 rm.iterations++;
 

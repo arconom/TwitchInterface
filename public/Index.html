@@ -261,8 +261,9 @@ pointer-events: none;
 								<v-card-text>
 									<v-tabs v-model="currentChannel" bg-color="primary" show-arrows>
 										<v-tab v-for="(c, i) in activeChannels" :key="i" :value="i" @click="currentChannel = i">{{c}}
-										<v-icon @click="addChannel(c)" v-show="!savedChannels.has(c)">mdi-bookmark-plus</v-icon>
-										<v-icon @click="removeChannel(c)" v-show="savedChannels.has(c)">mdi-bookmark-remove</v-icon>
+											<v-icon @click="addChannel(c)" v-show="!savedChannels.has(c)">mdi-bookmark-plus</v-icon>
+											<v-icon @click="removeChannel(c)" v-show="savedChannels.has(c)">mdi-bookmark-remove</v-icon>
+											<v-icon color="error" id="btnLeaveChannel" @click="leaveChannel(i)">mdi-close-box</v-btn>
 										</v-tab>
 									</v-tabs>
 									<v-list style="height: 30em; overflow: scroll;" :items="currentChannelMessages"/>
@@ -275,13 +276,12 @@ pointer-events: none;
 								</v-card-text>
 								<v-card-actions>
 									<v-btn style="width: calc(80% - 2em);" :disabled="message.trim().length === 0" color="primary" id="btnSay" @click="say()">Send</v-btn>
-									<v-btn style="width: calc(20% - 2em);" color="error" id="btnLeaveChannel" @click="leaveChannel()">Leave Channel</v-btn>
 								</v-card-actions>
 							</v-card>
 							<v-expansion-panels>
 								<v-expansion-panel>
 									<v-expansion-panel-title>
-													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveRepeatingMessages" :disabled="areRepeatingMessagesValid">Save</v-btn>
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveRepeatingMessages" :disabled="!areRepeatingMessagesValid">Save</v-btn>
 													<v-btn style="margin-right: 2em;" color="primary" @click.stop="addRepeatingMessage">Add</v-btn>
 												Repeating Messages
 												"./data/repeatingMessages.json"

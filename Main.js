@@ -81,7 +81,7 @@ class App {
         .then(App.loadCurrencies)
         .then(App.loadVariables)
         .then(function () {
-            // //FileRepository.log("App.config.overlayWebSocketPort", App.config.overlayWebSocketPort);
+            FileRepository.log("App.config.overlayWebSocketPort " + App.config.overlayWebSocketPort);
             App.overlayWebSocket = new WebUIInterface(App.config.overlayWebSocketPort);
             App.webUIInterface = new WebUIInterface(App.config.webUIInterfacePort);
 
@@ -91,7 +91,7 @@ class App {
             App.chatBot = new ChatBot(App);
         })
         .then(function () {
-            // //FileRepository.log("App.init before readCommandState");
+            FileRepository.log("App.init before readCommandState");
             FileRepository.readCommandState()
             .then(function (result) {
                 // console.log(result);
@@ -107,7 +107,7 @@ class App {
         .then(App.startObsManager)
         .then(App.loadOscMappings)
         .then(function () {
-            // //FileRepository.log("App.init before getPluginList");
+            FileRepository.log("App.init before getPluginList");
             return FileRepository.getPluginFolderList()
             .then(function (list) {
                 App.pluginList = list;
@@ -138,7 +138,7 @@ class App {
         // });
         // })
         .then(function () {
-            //FileRepository.log("App.init before getUserInfo");
+            FileRepository.log("App.init before getUserInfo");
 
             App.twitchAPIProvider
             .getUserInfo({
@@ -154,7 +154,7 @@ class App {
                 //FileRepository.log("App.init error getting bot user info " + e);
             });
 
-            //FileRepository.log("App.init before readUsers");
+            FileRepository.log("App.init before readUsers");
 
             FileRepository.readUsers()
             .then(function (data) {
@@ -174,7 +174,7 @@ class App {
                 //no file
             });
 
-            //FileRepository.log("App.init before readWallets");
+            FileRepository.log("App.init before readWallets");
             FileRepository.readWallets()
             .then(function (data) {
                 try {
@@ -191,7 +191,7 @@ class App {
                 //no file
             });
 
-            //FileRepository.log("App.init before loadEventSubscriptions");
+            FileRepository.log("App.init before loadEventSubscriptions");
             App.loadEventSubscriptions();
             App.twitchAPIProvider.getSubscriptions(null, function (data) {
                 if (data?.length > 0) {
@@ -202,6 +202,7 @@ class App {
 
             const orderedMap = App.getPluginsInOrder();
 
+            FileRepository.log("App.init before loadPlugins");
             return FileRepository.loadPlugins(orderedMap)
             .then(function (plugins) {
                 //FileRepository.log("this should be visible");
@@ -209,16 +210,16 @@ class App {
                 return Promise.resolve();
             })
             .catch(function (err) {
-                //FileRepository.log("Error loading plugins " + err);
-                //return Promise.reject(err);
-                return Promise.reject();
+                FileRepository.log("Error loading plugins " + err);
+                // return Promise.reject(err);
+                return Promise.resolve();
             });
         })
         .then(App.startWalletSaveInterval)
         .then(App.startWebServer)
         .then(App.startOverlay)
         .catch(function (e) {
-            //FileRepository.log("Main.init error " + e);
+            FileRepository.log("Main.init error " + e);
         });
     }
 
@@ -229,9 +230,9 @@ class App {
         }
 
         //FileRepository.log("main.js loading plugins " + plugins
-            .map(function (p) {
-                return p?.default ?.name ?? p?.name ?? JSON.stringify(p?.name);
-            }));
+            // .map(function (p) {
+                // return p?.default ?.name ?? p?.name ?? JSON.stringify(p?.name);
+            // }));
 
         const keys = Array.from(orderedMap.keys()).sort();
 
@@ -495,7 +496,7 @@ class App {
     }
 
     static startOverlay() {
-        //FileRepository.log("App.startOverlay");
+        FileRepository.log("App.startOverlay");
         let hostname = "127.0.0.1";
         let port = App.config.webServerPort;
         return openBrowser(hostname + ":" + port + "/overlay", {
@@ -523,7 +524,7 @@ class App {
     }
 
     static startWebServer() {
-        //FileRepository.log("App.startWebServer");
+        FileRepository.log("App.startWebServer");
 
         //todo make a way for plugins to create endpoints
         //maybe not, name collisions are bad
@@ -1378,7 +1379,7 @@ class App {
                 channelMessages.push(x);
 
                 if (channelMessages.length > App.config.chatLogChannelHistory) {
-                    channelMessages.pop();
+                    channelMessages.shift();
                 }
             } else {
                 channelMessages = [x];
@@ -1664,17 +1665,17 @@ class App {
     }
 
     static doAction(action, message) {
-        //FileRepository.log("doAction " + JSON.stringify(action));
+        FileRepository.log("doAction " + JSON.stringify(action));
         const pluginName = action.key.substr(0, action.key.indexOf("."));
         const actionName = action.key.substr(action.key.indexOf(".") + 1);
         const plugin = App.globalState.get(pluginName);
 
         if (plugin !== null && plugin !== undefined) {
-            // //FileRepository.log("plugin " + pluginName + " actions " + JSON.stringify(plugin));
-            // //FileRepository.log("plugin " + pluginName + " actions " + Array.from(plugin.actions.keys()));
-            // //FileRepository.log("actionName " + actionName);
+            // FileRepository.log("plugin " + pluginName + " actions " + JSON.stringify(plugin));
+            // FileRepository.log("plugin " + pluginName + " actions " + Array.from(plugin.actions.keys()));
+            // FileRepository.log("actionName " + actionName);
             const actionObject = plugin.actions.get(actionName);
-            // //FileRepository.log("actionObject" + JSON.stringify(actionObject));
+            // FileRepository.log("actionObject" + JSON.stringify(actionObject));
             actionObject?.handler(App.globalState, message, JSON.parse(action.json));
             // } else {
             // const plugins = Array.from(App.globalState.keys());

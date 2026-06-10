@@ -240,10 +240,10 @@ export default class ChatCommandManager {
         if (!!actionObj) {
             FileRepository.log("doAction action found:  " + JSON.stringify(actionObj));
             if (!!actionObj.handler) {
-                FileRepository.log("typeof action.json:  " + action.json + " " + typeof(action.json));
                 let json;
 
                 if (typeof(action.json) === "object") {
+					FileRepository.log("action.json:  " + JSON.stringify(action.json));
                     json = action.json;
                 } else if (typeof(action.json) === "string") {
                     try {

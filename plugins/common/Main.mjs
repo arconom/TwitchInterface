@@ -367,20 +367,29 @@ commonActions.set("Get Currency Value", {
 commonActions.set("Random Message", {
     name: "Random Message",
     description: "Send a random message from a list in chat",
-    defaultJson: `{"messages": "[\"\"]"}`,
+    defaultJson: `{"messages": "[\"\"]", "avoidRepeats": false}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
 
-
         let name = obj.args[0];
         if (!name) {
             name = getNickname();
         }
+
+        var key = obj.target.substr(1);
+        let channelMessages = App.chatLog.get(key);
+		let filteredMessages = json.messages.filter(function(message)
+		{
+			return !json.avoidRepeats ||
+			(channelMessages[0]?.msg.toLowerCase() !== message.toLowerCase() &&
+			channelMessages[1]?.msg.toLowerCase() !== message.toLowerCase() &&
+			obj.msg.toLowerCase() !== message.toLowerCase());
+		});
 		
-        const message = json.messages[Math.floor(Math.random() * json.messages.length)];
-        FileRepository.log("Random Message " + message);
+        const message = filteredMessages[Math.floor(Math.random() * filteredMessages.length)];
+        // FileRepository.log("Random Message " + message);
         App.chatBot.sendMessage(obj.target, message.replace("${name}", name));
 
         json.followOnActions?.forEach((x) => {
@@ -388,7 +397,7 @@ commonActions.set("Random Message", {
                 x.json = {};
             }
             x.json.message = "";
-            FileRepository.log("x.json " + x.json);
+            // FileRepository.log("x.json " + x.json);
             App.chatBot.chatCommandManager.doAction(obj, x);
         });
     }

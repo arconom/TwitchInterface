@@ -74,12 +74,12 @@ var plugin = {
 
                     if (messageChanged) {
                         var responseMessage = newWords.join(" ");
-                        message.chatBot.sendMessage(message.target.substr(1), responseMessage);
+                        message.chatBot.sendMessage(message.target, responseMessage);
                     }
                 }
             }
         } catch (e) {
-            plugin.FileRepository.log("butts.chatMessageHandler", e);
+            // plugin.FileRepository.log("butts.chatMessageHandler", e);
         }
     },
     exports: {},

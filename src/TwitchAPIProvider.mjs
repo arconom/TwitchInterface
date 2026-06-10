@@ -87,6 +87,37 @@ export default class TwitchAPIProvider {
 
     }
 
+    getChatSettings(args, callback) {
+		// args = {"broadcaster_id": "12345"}
+        FileRepository.log("getChatSettings \r\n" + JSON.stringify(args));
+        var self = this;
+        var url = this.baseUri + "chat/settings" + ObjectToQuerystring(args);
+        var requestOptions = {
+            method: 'GET', // *GET, POST, PUT, DELETE, etc.
+            headers: self.getHeaders()
+        };
+		
+/* 		example result
+		{
+		  "data": [
+			{
+			  "broadcaster_id": "713936733",
+			  "slow_mode": false,
+			  "slow_mode_wait_time": null,
+			  "follower_mode": true,
+			  "follower_mode_duration": 0,
+			  "subscriber_mode": false,
+			  "emote_mode": false,
+			  "unique_chat_mode": false,
+			  "non_moderator_chat_delay": true,
+			  "non_moderator_chat_delay_duration": 4
+			}
+		  ]
+		}
+ */		
+        return self.requestJson(url, requestOptions, callback);
+    }
+
     getUserInfo(args, callback) {
         FileRepository.log("getUserInfo \r\n" + JSON.stringify(args));
         var self = this;

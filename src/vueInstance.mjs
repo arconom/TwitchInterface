@@ -336,9 +336,15 @@ export const vueInstance = {
                 });
             }
         },
-        leaveChannel: function () {
+        leaveChannel: function (i) {
             var self = this;
-            dataAccess.leaveChannel(self.activeChannels[self.currentChannel]).then(x => {
+			let index = i;
+			if (index == null)
+			{
+				index == self.currentChannel;
+			}
+			//self.currentChannel
+            dataAccess.leaveChannel(self.activeChannels[index]).then(x => {
                 self.snackbarText = "Left channel " + self.activeChannels[self.currentChannel];
                 self.snackbar = true;
                 self.activeChannels.splice(self.currentChannel, 1);
