@@ -167,7 +167,7 @@ export default class ChatBot extends HandlerMap {
             return new Promise(function (resolve, reject) {
                 setTimeout(function () {
                     resolve(self.connect());
-                }, 2000);
+                }, 1000);
             });
         } else {
             FileRepository.log("ChatBot.connect success");
@@ -196,6 +196,7 @@ export default class ChatBot extends HandlerMap {
     }
 
 	trimChannelName(target) {
+		if(!target){return "";}
 	    if (target.indexOf("#") === 0) {
 	        return target.substring(1);
 	    } else {

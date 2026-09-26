@@ -367,18 +367,14 @@ commonActions.set("Get Currency Value", {
 commonActions.set("Random Message", {
     name: "Random Message",
     description: "Send a random message from a list in chat",
-    defaultJson: `{"messages": "[\"\"]", "avoidRepeats": false}`,
+    defaultJson: `{"messages": "[\"\"]", "mention": "", "avoidRepeats": false}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
+		let name = getMention(obj, json);
 
-        let name = obj.args[0];
-        if (!name) {
-            name = getNickname();
-        }
-
-        var key = obj.target.substr(1);
+        let key = obj.target.substr(1);
         let channelMessages = App.chatLog.get(key);
 		let filteredMessages = json.messages.filter(function(message)
 		{
@@ -406,16 +402,13 @@ commonActions.set("Random Message", {
 commonActions.set("Say", {
     name: "Say",
     description: "Send a message to chat",
-    defaultJson: `{"message": ""}`,
+    defaultJson: `{"message": "", "mention": ""}`,
     handler: function (globalState, obj, json) {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
         FileRepository.log("Say" + JSON.stringify(json));
-        let name = obj.args[0];
-        if (!name) {
-            name = getNickname();
-        }
+		let name = getMention(obj, json);
         App.chatBot.sendMessage(obj.target, json.message?.replace("${name}", name));
 
         json.followOnActions?.forEach((x) => {
@@ -437,16 +430,24 @@ commonActions.set("Send OBS Message", {
         const FileRepository = globalState.get("filerepository");
         const Constants = globalState.get("constants");
         const App = globalState.get("app");
-        FileRepository.log("SendOBSMessage" + JSON.stringify(json));
-        let message = obj.args[0];
+        FileRepository.log("SendOBSMessage\r\n" + 
+			JSON.stringify(json) + "\r\n" + 
+			obj.args
+		);
 
-        if (!message) {
-            message = json.message;
-        }
+        let message = json.message;
 
-        App.ObsManager.send(message, json.data).then(function (res) {
-            FileRepository.log("response for message " + message + ":  \r\n" + res);
-        });
+
+
+
+		App.ObsManager.send(message, {
+			sceneName: obj.args[0]
+		}).then(function (res) {
+			FileRepository.log("response for message " + message + ":  \r\n" + res);
+		})
+		.catch(function(e){
+			FileRepository.log("Error when sending OBS a message " + message + ":  \r\n" + e);
+		});
 
         json.followOnActions?.forEach((x) => {
             if (!x.json) {
@@ -480,6 +481,21 @@ var plugin = {
         wordSyllabizer: WordSyllabizer
     }
 };
+
+function getMention(obj, json, isCommand)
+{
+	let name = json?.mention?.length > 0 ? 
+	json.mention : 
+	isCommand ? 
+		obj.args[0] : 
+		"@" + obj?.context?.username ?? "";
+		
+	if (!name) {
+		name = getNickname();
+	}
+	
+	return name;
+}
 
 function getNickname() {
     var list = [

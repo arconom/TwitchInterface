@@ -353,7 +353,12 @@ export default class TwitchAPIProvider {
                         return Promise.resolve(res.data);
                     } else {
                         FileRepository.log("TwitchAPIProvider.requestJson response " + JSON.stringify(res));
-                        return Promise.resolve(res);
+						if(res.status === "401")
+						{
+							self.oAuthProvider.refreshAccessToken();
+							self.requestJson(url, requestOptions, callback);
+						}
+                        return Promise.reject(res);
                     }
                 })
                 .then(function (res) {

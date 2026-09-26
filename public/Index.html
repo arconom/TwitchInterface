@@ -76,37 +76,14 @@ pointer-events: none;
                                 v-model="currentChatCommandConfigItem.description"></v-text-field>
                             </v-col>
                         </v-row>
-                        <v-row>
-                            <v-col>
-                                <v-label>Actions</v-label>
-                            </v-col>
-                        </v-row>
-                        <v-row>
-                            <v-col cols="11">
-                                <v-combobox :items="availableActionsDisplay" v-model="newAction.key"></v-combobox>
-                            </v-col>
-                            <v-col cols="12" sm="12">
-                                <v-text-field 
-                                label="json" 
-                                :placeholder="newAction.defaultJSON"
-                                v-model="newAction.json"></v-text-field>
-                            </v-col>
-                            <v-col cols="1">
-                                <v-btn @click="currentChatCommandConfigItem.actions.push(newAction); newAction = {key: '', json: ''}" 
-                                    color="primary"><v-icon icon="mdi-plus-circle"></v-icon></v-btn>
-                            </v-col>
-                        </v-row>
-                        <v-row v-for="(action,j) in currentChatCommandConfigItem.actions" :key="j">
-                            <v-col cols="11">
-                                <v-label>{{action.key}}</v-label>
-                            </v-col>
-                            <v-col cols="1">
-                                <v-btn @click="currentChatCommandConfigItem?.actions?.splice(j,1)" color="error"><v-icon icon="mdi-delete"></v-icon></v-btn>
-                            </v-col>
-                            <v-col cols="12">
-                                <div>{{action.json}}</div>
-                            </v-col>
-                        </v-row>
+
+						<action-select 
+							@actionAdded="function(addMe){currentChatCommandConfigItem.actions.push(addMe)}"
+							:selected-actions="currentChatCommandConfigItem.actions"
+							:available-actions="availableActions"
+						>
+						</action-select>
+						
                     </v-card-text>
                   <v-card-actions>
                     <v-spacer></v-spacer>
@@ -175,58 +152,58 @@ pointer-events: none;
                 </v-card>
             </v-dialog>
 
-
             <v-dialog v-model="showChatMessageTriggerDialog" width="75%">
                 <v-card>
                     <v-card-text>
 						<v-row>
-							<v-col cols="12" sm="12">
+							<v-col cols="6" sm="12">
 								<v-text-field 
 								label="Regex" 
 								v-model="currentChatMessageTrigger.regex"></v-text-field>
 							</v-col>
-						</v-row>
-
-						<v-row>
-							<v-col>
-								<v-label>Actions</v-label>
-							</v-col>
-						</v-row>
-						<v-row>
-							<v-col cols="11">
-								<v-combobox :items="availableActionsDisplay" v-model="newAction.key"></v-combobox>
-							</v-col>
-							<v-col cols="12" sm="12">
+							<v-col cols="6" sm="12">
 								<v-text-field 
-								label="json" 
-								:placeholder="newAction.defaultJSON"
-								v-model="newAction.json"></v-text-field>
+								label="Username" 
+								v-model="currentChatMessageTrigger.username"></v-text-field>
 							</v-col>
-							<v-col cols="1">
-								<v-btn @click="currentChatMessageTrigger.actions.push(newAction); newAction = {key: '', json: ''}" 
-									color="primary"><v-icon icon="mdi-plus-circle"></v-icon></v-btn>
+							<v-col cols="6" sm="12">
+								<v-text-field 
+								label="Badge" 
+								v-model="currentChatMessageTrigger.badge"></v-text-field>
 							</v-col>
-						</v-row>
-						<v-row v-for="(action,j) in currentChatMessageTrigger?.actions" :key="j">
-							<v-col cols="11">
-								<v-label>{{action.key}}</v-label>
-							</v-col>
-							<v-col cols="1">
-								<v-btn @click="currentChatMessageTrigger?.actions?.splice(j,1)" color="error"><v-icon icon="mdi-delete"></v-icon></v-btn>
-							</v-col>
-							<v-col cols="12">
-								<div>{{action.json}}</div>
+							<v-col cols="6" sm="12">
+								<v-text-field 
+								label="Chance to Trigger" 
+								v-model="currentChatMessageTrigger.chance"></v-text-field>
 							</v-col>
 						</v-row>
+						
+						<action-select 
+							@actionAdded="function(addMe){currentChatMessageTrigger.actions.push(addMe)}"
+							:selected-actions="currentChatMessageTrigger.actions"
+							:available-actions="availableActions"
+						>
+						</action-select>
+
                     </v-card-text>
                   <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn
                       text="Close Dialog"
-                      @click.stop.prev="function(e){setChatMessageTrigger(); showChatMessageTriggerDialog = false;}"
+                      @click.stop.prev="closeChatMessageTriggerDialog"
                     >Close</v-btn>
                   </v-card-actions>
                 </v-card>
+            </v-dialog>
+
+            <v-dialog v-model="showEventDialog" width="75%">
+				<event-subscription-detail v-model="selectedEventSubscription"
+  				    @close="showEventDialog = false;"
+					@update:model-value="updateEventSubscription"
+					:available-actions="availableActions"
+					:moderator-id="botUserInfo['id']"
+				>
+				</event-subscription-detail>
             </v-dialog>
 
 
@@ -320,7 +297,7 @@ pointer-events: none;
 								<v-expansion-panel>
 									<v-expansion-panel-title>
 													<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveChatMessageTriggers" >Save</v-btn>
-													<v-btn style="margin-right: 2em;" color="primary" @click.stop="currentChatMessageTrigger.id = new Date().getTime(); showChatMessageTriggerDialog = true">Add</v-btn>
+													<v-btn style="margin-right: 2em;" color="primary" @click.stop="resetCurrentChatMessageTrigger(); showChatMessageTriggerDialog = true">Add</v-btn>
 												Chat Message Triggers
 												"./data/chatmessagetriggers.json"
 									</v-expansion-panel-title>
@@ -332,14 +309,24 @@ pointer-events: none;
 											v-model="searchChatMessageTriggers"></v-text-field>
 										
 										<v-row v-for="(item, i) in chatMessageTriggersDisplay">
-											<v-col sm="10">
-												<v-text-field label="Regex" v-model="item.regex"></v-text-field>
+											<v-col sm="12">
+												<v-label>Regex:  {{item.regex}}</v-label>
+											</v-col>
+											<v-col sm="4">
+												<v-label>Username:  {{item.username}}</v-label>
+											</v-col>
+											<v-col sm="2">
+												<v-label>Badge:  {{item.badge}}</v-label>
+											</v-col>
+											<v-col sm="2">
+												<v-label>Chance to Trigger:  {{item.chance}}</v-label>
+											</v-col>
+											<v-col sm="2"></v-col>
+											<v-col sm="1">
+												<v-btn style="margin-right: 2em;" color="primary" @click="function(e){showChatMessageTriggerDialog = true; resetCurrentChatMessageTrigger(); currentChatMessageTrigger = item;}"><v-icon icon="mdi-pencil" /></v-btn>
 											</v-col>
 											<v-col sm="1">
-												<v-btn style="margin-right: 2em;" color="primary" @click="function(e){currentChatMessageTrigger.id = item.id; showChatMessageTriggerDialog = true; currentChatMessageTrigger = item;}"><v-icon icon="mdi-pencil" /></v-btn>
-											</v-col>
-											<v-col sm="1">
-												<v-btn style="margin-right: 2em;" color="error" @click="deleteChatMessageTrigger(item.id)"><v-icon icon="mdi-delete" /></v-btn>
+												<v-btn style="margin-right: 2em;" color="error" @click="deleteChatMessageTrigger(i)"><v-icon icon="mdi-delete" /></v-btn>
 											</v-col>
 										</v-row>
 
@@ -694,66 +681,76 @@ pointer-events: none;
 					</v-window-item>
 					<v-window-item value="events">
 						<v-container>
-							<v-card title="Event Subscriptions">
-							<v-card-subtitle>Cost: {{cost}}  Max cost: {{maxCost}}</v-card-subtitle>
-								<v-card-text>
-								
-								<v-select
-									v-model="selectedEventSubscriptionKey"
-									:items="eventSubscriptionTypesDisplay"
-									item-title="name"
-									item-value="name"
-								>
-								</v-select>
-									
-								<v-row 
-								v-for="(item, i) in Object.keys(selectedEventSubscriptionType.condition)" 
-								:key="i">
-									<v-text-field 
-									:label="item" 
-									v-model="selectedEventSubscriptionType.condition[item]"></v-text-field>
-								</v-row>
-								
-								</v-card-text>
-								<v-card-actions>
-									<v-btn color="primary" @click="addEventSubscription">Add Subscription</v-btn>
-									<v-btn color="primary" :disabled="eventSubStarted" @click="startEventSub">Start Event Sub</v-btn>
-									<v-btn color="error" :disabled="!eventSubStarted" @click="endEventSub">End Event Sub</v-btn>
-								</v-card-actions>
-							</v-card>
-								<v-expansion-panels>
-								<v-expansion-panel>
-									<v-expansion-panel-title>
-										<v-btn style="margin-right: 2em;" color="primary" @click.stop="saveEventSubscriptionsClickHandler">Save</v-btn>
+							<v-card>
+							
+							<v-card-title>
+								<v-row>
+									<v-col cols="10" sm="10" align-self="center">
 										Event Subscriptions
-										Entries here are saved to"./data/EventSubscriptions.json"
-							</v-expansion-panel-title>
-									<v-expansion-panel-text>
-										<v-text-field placeholder="Search" 
-											@click="searchClickHandler"
-											v-model="searchEvents"></v-text-field>
-										<v-row v-for="(item, i) in eventSubscriptionsDisplay">
-											<v-col cols="10">
-												<v-checkbox :key="i" 
-												@click="setEventSubscription(item.name, i, !item.value)" 
-												v-model="item.value"
-												:label="item.displayName"/>
-											</v-col>
-											<v-col cols="1">
-												<v-btn @click="removeEventSubscription(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
-											</v-col>
-											<v-col cols="1">
-                                                <v-btn @click="addActionToEventSubscription(item.name, item.subKey)" color="primary">+</v-btn>                                            
-											</v-col>
-											<v-col cols="12" v-for="(action,j) in item.actions" :key="j">
-                                                <v-combobox :items="availableActions" v-model="action.name"></v-combobox>
-                                                <v-btn @click="removeActionFromEventSubscription(item.subKey, j)" 
-                                                    color="error"><v-icon icon="mdi-delete"></v-icon></v-btn>
-                                            </v-col>
-										</v-row>
-									</v-expansion-panel-text>
-								</v-expansion-panel>
+									</v-col>
+									<v-col cols="1" sm="1" align-self="center">
+										<v-icon icon="mdi-plus-circle"
+											@click="addEventSubscription" 
+											color="primary"></v-icon>
+									</v-col>
+									<v-col cols="1" sm="1" align-self="center">
+										<v-icon icon="mdi-content-save" 
+											color="primary" 
+											@click="saveEventSubscriptionsClickHandler" 
+											style="margin-right: 2em;" 
+											size="x-large"></v-icon>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col cols="3" sm="3" align-self="center">
+										<v-btn color="primary" :disabled="eventSubStarted" @click="startEventSub">Start Event Sub</v-btn>
+									</v-col>
+									<v-col cols="3" sm="3" align-self="center">
+										<v-btn color="error" :disabled="!eventSubStarted" @click="endEventSub">End Event Sub</v-btn>
+									</v-col>
+								</v-row>
+							</v-card-title>
+							
+							<v-card-subtitle>
+							</v-card-subtitle>
+							<v-card-text>
+								<v-expansion-panels>
+									<v-expansion-panel>
+										<v-expansion-panel-title>
+											<div>
+												Cost: {{cost}}  Max cost: {{maxCost}}  
+											</div>
+											<br/>
+											<div>
+												Entries here are saved to"./data/EventSubscriptions.json"
+											</div>
+										</v-expansion-panel-title>
+										<v-expansion-panel-text>
+											<v-text-field placeholder="Search" 
+												@click="searchClickHandler"
+												v-model="searchEvents"></v-text-field>
+											<v-row v-for="(item, i) in eventSubscriptionsDisplay">
+												<v-col cols="10">
+													<v-checkbox :key="i" 
+													@click="setEventSubscription(item.name, i, !item.value)" 
+													v-model="item.value"
+													:label="item.displayName"/>
+												</v-col>
+												<v-col cols="1">
+													<v-btn @click="removeEventSubscription(i)" color="error"><v-icon icon="mdi-delete" /></v-btn>
+												</v-col>
+												<v-col cols="1">
+													<v-btn @click="editEventSubscription(item)" color="primary"><v-icon icon="mdi-pencil" /></v-btn>
+												</v-col>
+												<v-col cols="12" v-for="(action,j) in item.actions" :key="j">
+													<v-label :text="action.key + ' ' + action.json"></v-label>
+												</v-col>
+											</v-row>
+										</v-expansion-panel-text>
+									</v-expansion-panel>
 								</v-expansion-panels>
+							</v-card-text>
+							</v-card>
 						</v-container>
 					</v-window-item>
 					<v-window-item value="osc">

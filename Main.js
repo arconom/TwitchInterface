@@ -198,6 +198,10 @@ class App {
                     //FileRepository.log("EventSub already running at startup");
                     App.isEventSubRunning = true;
                 }
+				else
+				{
+					App.startEventSub();
+				}
             });
 
             const orderedMap = App.getPluginsInOrder();
@@ -230,9 +234,9 @@ class App {
         }
 
         //FileRepository.log("main.js loading plugins " + plugins
-            // .map(function (p) {
-                // return p?.default ?.name ?? p?.name ?? JSON.stringify(p?.name);
-            // }));
+        // .map(function (p) {
+        // return p?.default ?.name ?? p?.name ?? JSON.stringify(p?.name);
+        // }));
 
         const keys = Array.from(orderedMap.keys()).sort();
 
@@ -921,7 +925,7 @@ class App {
                     //FileRepository.log("getting all users" + JSON.stringify(App.users));
                     var entries = Array.from(App.users?.entries())
                         //FileRepository.log("getting all users" + JSON.stringify(entries));
-                    return Promise.resolve(entries);
+                        return Promise.resolve(entries);
                 }
             },
             "POST": function (args) {
@@ -1179,6 +1183,7 @@ class App {
 
         Controller.set("/chat/messagetriggers", {
             "GET": function (args) {
+                FileRepository.log("/chat/messagetriggers " + JSON.stringify(App.chatMessageTriggers));
                 return Promise.resolve(App.chatMessageTriggers);
             },
             "POST": function (args) {
@@ -1412,38 +1417,96 @@ class App {
             App.chatBot.AddHandler("message", handler, true);
         });
 
-        // //FileRepository.log("main.js getting message triggers");
+        // FileRepository.log("main.js getting message triggers");
         FileRepository.readChatMessageTriggers().then(function (result) {
-            // //FileRepository.log("main.js message triggers callback");
+            // FileRepository.log("main.js message triggers callback");
             if (result) {
                 App.chatMessageTriggers = JSON.parse(result);
-                // //FileRepository.log("main.js message triggers loaded " + JSON.stringify(App.chatMessageTriggers));
+                // FileRepository.log("main.js message triggers loaded " + JSON.stringify(App.chatMessageTriggers));
             } else {
                 App.chatMessageTriggers = [];
-                // //FileRepository.log("main.js message triggers not found, creating new");
+                // FileRepository.log("main.js message triggers not found, creating new");
             }
         });
 
         App.chatBot.AddHandler("message", function (message) {
-            // //FileRepository.log("main.js message triggers message" + Array.from(Object.keys(message)).join("\r\n"));
+
+            /*
+				message
+				context: {
+				"badgeInfo",
+				"badgeInfoRaw",
+				"badges",
+				"badgesRaw",
+				"clientNonce",
+				"color",
+				"displayName",
+				"emotes",
+				"emotesRaw",
+				"firstMsg",
+				"flags",
+				"id",
+				"messageType",
+				"mod",
+				"returningChatter",
+				"roomId",
+				"subscriber",
+				"tmiSentTs",
+				"turbo",
+				"userId",
+				"userType",
+				"username"
+				}
+             */
+
+            let keys = Object.keys(message);
+
+            // keys.forEach(function(key){
+            FileRepository.log("main.js message trigger context" +
+                JSON.stringify(Array.from(Object.keys(message["context"]))));
+
+            FileRepository.log("main.js message trigger badges" +
+                JSON.stringify(message["context"]["badges"]));
+            // });
 
             if (!message.self) {
                 // //FileRepository.log("main.js message triggers callbacks " + App.chatMessageTriggers.length);
-                App.chatMessageTriggers?.forEach(function (trigger) {
-                    let regex = new RegExp(trigger.regex, "gi");
-                    // //FileRepository.log("main.js message triggers callback " + JSON.stringify(trigger));
-                    // //FileRepository.log("main.js message triggers match \r\n" +
-                    // "message" + message.msg + "\r\n" +
-                    // "match" + message.msg.match(regex));
-                    if (message.msg.match(regex)) {
-                        // //FileRepository.log("main.js message triggers regex found ");
-                        // //FileRepository.log("main.js message trigger actions " + trigger.actions.length);
 
-                        trigger.actions.forEach(function (action) {
-                            App.doAction(action, message);
+                let promise = Promise.resolve();
+
+                App.chatMessageTriggers.reduce(function (prev, trigger) {
+                    return prev?.then(function () {
+                        return new Promise(function (resolve, reject) {
+                            setTimeout(function () {
+
+                                let regex = new RegExp(trigger.regex, "gi");
+                                FileRepository.log("main.js message triggers callback " + JSON.stringify(trigger));
+                                // //FileRepository.log("main.js message triggers match \r\n" +
+                                // "message" + message.msg + "\r\n" +
+                                // "match" + message.msg.match(regex));
+
+                                if
+                                (
+                                    (trigger.regex === undefined || trigger.regex?.length === 0 || message.msg?.match(regex)) &&
+                                    (trigger.username === undefined || trigger.username?.length === 0 || message.context?.username.toLowerCase() === trigger.username.toLowerCase()) &&
+                                    (trigger.badge === undefined || trigger.badge?.length === 0 || Object.keys(message.context?.badges).indexOf(trigger.badge) > -1)) {
+                                    let r = Math.random();
+									let chance = trigger.chance ?? 1;
+
+                                    if (r < chance) {
+                                        FileRepository.log("main.js message triggers regex found ");
+                                        FileRepository.log("main.js message trigger actions " + trigger.actions.length);
+
+                                        trigger.actions.forEach(function (action) {
+                                            App.doAction(action, message);
+                                        });
+                                    }
+                                }
+                                resolve();
+                            }, 1000);
                         });
-                    }
-                });
+                    })
+                }, Promise.resolve());
             }
         }, true);
 
@@ -1498,38 +1561,45 @@ class App {
         }
 
         App.eventSubListener?.close();
-        // //FileRepository.log("startEventSub " + eventSubscriptionConfig);
+        // FileRepository.log("startEventSub " + eventSubscriptionConfig);
         App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null /* App.config.listenerPort */, App.oAuthProvider);
 
-        // //FileRepository.log("subs " + JSON.stringify(Array.from(subs.entries())));
+        // FileRepository.log("subs " + JSON.stringify(Array.from(subs.entries())));
+
+        App.eventSubListener.AddHandler("close", function (event) {
+			App.startEventSub();
+        }, true);
 
         App.eventSubListener.AddHandler("message", function (event) {
             var obj = JSON.parse(event.data);
 
             if (obj.metadata.message_type === Constants.session_welcome && !App.subbed) {
-                //FileRepository.log("welcome in. do subs");
+                FileRepository.log("welcome in. do subs");
                 App.subbed = true;
                 for (var [key, value] of App.eventSubscriptionConfig.entries()) {
-                    //FileRepository.log("Main. sub: " + key + " " + JSON.stringify(value));
-                    App.eventSubListener.subscribe(key, value[0].condition)
+                    FileRepository.log("Main. sub: " + key + " " + JSON.stringify(value));
+                    App.eventSubListener.subscribe(key, value.condition)
                     .then(function (x) {
                         if (x) {
-                            //FileRepository.log("startEventSub subscribed to " + JSON.stringify(x));
+                            FileRepository.log("startEventSub subscribed to " + JSON.stringify(x));
                         } else {
-                            //FileRepository.log("startEventSub subscription failed");
+                            FileRepository.log("startEventSub subscription failed");
                         }
                     });
                 }
             } else if (obj.metadata.message_type === "notification") {
                 App.oscManager?.send("/eventsub.message", event.data);
-                //FileRepository.log("doing sub event " + obj.metadata.subscription_type);
+                FileRepository.log("doing sub event " + 
+					obj.metadata.subscription_type + 
+					"\r\n event data " + 
+					JSON.stringify(event.data));
 
-                const eventSubConfig = App.eventSubscriptionConfig.get(obj.metadata.subscription_type)[0];
-                //FileRepository.log("eventSubConfig " + JSON.stringify(eventSubConfig));
+                const eventSubConfig = App.eventSubscriptionConfig.get(obj.metadata.subscription_type);
+                FileRepository.log("eventSubConfig " + JSON.stringify(eventSubConfig));
 
                 //todo maybe replace event.data with message
                 eventSubConfig?.actions?.forEach(function (action) {
-                    App.doAction(action.name, event.data);
+                    App.doAction(action, event.data);
                 });
 
                 App.oscManager.send("/" + obj.metadata.subscription_type, JSON.stringify(event.data));
@@ -1665,6 +1735,8 @@ class App {
     }
 
     static doAction(action, message) {
+		if(!action){return;}
+		
         FileRepository.log("doAction " + JSON.stringify(action));
         const pluginName = action.key.substr(0, action.key.indexOf("."));
         const actionName = action.key.substr(action.key.indexOf(".") + 1);
@@ -1673,9 +1745,9 @@ class App {
         if (plugin !== null && plugin !== undefined) {
             // FileRepository.log("plugin " + pluginName + " actions " + JSON.stringify(plugin));
             // FileRepository.log("plugin " + pluginName + " actions " + Array.from(plugin.actions.keys()));
-            // FileRepository.log("actionName " + actionName);
+            FileRepository.log("actionName " + actionName);
             const actionObject = plugin.actions.get(actionName);
-            // FileRepository.log("actionObject" + JSON.stringify(actionObject));
+            FileRepository.log("actionObject" + JSON.stringify(actionObject));
             actionObject?.handler(App.globalState, message, JSON.parse(action.json));
             // } else {
             // const plugins = Array.from(App.globalState.keys());

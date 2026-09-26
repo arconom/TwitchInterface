@@ -278,16 +278,16 @@ SubscriptionTypes.set(SubscriptionTypeNames.channelRaid, {
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelShield_modeBegin, {
     name: "channel.shield_mode.begin",
-    version: "beta",
+    version: "1",
 	"condition": {
-        "broadcaster_user_id": "",
-        "moderator_user_id": ""
+        "broadcaster_id": "",
+        "moderator_id": ""
     },
     description: "Sends a notification when the broadcaster activates Shield Mode."
 });
 SubscriptionTypes.set(SubscriptionTypeNames.channelShield_modeEnd, {
     name: "channel.shield_mode.end",
-    version: "beta",
+    version: "1",
 	"condition": {
         "broadcaster_user_id": "",
         "moderator_user_id": ""

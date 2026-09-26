@@ -37,7 +37,10 @@ export default class EventSubListener extends WebSocketListener {
             if (event.code >= 4000) {
                 FileRepository.log("EventSubListener close event error " + event.code + " " + event.reason);
             }
-            FileRepository.log("EventSubListener close event " + JSON.stringify(event));
+			else
+			{
+				FileRepository.log("EventSubListener close event " + JSON.stringify(event));
+			}
             self.closeHandler(event.data);
         }, true);
 
@@ -64,6 +67,7 @@ export default class EventSubListener extends WebSocketListener {
 
     close() {
         this.socket.close();
+		this.destroy();
         return Promise.resolve();
     }
 
@@ -87,6 +91,11 @@ export default class EventSubListener extends WebSocketListener {
     }
 
     getSubscriptionConfig(sub, condition) {
+		if(sub == null || sub == undefined)
+		{
+			return null;
+		}
+		
         var returnMe = {
             type: "",
             version: "",

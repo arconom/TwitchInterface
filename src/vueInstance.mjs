@@ -7,7 +7,9 @@ import Currency from "./Currency.mjs";
 import User from "./User.mjs";
 import RepeatingMessage from "./RepeatingMessage.mjs";
 import MessageTrigger from "./messagetrigger.mjs";
-
+import ActionSelect from "./UIComponents/actionSelect.mjs";
+import EventSubscription from "./eventSubscription.mjs";
+import EventSubscriptionDetail from "./UIComponents/eventSubscriptionDetail.mjs";
 const dataAccess = new DataAccess();
 
 export const vueInstance = {
@@ -66,9 +68,11 @@ export const vueInstance = {
             secrets: [],
             selectedEndpointKey: "",
             selectedEventSubscriptionKey: "channel.follow",
+			selectedEventSubscription: null,
             selectedOscMappingKey: "/eventsub.message",
             showChatMessageTriggerDialog: false,
             showChatCommandDialog: false,
+			showEventDialog: false,
             showVariableDialog: false,
             showCurrencyDialog: false,
             snackbar: false,
@@ -79,7 +83,8 @@ export const vueInstance = {
             webSocket: null
         }
     },
-    watch: {
+    components:{ActionSelect,EventSubscriptionDetail},
+	watch: {
         showChatCommandDialog(newVal, oldVal) {
             console.log("vueInstance.watch.showChatCommandDialog");
             if (!this.showChatCommandDialog) {
@@ -96,33 +101,15 @@ export const vueInstance = {
             if (!this.showCurrencyDialog) {
                 this.saveCurrentCurrency();
             }
-        },
-        "newAction.key"(newVal, oldVal) {
-            this.newAction = {
-                key: "",
-                json: ""
-            };
-            const action = this.availableActions.find((x) => x.displayName === newVal);
-            this.newAction.key = action?.displayName ?? "";
-            this.newAction.json = action?.defaultJSON ?? "";
         }
     },
     methods: {
-        addActionToEventSubscription: function (name, key) {
-            let subs = this.eventSubscriptions.get(name);
-
-            let target = subs.find(function (sub) {
-                return JSON.stringify(sub.condition) === key;
-            });
-
-            if (!target.actions) {
-                target.actions = [];
-            }
-
-            target.actions.push({
-                name: ""
-            });
-        },
+		updateEventSubscription(model)
+		{
+			console.log("updateEventSubscription before update", this.eventSubscriptions.get(model.name));
+			console.log("updateEventSubscription", model);
+			this.eventSubscriptions.set(model.name, model);
+		},
         addChannel: function (channel) {
             this.savedChannels.add(channel);
             dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
@@ -140,17 +127,13 @@ export const vueInstance = {
             this.showCurrencyDialog = true;
         },
         addEventSubscription: function () {
-            this.selectedEventSubscriptionType.enabled = true;
-
-            if (this.eventSubscriptions.has(this.selectedEventSubscriptionType.name)) {
-                var list = this.eventSubscriptions.get(this.selectedEventSubscriptionType.name);
-                list.push(this.selectedEventSubscriptionType);
-                this.eventSubscriptions.set(this.selectedEventSubscriptionType.name, list);
-            } else {
-                this.eventSubscriptions.set(this.selectedEventSubscriptionType.name, [this.selectedEventSubscriptionType]);
-            }
-
-            this.saveEventSubscriptions();
+			this.selectedEventSubscription = new EventSubscription();
+			this.showEventDialog = true;
+        },
+        editEventSubscription: function (item) {
+			this.selectedEventSubscription = this.eventSubscriptions.get(item.name);
+			console.log("this.selectedEventSubscription", this.selectedEventSubscription);
+			this.showEventDialog = true;
         },
         addRepeatingMessage: function (e) {
             var self = this;
@@ -169,6 +152,11 @@ export const vueInstance = {
         authenticate: function () {
             dataAccess.putOauth();
         },
+		closeChatMessageTriggerDialog(e)
+		{
+			this.setChatMessageTrigger(); 
+			this.showChatMessageTriggerDialog = false;
+		},
         createWebSocket: function () {
             var self = this;
 
@@ -209,6 +197,10 @@ export const vueInstance = {
             navigator.clipboard.writeText(key);
             this.snackbar = true;
             this.snackbarText = "Id copied";
+        },
+        deleteChatMessageTrigger: function (index) {
+			console.log("deleteChatMessageTrigger", index);
+            this.chatMessageTriggers.splice(index, 1);
         },
         deleteConfig: function (index) {
             this.config.splice(index, 1);
@@ -286,6 +278,26 @@ export const vueInstance = {
             });
 
         },
+		getChatMessageTriggers(){
+			let self = this;
+
+			dataAccess.getChatMessageTriggers()
+			.then(function (data) {
+				console.log("getChatMessageTriggers", data);
+				if (data?.length > 0) {
+					self.chatMessageTriggers = data;
+				}
+				else
+				{
+					setTimeout(function(){
+						self.getChatMessageTriggers();
+					}, 2000);
+				}
+			})
+			.catch(function (err) {
+				console.log(err);
+			});
+		},
         getEventSubCost: function () {
             var self = this;
             dataAccess.getEventSubCost().then(function (data) {
@@ -360,8 +372,11 @@ export const vueInstance = {
             event.preventDefault();
             this.getChatCommandState();
         },
-        removeActionFromEventSubscription: function (name, index) {
-            let sub = this.eventSubscriptions.get(name);
+/*         removeActionFromEventSubscription: function (name, index) {
+            console.log("removeActionFromEventSubscription", name, index);
+console.log(JSON.stringify(Array.from(this.eventSubscriptions.entries())));
+			let sub = this.eventSubscriptions.get(name)[0];
+console.log("sub", JSON.stringify(sub));
 
             if (!sub?.actions) {
                 return;
@@ -369,29 +384,19 @@ export const vueInstance = {
 
             sub.actions.splice(index);
         },
-        removeChannel: function (channel) {
+ */        removeChannel: function (channel) {
             this.savedChannels.delete(channel);
             dataAccess.putBookmarkedChannels(Array.from(this.savedChannels.values()));
         },
         removeEventSubscription: function (index) {
-            //because of the way we are rendering the list and storing the data,
-            //the index doesn't point to the array index within the key,
-            //so we have to count from the beginning until we reach the index.
-            var counter = 0;
-
-            for (var key of this.eventSubscriptions.keys()) {
-                var list = this.eventSubscriptions.get(key);
-                if (counter + list.length > index) {
-                    list.splice(index - counter, 1);
-                    if (list.length === 0) {
-                        this.eventSubscriptions.delete(key);
-                    }
-                    return;
-                } else {
-                    counter += list.length;
-                }
-            }
+			let type = this.eventSubscriptionsDisplay[index].name;
+			this.eventSubscriptions.delete(type);
         },
+		resetCurrentChatMessageTrigger()
+		{
+			this.currentChatMessageTrigger = new MessageTrigger(); 
+			this.currentChatMessageTrigger.id = new Date().getTime(); 
+		},
         saveApiScopesClickHandler: function (event) {
             event.stopPropagation();
             event.preventDefault();
@@ -617,22 +622,6 @@ export const vueInstance = {
             val.value = value;
             this.chatScopes = temp;
         },
-        setEventSubscription: function (key, index, value) {
-            //because of the way we are rendering the list and storing the data,
-            //the index doesn't point to the array index within the key,
-            //so we have to count from the beginning until we reach the index.
-            var counter = 0;
-
-            for (var key of this.eventSubscriptions.keys()) {
-                var list = this.eventSubscriptions.get(key);
-                if (counter + list.length > index) {
-                    list[index - counter].enabled = value;
-                    return;
-                } else {
-                    counter += list.length;
-                }
-            }
-        },
         setOscEvent: function (name, value) {
             var temp = this.oscMappings;
             temp.set(name, value);
@@ -779,10 +768,10 @@ export const vueInstance = {
     },
     computed: {
         chatMessageTriggersDisplay: function () {
-            return this.chatMessageTriggers.filter((x) => x.regex.indexOf(this.searchChatMessageTriggers) > -1);
-        },
-        availableActionsDisplay: function () {
-            return this.availableActions.map((x) => x.displayName);
+            return this.chatMessageTriggers.filter((x) => {
+				console.log("chatMessageTriggers.filter", x);
+				x.regex?.indexOf(this.searchChatMessageTriggers) > -1
+			});
         },
         areRepeatingMessagesValid: function () {
             for (let rm of this.repeatingMessages) {
@@ -1032,15 +1021,6 @@ export const vueInstance = {
                 Object.values(x).some((v) => typeof v === "string" &&
                     v.indexOf(this.searchOscMappings) > -1));
         },
-        eventSubscriptionTypesDisplay: function () {
-            return Array.from(this.eventSubscriptionTypes.entries())
-            .map(function (x, i) {
-                return {
-                    name: x[0],
-                    value: x[1].name
-                };
-            });
-        },
         usersDisplay: function () {
             return Array.from(this.users.entries())
             .map(function (x, i) {
@@ -1056,39 +1036,54 @@ export const vueInstance = {
             var returnMe = [];
             var entries = Array.from(this.eventSubscriptions.entries());
 
-            for (let i = 0; i < entries.length; i++) {
-                var eventName = entries[i][0];
-                var subData = entries[i][1];
+			console.log("eventSubscriptionsDisplay", this.eventSubscriptions);
+			console.log("eventSubscriptionsDisplay entries", entries);
 
-                for (let j = 0; j < subData.length; j++) {
+            for (let i = 0; i < entries.length; i++) {
+				console.log("loop iteration", i);
+                var eventName = entries[i][0];
+				console.log("eventName", eventName);
+                var subData = entries[i][1];
+				console.log("subData", subData);
+
 
                     var pushMe = {
                         name: eventName,
                         displayName: eventName,
-                        subKey: JSON.stringify(subData[j].condition),
-                        value: subData[j].enabled,
-                        actions: subData[j].actions ?? []
+                        subKey: JSON.stringify(subData.condition),
+                        value: subData.enabled,
+                        actions: subData.actions ?? []
                     };
 
-                    var keys = Object.keys(subData[j].condition);
+                    let keys = [];
+					
+					if(subData.condition)
+					{
+						keys = Object.keys(subData.condition);
+					}
 
                     //put the condition keys into the name
                     for (let k = 0; k < keys.length; k++) {
-                        var name = self.users.get(subData[j].condition[keys[k]])?.display_name;
-                        pushMe.displayName += " " + subData[j].condition[keys[k]];
+                        var name = self.users.get(subData.condition[keys[k]])?.display_name;
+                        pushMe.displayName += " " + subData.condition[keys[k]];
                         if (name) {
                             pushMe.displayName += " (" + name + ")";
                         }
                     }
 
                     returnMe.push(pushMe);
-                }
             }
 
-            return returnMe.filter((x) =>
+			console.log("eventSubscriptionsDisplay unfiltered list", returnMe);
+
+			let filteredList = returnMe.filter((x) =>
                 Object.values(x).some((v) => typeof v === "string" ?
-                    v.indexOf(this.searchEvents) > -1
+                    v.indexOf(self.searchEvents) > -1
                      : false));
+
+			console.log("eventSubscriptionsDisplay returning", filteredList);
+
+            return filteredList;
         }
     },
     mounted: function () {
@@ -1106,25 +1101,6 @@ export const vueInstance = {
             .then(function (data) {
                 if (data) {
                     self.botUserInfo = data;
-
-                    dataAccess.getSubscriptionTypes()
-                    .then(function (data) {
-                        var temp = self.eventSubscriptionTypes;
-                        if (data?.length > 0) {
-                            data.forEach(function (x) {
-
-                                if (x[1].condition.hasOwnProperty("moderator_user_id")) {
-                                    x[1].condition["moderator_user_id"] = self.botUserInfo["id"];
-                                }
-
-                                temp.set(x[0], x[1]);
-                            });
-                        }
-                        self.eventSubscriptionTypes = temp;
-                    })
-                    .catch(function (err) {
-                        console.log(err);
-                    });
                 } else {
                     delay *= 2;
                     setTimeout(function () {
@@ -1136,6 +1112,7 @@ export const vueInstance = {
 
         dataAccess.getSubscriptions()
         .then(function (data) {
+			console.log("getSubscriptions");
             self.eventSubscriptions = new Map(data);
         })
         .catch(function (err) {
@@ -1262,33 +1239,7 @@ export const vueInstance = {
             console.log(err);
         });
 
-		setTimeout(function(){
-			dataAccess.getChatMessageTriggers()
-			.then(function (data) {
-				console.log("getChatMessageTriggers", data);
-				if (data?.length > 0) {
-					self.chatMessageTriggers = data;
-				}
-				else
-				{
-					setTimeout(function(){
-						dataAccess.getChatMessageTriggers()
-						.then(function (data) {
-							console.log("getChatMessageTriggers again", data);
-							if (data?.length > 0) {
-								self.chatMessageTriggers = data;
-							}
-						})
-						.catch(function (err) {
-							console.log(err);
-						});
-					}, 5000);
-				}
-			})
-			.catch(function (err) {
-				console.log(err);
-			});
-		}, 5000);
+		this.getChatMessageTriggers();
 
         dataAccess.getChatScopes()
         .then(function (data) {

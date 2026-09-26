@@ -3,7 +3,7 @@ export default class MessageTrigger{
         var self = this;
 
 		self.id = data?.id ?? -1;
-        self.regex = data?.regex ?? /.+/g;
+        self.regex = data?.regex ?? "";
         self.actions = data?.action ?? [];
 		self.enabled = false;
     }

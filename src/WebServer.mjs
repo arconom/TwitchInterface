@@ -233,11 +233,11 @@ export default class WebServer {
             break;
         }
 
-        // FileRepository.log("serveFile", filePath, extension, contentType);
+        FileRepository.log("serveFile\r\n" + filePath + "." + extension + " " + contentType);
 
         fs.stat(filePath, function (err, stat) {
             if (err == null) {
-                // FileRepository.log('File exists');
+                FileRepository.log('File exists');
                 try {
                     const readStream = fs.createReadStream(filePath);
                     response.writeHead(200, {

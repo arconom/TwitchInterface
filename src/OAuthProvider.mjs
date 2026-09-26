@@ -99,6 +99,11 @@ export default class OAuthProvider extends HandlerMap {
         }
     }
 
+    refreshAccessToken()
+	{
+		this.token = null;
+	}
+
     validateAccess(callback) {
         FileRepository.log("OAuthProvider.validateAccess");
         var self = this;

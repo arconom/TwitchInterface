@@ -52,6 +52,8 @@ export default class ObsManager {
     }
 
     send(requestType, requestData) {
+		console.log("send", requestType, requestData);
+		
         return this.webSocket.call(requestType /* : string */, requestData /* ?: object */);
     }
 

@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@4.1.0/dist/vuetify.min.css" />
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css" />
+    <style>
+	
+	body
+	{
+		height: 100vh;
+		margin: 0;
+		overflow: hidden;
+	}
+
+
+	.player-value
+	{
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height:100%;
+	}
+
+    .circle {
+      min-width: 50px;
+      min-height: 50px;
+      width: 50px;
+      height: 50px;
+      -webkit-border-radius: 25px;
+      -moz-border-radius: 25px;
+      border-radius: 25px;
+      background: red;
+	  display: inline-block;
+    }
+	
+    .health {
+      background-color: red;
+	  color: white;
+    }
+	
+    .mana {
+      background-color: blue;
+	  color: white;
+    }
+	
+    .charge {
+      background-color: goldenrod;
+	  color: white;
+    }
+	
+	v-app,
+	div#app
+	{
+		height: 100%;
+		display: block;
+	}
+	
+	.card-border
+	{
+		border-radius: 4px;
+		margin: 8px;
+	}
+
+	.bottom-player-play-area
+	{
+		min-height: 50vh;
+		background-color: green;
+	}
+
+	.top-player-play-area
+	{
+		min-height: 50vh;
+		background-color: purple;
+	}
+	
+	.top-player-play-area,
+	.bottom-player-play-area
+	{
+		display: block;
+	}
+	
+    .play-area,
+	.resolve-area
+	{
+		height: 50%;
+	}
+
+	.top-player-overlay
+	{
+	    position: absolute;
+		top: 0;
+		margin-top: -100px;
+	}
+
+	.bottom-player-overlay.min
+	{
+	    position: absolute;
+		bottom: -300px;
+	}
+
+	.bottom-player-overlay
+	{
+	    position: absolute;
+		bottom: 0;
+	}
+
+	.top-player-overlay .v-overlay__content,
+	.bottom-player-overlay .v-overlay__content
+	{
+		background-color: rgba(10,10,10,0.2);
+	}
+
+	.top-player-overlay .v-overlay__scrim,
+	.sheet.bottom-player-overlay
+	{
+		background-color: rgba(10,10,10,0.2);
+	}
+
+	.player-stats,
+	.sheet
+	{
+		overflow: visible;
+		box-shadow: none;
+		background-color: rgba(0,0,0,0);
+	}
+
+	.hand-area,
+	.hand-area *
+	{
+		overflow: visible;
+	}
+	
+	.top-player-play-area .card,
+	.bottom-player-play-area .card
+	{
+        width: 80px;
+  		height: 160px;
+		transition: transform 0.15s ease;
+	}
+
+	.top-player-play-area .card
+	{
+	    align-self: end;
+	}
+	
+	.bottom-player-play-area .card
+	{
+	    align-self: start;
+	}
+
+	.bottom-player .card
+	{
+		transform-origin: center bottom;
+		overflow: visible;
+	}
+	
+	.top-player .card
+	{
+		transform-origin: center top;
+		overflow: visible;
+	}
+	
+	.top-player .hand-area .card
+	{
+		width: 80px;
+		height: 160px;
+		transition: transform 0.15s ease;
+	    align-self: start;
+	}
+
+	.bottom-player .hand-area .card
+	{
+	    align-self: start;
+	}
+
+	@media (max-width: 1250px) {
+		.bottom-player .hand-area .card
+		{
+			width: 150px;
+			height: 300px;
+			transition: transform 0.15s ease;
+		}
+	}
+
+	@media (min-width: 1250px) {
+		.bottom-player.min .hand-area .card
+		{
+			width: 80px;
+			height: 160px;
+			transition: transform 0.15s ease;
+		}
+
+		.bottom-player .hand-area .card
+		{
+			width: 150px;
+			height: 300px;
+			transition: transform 0.15s ease;
+		}
+	}
+	
+	.top-player .hand-area
+	{
+		width: 100vw;
+	}
+
+	.bottom-player .hand-area
+	{
+		height: 400px;
+		width: 100vw;
+	}
+	
+	.top-player .hand-area .v-slide-group__content,
+	.bottom-player .hand-area .v-slide-group__content
+	{
+		justify-content:center;
+	}	
+	
+	.bottom-player .hand-area .card:hover
+	{
+		outline: 2px solid lightblue;
+		z-index: 999999;
+	}
+
+	.meter {
+		--value: 100; /* 0-100 */
+
+		width: 50px;
+		height: 50px;
+		border-radius: 50%;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.meter::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+
+		/* Black fill from top down */
+		height: calc((100 - var(--value)) * 1%);
+		background: black;
+	}
+
+	.ready-button
+	{
+		
+	}
+
+	.end-turn-button
+	{
+		background-color: red;
+		color: white;
+	}
+
+	.end-turn-button:disabled
+	{
+		background-color: grey;
+		color: white;
+	}
+
+    </style>
+	
+	<title>Mage Tower</title>
+	
+  </head>
+  <body>
+	<div id="app">{{ message }}</div>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+  </body>
+</html>
+
+<script type="importmap">
+  {
+    "imports": {
+      "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+      "vuetify": "https://cdn.jsdelivr.net/npm/vuetify@4.1.0/dist/vuetify.esm.js"
+    }
+  }
+</script>
+
+<script type="module">
+  import { createApp } from 'vue';
+  import { createVuetify } from "vuetify";
+  //import App from "./vueinstance.mjs";
+
+class Deck
+{
+    constructor()
+	{
+	    this.cards = [];
+		this.onShuffleHandlers = [];
+		this.onCardAddedHandlers = [];
+	}
+	
+	shuffle()
+	{
+	    this.cards.sort(function(a,b){return Math.random() * 2 - 1});
+		this.onShuffleHandlers.forEach(function(handler){handler();});
+	}
+	
+	drawCards(howMany)
+	{
+	    let returnMe = [];
+		
+		for(let i = 0; i < howMany; i++)
+		{
+	        returnMe.push(this.cards.pop());
+		}
+		
+		return returnMe;
+	}
+	
+	addCards(cards)
+	{
+	    for(let i = 0; i < cards.length; i++)
+		{
+            this.cards.push(cards[i]);
+		}
+        this.onCardAddedHandlers.forEach(function(handler){handler();});
+	}
+}
+
+class Hand extends Deck
+{
+
+
+
+}
+
+class ActionHandlerCollection
+{
+    constructor() {
+        this.onDiscarded = [];
+        this.onExhausted = [];
+        this.onDraw = [];
+        this.onTurnStart = [];
+        this.onTurnEnd = [];
+    }
+}
+
+class Card
+{
+    constructor()
+	{
+	    this.frontImage = null;
+		this.backImage = null;
+		this.chargeTime  = 0;
+		this.manaCost = 0;
+		this.physicalDamageModifier = 0;
+		this.magicDamageModifier = 0;
+		this.actions = [];
+		this.faceup = false;
+	}
+	
+	doActions(player, otherPlayer, gameController)
+	{
+		this.actions.forEach(function(action){
+		    action(this, gameController, player, otherPlayer);
+		});
+	}
+
+    image()
+	{
+	    return this.faceup ? this.frontImage : this.backImage;
+	}
+}
+
+
+class Player extends ActionHandlerCollection
+{
+    constructor()
+	{
+	    super();
+	    this.deck = new Deck();
+	    this.discard = new Deck();
+		this.hand = new Hand();
+		this.exhaust = new Deck();
+		this.cardsInPlay = [];
+		this.cardToResolve = null;
+		this.chargeTime = 0;
+		this.draftableCards = [];
+		this.currentMana = 3;
+		this.maxMana = 3;
+		this.currentHP = 30;
+		this.maxHP = 30;
+		this.physicalDefense = 0;
+		this.magicDefense = 0;
+		this.physicalDamage = 0;
+		this.magicDamage = 0;
+		this.endTurn = false;
+		
+		//callbacks
+		this.onPhysicalDamageTaken = [];
+		this.onMagicDamageTaken = [];
+		this.onPhysicalDamageDealt = [];
+		this.onMagicDamageDealt = [];
+	}
+
+    takePhysicalDamage(amount)
+	{
+	    let actualDamage = amount - this.physicalDefense;
+        this.takeDamage(actualDamage);		
+		this.onPhysicalDamageTaken.forEach(function(handler){handler(this, actualDamage)});
+	}
+    
+	takeMagicDamage(amount)
+	{
+	    let actualDamage = amount - this.magicDefense;
+        this.takeDamage(actualDamage);		
+		this.onMagicDamageTaken.forEach(function(handler){handler(this, actualDamage)});
+	}
+	
+	takeDamage(amount)
+	{
+	    this.currentHP -= amount;
+		
+		if(this.currentHP < 0)
+		{
+		    this.currentHP = 0;
+		}
+	}
+	
+	spendMana(amount)
+	{
+		if(this.currentMana < amount)
+		{
+		    return false;
+		}
+		else
+		{
+		    this.currentMana -= amount;
+		}
+	}
+	
+	increaseChargeTime(amount)
+	{
+	    this.chargeTime += amount;
+	}
+	
+	decreaseChargeTime(amount)
+	{
+	    this.chargeTime -= amount;
+
+		if(this.chargeTime < 0)
+		{
+		    this.chargeTime = 0;
+		}
+	}
+	
+	queueCard(index)
+	{
+		console.log("queueCard");
+		//send hand[index] to cards to resolve
+		
+		
+		if(this.currentMana >= this.hand.cards[index].manaCost)
+		{
+			let card = this.hand.cards.splice(index, 1)[0];
+			console.log("card", card);
+			this.cardToResolve = (card);
+		}
+	}
+	
+	unqueueCard()
+	{
+		console.log("unqueueCard");
+
+		if(this.cardToResolve !== null)
+		{
+			this.hand.addCards([this.cardToResolve]);
+			this.cardToResolve = null;
+		}
+	}
+
+	sendToDiscard(card)
+	{
+		this.discard.addCards([card]);
+	}
+}
+
+class GameController extends ActionHandlerCollection
+{
+    constructor()
+	{
+		super();
+	    this.lastPlayer = null; //0=top, 1=bottom
+	    this.turnNumber = 0;
+		this.topPlayer = new Player();
+		this.bottomPlayer = new Player();
+		this.isTopPlayerReady = false;
+		this.isBottomPlayerReady = false;
+		
+		this.isBottomPlayerSelecting = false;
+		this.selectedCard = null;
+		
+		while(this.topPlayer.chargeTime === this.bottomPlayer.chargeTime)
+		{
+			this.topPlayer.chargeTime = Math.floor(Math.random() * 5);
+			this.bottomPlayer.chargeTime = Math.floor(Math.random() * 5);
+		}
+		
+
+			this.cardBank = new Map();
+			
+			
+			this.cardBank.set(1, vasOrtFlam);
+
+//			[
+//				"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABrklEQVR4nO3QQQkAIADAQLV/Z63gXiLcJRibYw8urdcBPzErMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzj1wAKP4F9HcAAAAABJRU5ErkJggg=="
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABsElEQVR4nO3QwQ3AIBDAsIP9d25XIC+EZE8QZc18w5l9O+AlZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFP/TBAo+fDTKdAAAAAElFTkSuQmCC"
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABrklEQVR4nO3QQQkAIADAQLV/Z63gXiLcJRibew8urdcBPzErMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzg/XgOOSVcEUwAAAABJRU5ErkJggg=="
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABr0lEQVR4nO3QQQkAIADAQLV/Z63gXiLcJRibe+zBnfU64CdmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgUHPl8DjsyKQgAAAAAASUVORK5CYII="
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABrklEQVR4nO3QQQkAIADAQLV/Z63gXiLcJRibe3BrvQ74iVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZwQH2vwKPJ2eRTgAAAABJRU5ErkJggg=="
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABr0lEQVR4nO3QQQkAIADAQLV/Z63gXiLcJRibY+/BnfU64CdmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgUHPWADjl2ws+QAAAAASUVORK5CYII="
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABsElEQVR4nO3QwQ3AIBDAsNLJb3RWIC+EZE8QZc3Mx5n/dsBLzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKNnrfAxADZYPpAAAAAElFTkSuQmCC"
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABsElEQVR4nO3QQQ3AIADAQEA5zsHC+iJL7hQ0nWcPPlqvA/7ErMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzgApCpAw9kxog9AAAAAElFTkSuQmCC"
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABsElEQVR4nO3QQQ3AIADAQJhynIOF9UVI7hQ0nWvswT/f7YCXmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVHI8rAw+2IrbzAAAAAElFTkSuQmCC"
+//				,"iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABsElEQVR4nO3QQQ3AIADAQJhynIOF9UVI7hQ0nWPtwT/f7YCXmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVHI6rAw89E2O0AAAAAElFTkSuQmCC"
+//			];
+			
+			this.topPlayer.hand.addCards([vasOrtFlam,vasOrtFlam,vasOrtFlam]);
+			this.topPlayer.cardToResolve = vasOrtFlam;
+			this.bottomPlayer.hand.addCards([vasOrtFlam,vasOrtFlam,vasOrtFlam]);
+	}
+
+    startTurn()
+	{
+	    this.turnNumber++;
+		this.onTurnStart.forEach(function(handler){
+			handler(this);
+		});
+	}
+	
+    endTurn(player)
+	{
+		player.endTurn = true;
+	
+		if(this.bottomPlayer.endTurn && this.topPlayer.endTurn)
+		{
+			this.onTurnEnd.forEach(function(handler){
+				handler(this); 
+			});
+		
+			this.topPlayer.currentMana = this.topPlayer.maxMana;
+			this.topPlayer.chargeTime = Math.floor(Math.random() * 5);
+			
+			this.bottomPlayer.currentMana = this.bottomPlayer.maxMana;
+			this.bottomPlayer.chargeTime = Math.floor(Math.random() * 5);
+			
+			this.bottomPlayer.endTurn = false;
+			this.topPlayer.endTurn = false;
+		}
+	}
+
+	isBothPlayersReady()
+	{
+		return this.isTopPlayerReady && this.isBottomPlayerReady;
+	}
+
+	toggleTopPlayerReady()
+	{
+		this.isTopPlayerReady = !this.isTopPlayerReady;
+
+		if(this.isBothPlayersReady())
+		{
+			this.resolveCards();
+		}
+	}
+	
+	toggleBottomPlayerReady()
+	{
+		this.isBottomPlayerReady = !this.isBottomPlayerReady;
+
+		if(this.isBothPlayersReady())
+		{
+			this.resolveCards();
+		}
+	}
+
+	resolveCards()
+	{
+		console.log("resolveCards");
+	    let firstPlayerIndex = this.getFirstPlayerIndex(this.topPlayer, this.bottomPlayer);
+		
+		if(firstPlayerIndex === 0)
+		{
+			this.resolveCard(this.topPlayer, this.bottomPlayer, this);
+			this.isTopPlayerReady = false;
+		}
+		else
+        {
+			this.resolveCard(this.bottomPlayer, this.topPlayer, this);
+			this.isBottomPlayerReady = false;
+		}
+	}
+	
+	getFirstPlayerIndex(topPlayer, bottomPlayer)
+	{
+		if(this.topPlayer.chargeTime < this.bottomPlayer.chargeTime)
+		{
+			return 0;
+		}
+		else if(this.topPlayer.chargeTime > this.bottomPlayer.chargeTime)
+		{
+			return 1;
+		}
+		else
+		{
+			if(topPlayer.cardsToResolve[0].chargeTime < bottomPlayer.cardsToResolve[0].chargeTime)
+			{
+				return 0;
+			}
+			else if(topPlayer.cardsToResolve[0].chargeTime > bottomPlayer.cardsToResolve[0].chargeTime)
+			{
+				return 1;
+			}
+			else
+			{
+			    if(this.lastPlayer === 0)
+				{
+					return 0;
+				}
+				else if(this.lastPlayer === 1)
+				{
+					return 1;
+				}
+			}
+		}
+	}
+	
+	promptSelectCardInPlay(player, callback)
+	{
+		let self = this;
+		this.selectedCard = null;
+	
+	    if(player === this.bottomPlayer)
+		{
+			this.isBottomPlayerSelecting = true;
+			
+			let interval = setInterval(function(){
+				if(self.selectedCard !== null)
+				{
+					callback(self.selectedCard);
+					clearInterval(interval);
+				}
+			},500);
+		}
+	}
+
+	resolveCard(player, otherPlayer)
+	{
+		if(player.cardToResolve != null)
+		{
+		
+			player.spendMana(player.cardToResolve.manaCost);
+			player.increaseChargeTime(player.cardToResolve.chargeTime);
+		
+			player.cardToResolve.doActions(player, otherPlayer, this);
+
+			if(player.cardToResolve.type === "Summon" ||
+				player.cardToResolve.type === "Equipment")
+			{
+				player.cardToResolve.faceup = true;
+				player.cardsInPlay.push(player.cardToResolve); 
+			}
+			else
+			{
+				player.sendToDiscard(player.cardToResolve);
+			}
+			
+			player.cardToResolve = null;
+		}
+	}
+}
+
+const cardBackImageString = "iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABrklEQVR4nO3QQQkAIADAQLV/Z63gXiLcJRibYw8urdcBPzErMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzArMCswKzj1wAKP4F9HcAAAAABJRU5ErkJggg==";
+const vuetify = createVuetify();
+const showOpponentHand = true;
+const cards = new Map();
+
+let vasOrtFlam = new Card();
+vasOrtFlam.frontImage = "iVBORw0KGgoAAAANSUhEUgAAAGQAAADICAIAAACRXtOWAAABsElEQVR4nO3QwQ3AIBDAsIP9d25XIC+EZE8QZc18w5l9O+AlZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFP/TBAo+fDTKdAAAAAElFTkSuQmCC";
+vasOrtFlam.backImage = cardBackImageString;
+vasOrtFlam.chargeTime  = 4;
+vasOrtFlam.manaCost = 2;
+vasOrtFlam.physicalDamageModifier = 0;
+vasOrtFlam.magicDamageModifier = 2;
+vasOrtFlam.actions = [function(card, gameController, player, otherPlayer){
+    otherPlayer.takeMagicDamage(player.magicDamage);
+	gameController.promptSelectCardInPlay(player, function(selectedCard){
+		exhaustCard(selectedCard);
+	});
+}];
+
+cards.set("Vas Ort Flam", vasOrtFlam);
+
+const playerstatsui = {
+	data()
+	{
+		return {};
+	},
+	props:["health", "maxHealth", "mana", "maxMana", "charge"],
+
+	computed:{
+		healthFraction(){return (this.health / this.maxHealth) * 100;},
+		manaFraction(){return (this.mana / this.maxMana) * 100;}
+	},
+	methods:{
+		meterValueStyle(value){return '--value:'+ value + ';';}
+	},
+	template:`				
+	            <v-sheet class="player-stats">
+					<div class="circle health" :style="meterValueStyle(healthFraction)">
+						<div class="player-value">{{health}}</div>
+					</div>
+					<div class="circle mana" :style="meterValueStyle(manaFraction)">
+						<div class="player-value">{{mana}}</div>
+					</div>
+					<div class="circle charge">
+						<div class="player-value">{{charge}}</div>
+					</div>
+				</v-sheet>
+`};
+
+  createApp(
+	{
+		data: function () {
+			return {
+				showOpponentHand: showOpponentHand,
+				isHandHovered: false,
+				cardFrontImages: [],
+				cardBackImage: "",
+				gameController: new GameController(),
+				showHands: true
+			};
+		},
+		components:{playerstatsui},
+		computed:{
+		},
+		mounted:function(){
+			//get the images for the cards 
+		},
+		methods:{
+			swipe(directionString, index)
+			{
+				if(directionString === "Up")
+				{
+					gameController.bottomPlayer.queueCard(index);
+				}
+			},
+			handTouchHandler(event)
+			{
+			
+			},
+			toggleBottomPlayerHand()
+			{
+				console.log("toggleBottomPlayerHand");
+			    let hand = document.querySelector(".bottom-player-overlay");
+				let isHandVisible = !hand.classList.contains("min");
+				
+				if(isHandVisible)
+				{
+					document.querySelector(".bottom-player-overlay").classList.add("min");
+				}
+				else
+				{
+					document.querySelector(".bottom-player-overlay").classList.remove("min");
+				}
+			},
+			hideBottomPlayerHand()
+			{
+				console.log("hideBottomPlayerHand");
+			    document.querySelector(".bottom-player-overlay").classList.add("min");
+			},
+			showBottomPlayerHand()
+			{
+				console.log("showBottomPlayerHand");
+			    document.querySelector(".bottom-player-overlay").classList.remove("min");
+			},
+			selectCard_draft(index)
+			{
+				//prompt for confirm
+				if(confirm("Are you sure?"))
+				{
+					//send a request to the back end
+					selectDraftCard(index);
+				}
+			},
+			topPlayerCardInPlayClicked(i)
+			{
+				if(this.gameController.isBottomPlayerSelecting)
+				{
+					this.gameController.selectedCard = this.gameController.topPlayer.cardsInPlay[i];
+				}
+			},
+			bottomPlayerCardInPlayClicked(i)
+			{
+				if(this.gameController.isBottomPlayerSelecting)
+				{
+					this.gameController.selectedCard = this.gameController.bottomPlayer.cardsInPlay[i];
+				}
+			}
+		},
+		template: `
+		<v-app>
+			<v-sheet v-if="showHands" class="sheet mx-auto top-player-overlay top-player" align-center>
+				<v-slide-group
+				  class="pa-4 hand-area"
+				  center-active
+				>
+					<v-slide-group-item
+						v-for="item,i in gameController.topPlayer.hand.cards"
+						:key="i"
+						flex-fill
+						center
+					>
+						<img class="card card-image card-border"
+							:src="'data:image/png;base64,' + item.backImage"/>
+					</v-slide-group-item>
+				</v-slide-group>
+			</v-sheet>
+
+			<v-sheet
+			  class="top-player-play-area"
+			  height="50vh"
+			  width="100vw"
+			>
+				<playerstatsui 
+				    style="float: right;"
+					:health="gameController.topPlayer.currentHP"
+					:max-health="gameController.topPlayer.maxHP"
+					:mana="gameController.topPlayer.currentMana"
+					:max-mana="gameController.topPlayer.maxMana"
+					:charge="gameController.topPlayer.chargeTime"
+				/>
+
+				<v-btn @click="gameController.topPlayer.takePhysicalDamage(3)">Damage Top Player</v-btn>
+				<v-btn @click="gameController.topPlayer.spendMana(1)">Reduce Mana Top Player</v-btn>
+				<v-btn @click="gameController.topPlayer.decreaseChargeTime(1)">Reduce Charge Top Player</v-btn>
+				<v-btn @click="gameController.topPlayer.increaseChargeTime(1)">Increase Charge Top Player</v-btn>
+			
+				<v-btn class="ready-button" @click="gameController.toggleTopPlayerReady()">{{gameController.isTopPlayerReady === true ? "Unready" : "Ready"}}</v-btn>
+				<v-btn class="end-turn-button" :disabled="gameController.topPlayer.endTurn" @click="gameController.endTurn(gameController.topPlayer)">End Turn</v-btn>
+		
+				<div class="play-area resolve-area">
+					<img v-if="gameController.topPlayer.cardToResolve != null" 
+						class="card card-image card-border" 
+						:src="'data:image/png;base64,' + gameController.topPlayer.cardToResolve?.image()"/>
+				</div>
+
+				<v-slide-group
+				  class="pa-4 play-area"
+				  center-active
+				>
+				  <v-slide-group-item
+					v-for="item,i in gameController.topPlayer.cardsInPlay"
+					:key="i"
+				  >
+						<img @click="topPlayerCardInPlayClicked(i)"
+						class="card card-image card-border" :src="'data:image/png;base64,' + item.image()"/>
+				  </v-slide-group-item>
+				</v-slide-group>
+			</v-sheet>
+			
+		    <v-sheet
+   			  class="bottom-player-play-area"
+			  height="50vh"
+			  width="100vw"
+			>
+
+				<playerstatsui 
+				    style="float: right;"
+					:health="gameController.bottomPlayer.currentHP"
+					:max-health="gameController.bottomPlayer.maxHP"
+					:mana="gameController.bottomPlayer.currentMana"
+					:max-mana="gameController.bottomPlayer.maxMana"
+					:charge="gameController.bottomPlayer.chargeTime"
+				/>
+
+				<v-btn @click="gameController.bottomPlayer.takePhysicalDamage(3)">Damage Bottom Player</v-btn>
+				<v-btn @click="gameController.bottomPlayer.spendMana(1)">Reduce Mana Bottom Player</v-btn>
+				<v-btn @click="gameController.bottomPlayer.decreaseChargeTime(1)">Reduce Charge Bottom Player</v-btn>
+				<v-btn @click="gameController.bottomPlayer.increaseChargeTime(1)">Increase Charge Bottom Player</v-btn>
+
+				<v-btn class="ready-button" @click="gameController.toggleBottomPlayerReady()">{{gameController.isBottomPlayerReady === true ? "Unready" : "Ready"}}</v-btn>
+				<v-btn class="end-turn-button" :disabled="gameController.bottomPlayer.endTurn" @click="gameController.endTurn(gameController.bottomPlayer)">End Turn</v-btn>
+
+				<v-slide-group
+				  class="pa-4 play-area"
+				  center-active
+				>
+				  <v-slide-group-item
+					v-for="item,i in gameController.bottomPlayer.cardsInPlay"
+					:key="i"
+				  >
+						<img @click="bottomPlayerCardInPlayClicked(i)" 
+							class="card card-image card-border" 
+							:src="'data:image/png;base64,' + item.image()"/>
+				  </v-slide-group-item>
+				</v-slide-group>
+
+				<div class="play-area resolve-area">
+						<img v-if="gameController.bottomPlayer.cardToResolve != null" 
+							@click="gameController.bottomPlayer.unqueueCard()"
+							@touch="gameController.bottomPlayer.unqueueCard()"
+							class="card card-image card-border" 
+							:src="'data:image/png;base64,' + gameController.bottomPlayer.cardToResolve?.image()"/>
+				</div>
+
+				<v-slide-group
+				  class="pa-4 play-area resolve-area"
+				  center-active
+				>
+				  <v-slide-group-item
+					v-for="item,i in gameController.bottomPlayer.cardsToResolve"
+					:key="i"
+				  >
+				  </v-slide-group-item>
+				</v-slide-group>
+		    </v-sheet>
+
+			<v-overlay class="draft-area">
+				<v-slide-group
+				  class="pa-4"
+				  center-active
+				  style="position: absolute; top: calc(50% - 100); z-index: 10;"
+				>
+				  <v-slide-group-item
+					v-for="item,i in gameController.bottomPlayer.draftableCards"
+					:key="i"
+				  >
+					<img 
+						@click="selectCard_draft(i)"
+						class="card card-image card-border"
+						:src="'data:image/png;base64,' + item.frontImage"/>
+				  </v-slide-group-item>
+				</v-slide-group>
+			</v-overlay>
+
+			<v-sheet  v-if="showHands"
+				@mouseenter="showBottomPlayerHand"
+				@mouseleave="hideBottomPlayerHand"
+				@touch="toggleBottomPlayerHand"
+				class="sheet mx-auto bottom-player-overlay bottom-player min" 
+				align-center>
+
+				<v-slide-group
+				  class="pa-4 hand-area"
+				  show-arrows
+				>
+					<v-slide-group-item
+						v-for="item,i in gameController.bottomPlayer.hand.cards"
+						:key="i"
+					>
+						<img @click="gameController.bottomPlayer.queueCard(i)"
+							v-touch="{
+								left: () => swipe('Left',i),
+								right: () => swipe('Right',i),
+								up: () => swipe('Up',i),
+								down: () => swipe('Down',i)
+							}"
+							class="card card-image card-border"
+							:src="'data:image/png;base64,' + item.frontImage"/>
+					</v-slide-group-item>
+				</v-slide-group>
+			</v-sheet>
+		</v-app>
+		`
+	}
+  )
+  .use(vuetify)
+  .mount('#app');
+</script>
