@@ -39,13 +39,13 @@ export default class EventSubListener extends WebSocketListener {
             }
 			else
 			{
-				FileRepository.log("EventSubListener close event " + JSON.stringify(event));
+				FileRepository.log("EventSubListener close event " + JSON.stringify(event.data));
 			}
             self.closeHandler(event.data);
         }, true);
 
         this.AddHandler("error", function (event) {
-            FileRepository.log("EventSubListener error " + event.type + " " + event.data);
+            FileRepository.log("EventSubListener error " + event.type + " " + JSON.stringify(event.data));
         }, true);
 
         this.AddHandler("message", function (event) {
@@ -67,7 +67,7 @@ export default class EventSubListener extends WebSocketListener {
 
     close() {
         this.socket.close();
-		this.destroy();
+		//this.destroy();
         return Promise.resolve();
     }
 

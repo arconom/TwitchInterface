@@ -10,7 +10,7 @@ from "./FileRepository.mjs";
 export default class WebSocketListener extends HandlerMap {
 
     constructor(uri, port) {
-        // FileRepository.log("WebSocketListener.ctor");
+        FileRepository.log("WebSocketListener.ctor " + uri + " " + port);
         super();
         this.uri = uri;
         this.port = port;
@@ -39,7 +39,7 @@ export default class WebSocketListener extends HandlerMap {
             FileRepository.log("WebSocketListener.onconnection");
             
             ws.on('message', function message(data) {
-                FileRepository.log('message from ', ws, data);
+                FileRepository.log('message from ' + ws + " " + data);
             });
 
             ws.send('connected', ws);
@@ -62,10 +62,12 @@ export default class WebSocketListener extends HandlerMap {
         });
 
         self.socket.addEventListener('close', (event) => {
+            FileRepository.log('websocket.close:  ' + JSON.stringify(event.data));
             self.ExecuteHandlers("close", event);
         });
 
         self.socket.addEventListener('error', (event) => {
+            FileRepository.log('websocket.error:  ' + JSON.stringify(event));
             self.ExecuteHandlers("error", event);
         });
 

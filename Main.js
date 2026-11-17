@@ -1561,13 +1561,16 @@ class App {
         }
 
         App.eventSubListener?.close();
+		App.eventSubListener = null;
         // FileRepository.log("startEventSub " + eventSubscriptionConfig);
         App.eventSubListener = new EventSubListener(Constants.eventSubWebSocketUrl, null /* App.config.listenerPort */, App.oAuthProvider);
 
         // FileRepository.log("subs " + JSON.stringify(Array.from(subs.entries())));
 
         App.eventSubListener.AddHandler("close", function (event) {
-			App.startEventSub();
+			setTimeout(function(){
+				App.startEventSub();
+			}, 1000);
         }, true);
 
         App.eventSubListener.AddHandler("message", function (event) {
